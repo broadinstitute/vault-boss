@@ -95,5 +95,10 @@
             <artifactId>junit</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>com.hubspot.dropwizard</groupId>
+            <artifactId>dropwizard-guice</artifactId>
+        </dependency>
+
     </dependencies>
 </project>

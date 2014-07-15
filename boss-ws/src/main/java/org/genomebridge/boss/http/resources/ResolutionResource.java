@@ -15,16 +15,20 @@
  */
 package org.genomebridge.boss.http.resources;
 
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
+import java.net.URI;
+import java.net.URL;
 
-@Path("status")
-public class StatusResource {
+public class ResolutionResource extends AbstractResource {
 
-    private String message;
+    public URI url;
+    public URI objectUrl;
+    public Integer validityPeriodSeconds;
 
-    public StatusResource() { message = "OK"; }
+    public ResolutionResource() {}
 
-    @GET
-    public String status() { return message; }
+    public ResolutionResource(URI url, URI objectUrl, Integer validityPeriodSeconds) {
+        this.url = url;
+        this.objectUrl = objectUrl;
+        this.validityPeriodSeconds = validityPeriodSeconds;
+    }
 }

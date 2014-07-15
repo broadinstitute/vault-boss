@@ -15,10 +15,12 @@
  */
 package org.genomebridge.boss.http;
 
+import com.hubspot.dropwizard.guice.GuiceBundle;
 import io.dropwizard.Application;
 import io.dropwizard.assets.AssetsBundle;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
+import org.genomebridge.boss.http.resources.GroupResource;
 import org.genomebridge.boss.http.resources.StatusResource;
 
 public class BossApplication extends Application<BossConfiguration> {
@@ -28,11 +30,21 @@ public class BossApplication extends Application<BossConfiguration> {
     }
 
     public void run(BossConfiguration config, Environment env) {
-        env.jersey().register(new StatusResource());
+        env.jersey().register(StatusResource.class);
+        env.jersey().register(GroupResource.class);
+
         env.healthChecks().register("db", new DbHealthCheck());
     }
 
     public void initialize(Bootstrap<BossConfiguration> bootstrap) {
+
+        GuiceBundle<BossConfiguration> guiceBundle = GuiceBundle.<BossConfiguration>newBuilder()
+                .addModule(new BossModule())
+                .setConfigClass(BossConfiguration.class)
+                .build();
+
+        bootstrap.addBundle(guiceBundle);
+
         bootstrap.addBundle(new AssetsBundle("/assets/", "/site"));
     }
 }

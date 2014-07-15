@@ -20,17 +20,10 @@ import com.sun.jersey.api.client.ClientResponse;
 import io.dropwizard.testing.junit.DropwizardAppRule;
 import org.junit.*;
 
-import java.net.URL;
 
 import static org.fest.assertions.api.Assertions.*;
 
-public class StatusAcceptanceTest {
-
-    public static String resourceFilePath(String name) {
-        ClassLoader loader = Thread.currentThread().getContextClassLoader();
-        URL resource = loader.getResource(name);
-        return resource != null ? resource.getFile() : null;
-    }
+public class StatusAcceptanceTest extends AbstractTest {
 
     @ClassRule
     public static final DropwizardAppRule<BossConfiguration> RULE =
@@ -38,13 +31,14 @@ public class StatusAcceptanceTest {
                     resourceFilePath("boss-config.yml"));
 
     @Test
-    public void loginHandlerRedirectsAfterPost() {
+    public void statusMessageTest() {
         Client client = new Client();
 
-        ClientResponse response = client.resource(
-                String.format("http://localhost:%d/ok", RULE.getLocalPort()))
-                .get(ClientResponse.class);
+        String statusPath = String.format("http://localhost:%d/status", RULE.getLocalPort());
+
+        ClientResponse response = get(client, statusPath);
 
         assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getEntity(String.class)).isEqualTo("OK");
     }
 }

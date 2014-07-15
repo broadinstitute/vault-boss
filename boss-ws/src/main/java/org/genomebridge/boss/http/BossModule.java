@@ -13,18 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.genomebridge.boss.http.resources;
+package org.genomebridge.boss.http;
 
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
+import com.google.inject.AbstractModule;
+import org.genomebridge.boss.http.service.BossAPI;
+import org.genomebridge.boss.http.service.MemoryBossAPI;
 
-@Path("status")
-public class StatusResource {
+public class BossModule extends AbstractModule {
 
-    private String message;
+    private BossAPI memoryApi = new MemoryBossAPI();
 
-    public StatusResource() { message = "OK"; }
-
-    @GET
-    public String status() { return message; }
+    @Override
+    protected void configure() {
+        bind(BossAPI.class).toInstance(memoryApi);
+    }
 }

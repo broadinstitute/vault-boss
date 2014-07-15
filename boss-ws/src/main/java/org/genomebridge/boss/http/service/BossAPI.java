@@ -13,18 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.genomebridge.boss.http.resources;
+package org.genomebridge.boss.http.service;
 
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
+import org.genomebridge.boss.http.resources.GroupResource;
+import org.genomebridge.boss.http.resources.ObjectResource;
 
-@Path("status")
-public class StatusResource {
+import java.net.URI;
 
-    private String message;
+public interface BossAPI {
 
-    public StatusResource() { message = "OK"; }
+    public GroupResource getGroup(String groupId);
+    public void updateGroup(GroupResource rec);
 
-    @GET
-    public String status() { return message; }
+    public ObjectResource getObject(String objectId);
+    public void updateObject(ObjectResource rec);
+
+    public URI getPresignedURL(int seconds);
 }

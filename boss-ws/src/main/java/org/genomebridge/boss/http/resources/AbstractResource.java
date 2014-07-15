@@ -15,16 +15,32 @@
  */
 package org.genomebridge.boss.http.resources;
 
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
+import java.util.Arrays;
 
-@Path("status")
-public class StatusResource {
+public abstract class AbstractResource {
 
-    private String message;
+    public static <T> T setFrom(T original, T newValue) {
+        if(newValue != null) {
+            return newValue;
+        } else {
+            return original;
+        }
+    }
 
-    public StatusResource() { message = "OK"; }
+    public static <T> boolean eq(T mine, T theirs) {
+        if(mine == null) {
+            return mine == theirs;
+        } else {
+            return mine.equals(theirs);
+        }
+    }
 
-    @GET
-    public String status() { return message; }
+    public static <T> boolean arrayEq(T[] mine, T[] theirs) {
+        if(mine == null) {
+            return mine == theirs;
+        } else {
+            return Arrays.equals(mine, theirs);
+        }
+    }
+
 }
