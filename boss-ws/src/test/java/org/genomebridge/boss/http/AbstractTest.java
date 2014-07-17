@@ -36,6 +36,11 @@ public class AbstractTest {
                 .post(ClientResponse.class, value);
     }
 
+    public ClientResponse delete(Client client, String url) {
+        return client.resource(url)
+                .delete(ClientResponse.class);
+    }
+
     public ClientResponse get(Client client, String url) {
         return client.resource(url)
                 .accept(MediaType.APPLICATION_JSON_TYPE)
