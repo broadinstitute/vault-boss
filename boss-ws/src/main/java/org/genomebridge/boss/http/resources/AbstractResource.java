@@ -15,6 +15,8 @@
  */
 package org.genomebridge.boss.http.resources;
 
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.Response;
 import java.util.Arrays;
 
 public abstract class AbstractResource {
@@ -25,6 +27,30 @@ public abstract class AbstractResource {
         } else {
             return original;
         }
+    }
+
+    /**
+     * Throw a WebApplicationException (Status: BAD_REQUEST) if a particular value is
+     * set to something other than the original value.
+     *
+     * @param original The original value
+     * @param newValue The new value
+     * @param <T> The type of the values.
+     *
+     * @return The original value.
+     */
+    public static <T> T errorIfSet(T original, T newValue) {
+        if(original == null) {
+            if (newValue != null) {
+                throw new WebApplicationException(Response.Status.BAD_REQUEST);
+            }
+        } else {
+            if(newValue != null && !original.equals(newValue)) {
+                throw new WebApplicationException(Response.Status.BAD_REQUEST);
+            }
+        }
+
+        return original;
     }
 
     public static <T> boolean eq(T mine, T theirs) {

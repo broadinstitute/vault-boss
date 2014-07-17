@@ -70,15 +70,20 @@ public class ObjectResource extends AbstractResource {
         }
     }
 
-    private void populateFromAPI() {
+    private boolean populateFromAPI() {
         ObjectResource fromApi = api.getObject(objectId);
 
-        objectUrl = fromApi.objectUrl;
-        sizeEstimateBytes = fromApi.sizeEstimateBytes;
-        name = fromApi.name;
-        ownerId = fromApi.ownerId;
-        readers = fromApi.readers;
-        writers = fromApi.writers;
+        if(fromApi != null) {
+            objectUrl = fromApi.objectUrl;
+            sizeEstimateBytes = fromApi.sizeEstimateBytes;
+            name = fromApi.name;
+            ownerId = fromApi.ownerId;
+            readers = fromApi.readers;
+            writers = fromApi.writers;
+            return true;
+        }
+
+        return false;
     }
 
     @Path("resolve")
@@ -96,23 +101,30 @@ public class ObjectResource extends AbstractResource {
     @Consumes("application/json")
     @Produces("application/json")
     @POST
-    public ObjectResource update(ObjectResource newRec) {
+    public ObjectResource update(@Context UriInfo uriInfo, ObjectResource newRec) {
 
-        if(newRec.objectId != null && !objectId.equals(newRec.objectId)) {
-            throw new IllegalArgumentException(String.format(
-                    "Can't update the objectId (from \"%s\" to \"%s\")", objectId, newRec.objectId));
+        if(populateFromAPI()) {
+            if (newRec.objectId != null && !objectId.equals(newRec.objectId)) {
+                throw new IllegalArgumentException(String.format(
+                        "Can't update the objectId (from \"%s\" to \"%s\")", objectId, newRec.objectId));
+            }
+
+            objectUrl = errorIfSet(objectUrl, newRec.objectUrl);
+            readers = setFrom(readers, newRec.readers);
+            writers = setFrom(writers, newRec.writers);
+            name = errorIfSet(name, newRec.name);
+            ownerId = setFrom(ownerId, newRec.ownerId);
+            sizeEstimateBytes = errorIfSet(sizeEstimateBytes, newRec.sizeEstimateBytes);
+
+            updateInAPI();
+            return this;
+
+        } else {
+
+            newRec.objectId = uriInfo.getRequestUri().toString();
+            api.updateObject(newRec);
+            return newRec;
         }
-
-        objectUrl = setFrom(objectUrl, newRec.objectUrl);
-        readers = setFrom(readers, newRec.readers);
-        writers = setFrom(writers, newRec.writers);
-        name = setFrom(name, newRec.name);
-        ownerId = setFrom(ownerId, newRec.ownerId);
-        sizeEstimateBytes = setFrom(sizeEstimateBytes, newRec.sizeEstimateBytes);
-
-        updateInAPI();
-
-        return this;
     }
 
     private void updateInAPI() {

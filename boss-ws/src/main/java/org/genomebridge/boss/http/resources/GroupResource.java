@@ -28,8 +28,9 @@ public class GroupResource extends AbstractResource {
 
     private BossAPI api;
 
-    @PathParam("groupId") public String groupId;
+    @Context UriInfo uriInfo;
 
+    public String groupId;
     public String ownerId;
     public Long sizeEstimateBytes;
     public String typeHint;
@@ -42,12 +43,26 @@ public class GroupResource extends AbstractResource {
         this.api = api;
     }
 
+    /**
+     * Objects are sub-resources of the groups to which they belong.  This method
+     * returns an ObjectResource corresponding to the associated objectId within
+     * this group.
+     *
+     * @param objectId The id of the object requested.
+     * @return A resource value representing the object requested.
+     */
     @Path("{objectId}")
-    public ObjectResource getObject(@Context UriInfo uriInfo,
-                                    @PathParam("objectId") String objectId) {
+    public ObjectResource getObject(@PathParam("objectId") String objectId) {
         return new ObjectResource(api, uriInfo.getRequestUri().toString());
     }
 
+    /**
+     * Returns a populated resource object describing this group resource.
+     *
+     * This method implements the 'describe' method, for Groups, from the Boss API spec.
+     *
+     * @return A fully-populated GroupResource containing all available information about this group
+     */
     @GET
     @Produces("application/json")
     public GroupResource describe() {
@@ -57,33 +72,60 @@ public class GroupResource extends AbstractResource {
         return this;
     }
 
-    private void populateFromAPI() {
+    private boolean populateFromAPI() {
+
+        groupId = uriInfo.getRequestUri().toString();
         GroupResource rec = api.getGroup(groupId);
 
-        ownerId = rec.ownerId;
-        sizeEstimateBytes = rec.sizeEstimateBytes;
-        typeHint = rec.typeHint;
-        readers = rec.readers;
-        writers = rec.writers;
+        if(rec != null) {
+            ownerId = rec.ownerId;
+            sizeEstimateBytes = rec.sizeEstimateBytes;
+            typeHint = rec.typeHint;
+            readers = rec.readers;
+            writers = rec.writers;
+
+            return true;
+        }
+
+        return false;
     }
 
+    /**
+     * Updates the resource to match the given template resource.
+     *
+     * Updates are _only_ accepted on the ownerId, readers, and writers fields; all other
+     * updates cause a BAD_REQUEST exception to be thrown.
+     *
+     * This method implements both the 'reassignOwnership' and 'setPermissions' methods
+     * in the Boss API spec.
+     *
+     * @param newrec The template resource; the ownerId, readers, and writers fields of _this_
+     *               resource are updated to match those of the template resource.
+     * @return The (updated) resource.
+     */
     @POST
     @Consumes("application/json")
     @Produces("application/json")
     public GroupResource update(GroupResource newrec) {
-        if(newrec.groupId != null) {
-            throw new IllegalArgumentException("non-null groupId update isn't allowed");
+
+        if(populateFromAPI()) {
+
+            this.groupId = errorIfSet(groupId, newrec.groupId);
+            this.ownerId = setFrom(ownerId, newrec.ownerId);
+            this.sizeEstimateBytes = errorIfSet(sizeEstimateBytes, newrec.sizeEstimateBytes);
+            this.typeHint = errorIfSet(typeHint, newrec.typeHint);
+            this.readers = setFrom(readers, newrec.readers);
+            this.writers = setFrom(writers, newrec.writers);
+
+            updateInAPI();
+
+            return this;
+        } else {
+
+            newrec.groupId = uriInfo.getRequestUri().toString();
+            api.updateGroup(newrec);
+            return newrec;
         }
-
-        this.ownerId = setFrom(ownerId, newrec.ownerId);
-        this.sizeEstimateBytes = setFrom(sizeEstimateBytes, newrec.sizeEstimateBytes);
-        this.typeHint = setFrom(typeHint, newrec.typeHint);
-        this.readers = setFrom(readers, newrec.readers);
-        this.writers = setFrom(writers, newrec.writers);
-
-        updateInAPI();
-
-        return this;
     }
 
     private void updateInAPI() {
