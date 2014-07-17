@@ -16,9 +16,11 @@
 package org.genomebridge.boss.http.resources;
 
 import org.genomebridge.boss.http.service.BossAPI;
+import org.genomebridge.boss.http.service.DeregisteredObjectException;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
+import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import java.net.URI;
 import java.net.URL;
@@ -41,11 +43,31 @@ public class ObjectResource extends AbstractResource {
         this.objectId = objectId;
     }
 
+    @DELETE
+    public String delete() {
+        try {
+            deleteFromAPI();
+            return this.objectId;
+
+        } catch(DeregisteredObjectException e) {
+            throw new WebApplicationException(Response.Status.BAD_REQUEST);
+        }
+    }
+
+    private void deleteFromAPI() {
+        api.deregisterObject(this);
+    }
+
     @Produces("application/json")
     @GET
     public ObjectResource describe() {
-        populateFromAPI();
-        return this;
+        try {
+            populateFromAPI();
+            return this;
+
+        } catch(DeregisteredObjectException e) {
+            throw new WebApplicationException(Response.Status.GONE);
+        }
     }
 
     private void populateFromAPI() {

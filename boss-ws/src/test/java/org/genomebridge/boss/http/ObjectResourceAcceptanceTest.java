@@ -113,4 +113,52 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         assertThat(created.readers).isEqualTo(obj.readers);
 
     }
+
+    @Test
+    public void registerDescribeAndDeleteTest() {
+        Client client = new Client();
+
+        GroupResource grp = new GroupResource();
+        grp.ownerId = "tdanford";
+        grp.readers = new String[]{"tdanford"};
+        grp.sizeEstimateBytes = 1000L;
+
+        String groupPath = String.format("http://localhost:%d/group/objecttest3_group", RULE.getLocalPort());
+
+        ClientResponse response = post(client, groupPath, grp);
+
+        assertThat(response.getStatus()).isEqualTo(200);
+
+        ObjectResource obj = new ObjectResource();
+        obj.name = "Test Described Object";
+        obj.ownerId = "tdanford";
+        obj.readers = new String[]{"carlyeks", "tdanford"};
+        obj.sizeEstimateBytes = 500L;
+
+        String objectPath = String.format("%s/object_to_delete", groupPath);
+
+        response = post(client, objectPath, obj);
+
+        assertThat(response.getStatus()).isEqualTo(200);
+
+        response = get(client, objectPath);
+
+        assertThat(response.getStatus()).isEqualTo(200);
+
+        ObjectResource created = response.getEntity(ObjectResource.class);
+
+        assertThat(created.objectId).isEqualTo(objectPath);
+        assertThat(created.name).isEqualTo(obj.name);
+        assertThat(created.ownerId).isEqualTo(obj.ownerId);
+        assertThat(created.sizeEstimateBytes).isEqualTo(obj.sizeEstimateBytes);
+        assertThat(created.readers).isEqualTo(obj.readers);
+
+        response = delete(client, objectPath);
+
+        assertThat(response.getStatus()).isEqualTo(200);
+
+        response = get(client, objectPath);
+
+        assertThat(response.getStatus()).isEqualTo(410);
+    }
 }

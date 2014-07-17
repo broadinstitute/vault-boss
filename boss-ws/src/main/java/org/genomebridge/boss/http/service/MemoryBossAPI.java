@@ -25,10 +25,12 @@ public class MemoryBossAPI implements BossAPI {
 
     private Map<String,GroupResource> groups;
     private Map<String,ObjectResource> objects;
+    private Set<String> deregisteredObjects;
 
     public MemoryBossAPI() {
         groups = new TreeMap<String,GroupResource>();
         objects = new TreeMap<String,ObjectResource>();
+        deregisteredObjects = new TreeSet<String>();
     }
 
     @Override
@@ -43,7 +45,20 @@ public class MemoryBossAPI implements BossAPI {
 
     @Override
     public ObjectResource getObject(String objectId) {
+        if(deregisteredObjects.contains(objectId)) {
+            throw new DeregisteredObjectException(objectId);
+        }
         return objects.get(objectId);
+    }
+
+    @Override
+    public void deregisterObject(ObjectResource object) {
+        if(objects.containsKey(object.objectId)) {
+            objects.remove(object.objectId);
+            deregisteredObjects.add(object.objectId);
+        } else {
+            throw new DeregisteredObjectException(object.objectId);
+        }
     }
 
     @Override

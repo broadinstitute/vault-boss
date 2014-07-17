@@ -15,19 +15,9 @@
  */
 package org.genomebridge.boss.http.service;
 
-import org.genomebridge.boss.http.resources.GroupResource;
-import org.genomebridge.boss.http.resources.ObjectResource;
+public class DeregisteredObjectException extends RuntimeException {
 
-import java.net.URI;
-
-public interface BossAPI {
-
-    public GroupResource getGroup(String groupId);
-    public void updateGroup(GroupResource rec);
-
-    public ObjectResource getObject(String objectId);
-    public void updateObject(ObjectResource rec);
-    public void deregisterObject(ObjectResource rec);
-
-    public URI getPresignedURL(int seconds);
+    public DeregisteredObjectException(String objectId) {
+        super(objectId);
+    }
 }
