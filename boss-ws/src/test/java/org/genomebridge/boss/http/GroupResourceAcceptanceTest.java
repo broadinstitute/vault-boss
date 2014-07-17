@@ -50,7 +50,7 @@ public class GroupResourceAcceptanceTest extends AbstractTest {
 
         GroupResource respGrp = response.getEntity(GroupResource.class);
 
-        assertThat(respGrp.groupId).isEqualTo("foo");
+        assertThat(respGrp.groupId).isEqualTo(groupPath);
         assertThat(respGrp.ownerId).isEqualTo(grp.ownerId);
         assertThat(respGrp.readers).isEqualTo(grp.readers);
         assertThat(respGrp.sizeEstimateBytes).isEqualTo(grp.sizeEstimateBytes);
@@ -76,7 +76,7 @@ public class GroupResourceAcceptanceTest extends AbstractTest {
         assertThat(response.getStatus()).isEqualTo(200);
 
         GroupResource described = response.getEntity(GroupResource.class);
-        assertThat(described.groupId).isEqualTo("testgroup1");
+        assertThat(described.groupId).isEqualTo(groupPath);
         assertThat(described.ownerId).isEqualTo(grp.ownerId);
         assertThat(described.readers).isEqualTo(grp.readers);
         assertThat(described.sizeEstimateBytes).isEqualTo(grp.sizeEstimateBytes);
