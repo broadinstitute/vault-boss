@@ -109,12 +109,12 @@ public class ObjectResource extends AbstractResource {
                         "Can't update the objectId (from \"%s\" to \"%s\")", objectId, newRec.objectId));
             }
 
-            objectUrl = errorIfSet(objectUrl, newRec.objectUrl);
+            objectUrl = errorIfSet(objectUrl, newRec.objectUrl, "objectUrl");
             readers = setFrom(readers, newRec.readers);
             writers = setFrom(writers, newRec.writers);
-            name = errorIfSet(name, newRec.name);
+            name = errorIfSet(name, newRec.name, "name");
             ownerId = setFrom(ownerId, newRec.ownerId);
-            sizeEstimateBytes = errorIfSet(sizeEstimateBytes, newRec.sizeEstimateBytes);
+            sizeEstimateBytes = errorIfSet(sizeEstimateBytes, newRec.sizeEstimateBytes, "sizeEstimateBytes");
 
             updateInAPI();
             return this;

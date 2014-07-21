@@ -110,10 +110,11 @@ public class GroupResource extends AbstractResource {
 
         if(populateFromAPI()) {
 
-            this.groupId = errorIfSet(groupId, newrec.groupId);
+            this.groupId = errorIfSet(groupId, newrec.groupId, "groupId");
             this.ownerId = setFrom(ownerId, newrec.ownerId);
-            this.sizeEstimateBytes = errorIfSet(sizeEstimateBytes, newrec.sizeEstimateBytes);
-            this.typeHint = errorIfSet(typeHint, newrec.typeHint);
+            this.sizeEstimateBytes = errorIfSet(
+                    sizeEstimateBytes, newrec.sizeEstimateBytes, "sizeEstimateBytes");
+            this.typeHint = errorIfSet(typeHint, newrec.typeHint, "typeHint");
             this.readers = setFrom(readers, newrec.readers);
             this.writers = setFrom(writers, newrec.writers);
 
