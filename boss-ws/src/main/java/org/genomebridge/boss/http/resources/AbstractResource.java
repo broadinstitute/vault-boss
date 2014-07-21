@@ -29,24 +29,35 @@ public abstract class AbstractResource {
         }
     }
 
+    private static RuntimeException generateException(String fieldName, String expected, String given) {
+        return new WebApplicationException(
+                Response.status(Response.Status.BAD_REQUEST)
+                .entity(String.format("%s was different than previously set. Expected: %s; given: %s",
+                        fieldName,
+                        expected,
+                        given))
+                .build());
+    }
+
     /**
      * Throw a WebApplicationException (Status: BAD_REQUEST) if a particular value is
      * set to something other than the original value.
      *
-     * @param original The original value
-     * @param newValue The new value
+     * @param original  The original value
+     * @param newValue  The new value
+     * @param fieldName The name of the field that is being tested
      * @param <T> The type of the values.
      *
      * @return The original value.
      */
-    public static <T> T errorIfSet(T original, T newValue) {
+    public static <T> T errorIfSet(T original, T newValue, String fieldName) {
         if(original == null) {
             if (newValue != null) {
-                throw new WebApplicationException(Response.Status.BAD_REQUEST);
+                throw generateException(fieldName, "null", newValue.toString());
             }
         } else {
             if(newValue != null && !original.equals(newValue)) {
-                throw new WebApplicationException(Response.Status.BAD_REQUEST);
+                throw generateException(fieldName, original.toString(), newValue.toString());
             }
         }
 
@@ -55,7 +66,7 @@ public abstract class AbstractResource {
 
     public static <T> boolean eq(T mine, T theirs) {
         if(mine == null) {
-            return mine == theirs;
+            return theirs == null;
         } else {
             return mine.equals(theirs);
         }
@@ -63,7 +74,7 @@ public abstract class AbstractResource {
 
     public static <T> boolean arrayEq(T[] mine, T[] theirs) {
         if(mine == null) {
-            return mine == theirs;
+            return theirs == null;
         } else {
             return Arrays.equals(mine, theirs);
         }

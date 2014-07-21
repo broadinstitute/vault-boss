@@ -110,10 +110,10 @@ public class FsGroupResource extends AbstractResource {
 
         if(populateFromAPI()) {
 
-            this.groupId = errorIfSet(groupId, newrec.groupId);
+            this.groupId = errorIfSet(groupId, newrec.groupId, "groupId");
             this.ownerId = setFrom(ownerId, newrec.ownerId);
-            this.directory = errorIfSet(directory, newrec.directory);
-            this.typeHint = errorIfSet(typeHint, newrec.typeHint);
+            this.directory = errorIfSet(directory, newrec.directory, "directory");
+            this.typeHint = errorIfSet(typeHint, newrec.typeHint, "typeHint");
             this.readers = setFrom(readers, newrec.readers);
             this.writers = setFrom(writers, newrec.writers);
 
