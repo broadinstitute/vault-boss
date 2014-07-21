@@ -42,7 +42,7 @@ public class GroupResourceAcceptanceTest extends AbstractTest {
         grp.readers = new String[] { "tdanford" };
         grp.sizeEstimateBytes = 1000L;
 
-        String groupPath = String.format("http://localhost:%d/group/foo", RULE.getLocalPort());
+        String groupPath = String.format("http://localhost:%d/group/store/foo", RULE.getLocalPort());
 
         ClientResponse response = post(client, groupPath, grp);
 
@@ -65,7 +65,7 @@ public class GroupResourceAcceptanceTest extends AbstractTest {
         grp.readers = new String[] { "tdanford", "carlyeks" };
         grp.sizeEstimateBytes = 1000L;
 
-        String groupPath = String.format("http://localhost:%d/group/testgroup1", RULE.getLocalPort());
+        String groupPath = String.format("http://localhost:%d/group/store/testgroup1", RULE.getLocalPort());
 
         ClientResponse response = post(client, groupPath, grp);
 

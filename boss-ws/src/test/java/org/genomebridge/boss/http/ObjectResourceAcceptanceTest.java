@@ -45,7 +45,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         grp.readers = new String[]{"tdanford"};
         grp.sizeEstimateBytes = 1000L;
 
-        String groupPath = String.format("http://localhost:%d/group/objecttest1_group", RULE.getLocalPort());
+        String groupPath = String.format("http://localhost:%d/group/store/objecttest1_group", RULE.getLocalPort());
 
         ClientResponse response = post(client, groupPath, grp);
 
@@ -82,7 +82,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         grp.readers = new String[]{"tdanford"};
         grp.sizeEstimateBytes = 1000L;
 
-        String groupPath = String.format("http://localhost:%d/group/objecttest2_group", RULE.getLocalPort());
+        String groupPath = String.format("http://localhost:%d/group/store/objecttest2_group", RULE.getLocalPort());
 
         ClientResponse response = post(client, groupPath, grp);
 
@@ -123,7 +123,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         grp.readers = new String[]{"tdanford"};
         grp.sizeEstimateBytes = 1000L;
 
-        String groupPath = String.format("http://localhost:%d/group/objecttest3_group", RULE.getLocalPort());
+        String groupPath = String.format("http://localhost:%d/group/store/objecttest3_group", RULE.getLocalPort());
 
         ClientResponse response = post(client, groupPath, grp);
 

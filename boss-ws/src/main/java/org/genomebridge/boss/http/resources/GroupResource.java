@@ -23,7 +23,7 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.UriInfo;
 
-@Path("group/{groupId}")
+@Path("group/store/{groupId}")
 public class GroupResource extends AbstractResource {
 
     private BossAPI api;
