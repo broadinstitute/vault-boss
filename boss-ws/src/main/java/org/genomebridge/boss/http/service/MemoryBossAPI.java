@@ -15,6 +15,8 @@
  */
 package org.genomebridge.boss.http.service;
 
+import org.genomebridge.boss.http.resources.FsGroupResource;
+import org.genomebridge.boss.http.resources.FsObjectResource;
 import org.genomebridge.boss.http.resources.GroupResource;
 import org.genomebridge.boss.http.resources.ObjectResource;
 
@@ -25,11 +27,15 @@ public class MemoryBossAPI implements BossAPI {
 
     private Map<String,GroupResource> groups;
     private Map<String,ObjectResource> objects;
+    private Map<String,FsGroupResource> fsgroups;
+    private Map<String,FsObjectResource> fsobjects;
     private Set<String> deregisteredObjects;
 
     public MemoryBossAPI() {
         groups = new TreeMap<String,GroupResource>();
         objects = new TreeMap<String,ObjectResource>();
+        fsgroups = new TreeMap<String,FsGroupResource>();
+        fsobjects = new TreeMap<String,FsObjectResource>();
         deregisteredObjects = new TreeSet<String>();
     }
 
@@ -58,6 +64,33 @@ public class MemoryBossAPI implements BossAPI {
             deregisteredObjects.add(object.objectId);
         } else {
             throw new DeregisteredObjectException(object.objectId);
+        }
+    }
+
+    @Override
+    public FsGroupResource getFsGroup(String groupId) { return fsgroups.get(groupId); }
+
+    @Override
+    public void updateFsGroup(FsGroupResource rec) { fsgroups.put(rec.groupId, rec); }
+
+    @Override
+    public FsObjectResource getFsObject(String objectId) {
+        if(deregisteredObjects.contains(objectId)) {
+            throw new DeregisteredObjectException(objectId);
+        }
+        return fsobjects.get(objectId);
+    }
+
+    @Override
+    public void updateFsObject(FsObjectResource rec) { fsobjects.put(rec.objectId, rec); }
+
+    @Override
+    public void deregisterFsObject(FsObjectResource rec) {
+        if(fsobjects.containsKey(rec.objectId)) {
+            fsobjects.remove(rec.objectId);
+            deregisteredObjects.add(rec.objectId);
+        } else {
+            throw new DeregisteredObjectException(rec.objectId);
         }
     }
 
