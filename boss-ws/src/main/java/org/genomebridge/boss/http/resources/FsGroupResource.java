@@ -23,8 +23,8 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.UriInfo;
 
-@Path("group/store/{groupId}")
-public class GroupResource extends AbstractResource {
+@Path("group/fs/{groupId}")
+public class FsGroupResource extends AbstractResource {
 
     private BossAPI api;
 
@@ -32,14 +32,14 @@ public class GroupResource extends AbstractResource {
 
     public String groupId;
     public String ownerId;
-    public Long sizeEstimateBytes;
+    public String directory;
     public String typeHint;
     public String[] readers, writers;
 
-    public GroupResource() {}
+    public FsGroupResource() {}
 
     @Inject
-    public GroupResource(BossAPI api) {
+    public FsGroupResource(BossAPI api) {
         this.api = api;
     }
 
@@ -52,8 +52,8 @@ public class GroupResource extends AbstractResource {
      * @return A resource value representing the object requested.
      */
     @Path("{objectId}")
-    public ObjectResource getObject(@PathParam("objectId") String objectId) {
-        return new ObjectResource(api, uriInfo.getRequestUri().toString());
+    public FsObjectResource getObject(@PathParam("objectId") String objectId) {
+        return new FsObjectResource(api, uriInfo.getRequestUri().toString());
     }
 
     /**
@@ -65,7 +65,7 @@ public class GroupResource extends AbstractResource {
      */
     @GET
     @Produces("application/json")
-    public GroupResource describe() {
+    public FsGroupResource describe() {
 
         populateFromAPI();
 
@@ -75,11 +75,11 @@ public class GroupResource extends AbstractResource {
     private boolean populateFromAPI() {
 
         groupId = uriInfo.getRequestUri().toString();
-        GroupResource rec = api.getGroup(groupId);
+        FsGroupResource rec = api.getFsGroup(groupId);
 
         if(rec != null) {
             ownerId = rec.ownerId;
-            sizeEstimateBytes = rec.sizeEstimateBytes;
+            directory = rec.directory;
             typeHint = rec.typeHint;
             readers = rec.readers;
             writers = rec.writers;
@@ -106,13 +106,13 @@ public class GroupResource extends AbstractResource {
     @POST
     @Consumes("application/json")
     @Produces("application/json")
-    public GroupResource update(GroupResource newrec) {
+    public FsGroupResource update(FsGroupResource newrec) {
 
         if(populateFromAPI()) {
 
             this.groupId = errorIfSet(groupId, newrec.groupId);
             this.ownerId = setFrom(ownerId, newrec.ownerId);
-            this.sizeEstimateBytes = errorIfSet(sizeEstimateBytes, newrec.sizeEstimateBytes);
+            this.directory = errorIfSet(directory, newrec.directory);
             this.typeHint = errorIfSet(typeHint, newrec.typeHint);
             this.readers = setFrom(readers, newrec.readers);
             this.writers = setFrom(writers, newrec.writers);
@@ -123,22 +123,22 @@ public class GroupResource extends AbstractResource {
         } else {
 
             newrec.groupId = uriInfo.getRequestUri().toString();
-            api.updateGroup(newrec);
+            api.updateFsGroup(newrec);
             return newrec;
         }
     }
 
     private void updateInAPI() {
-        api.updateGroup(this);
+        api.updateFsGroup(this);
     }
 
     public boolean equals(Object o) {
-        if(!(o instanceof GroupResource)) { return false; }
-        GroupResource r = (GroupResource)o;
+        if(!(o instanceof FsGroupResource)) { return false; }
+        FsGroupResource r = (FsGroupResource)o;
 
         return groupId.equals(r.groupId) &&
                 eq(ownerId, r.ownerId) &&
-                eq(sizeEstimateBytes, r.sizeEstimateBytes) &&
+                eq(directory, r.directory) &&
                 eq(typeHint, r.typeHint) &&
                 arrayEq(readers, r.readers) &&
                 arrayEq(writers, r.writers);

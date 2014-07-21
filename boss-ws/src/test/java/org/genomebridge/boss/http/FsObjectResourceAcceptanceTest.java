@@ -19,17 +19,16 @@ package org.genomebridge.boss.http;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import io.dropwizard.testing.junit.DropwizardAppRule;
+import org.genomebridge.boss.http.resources.FsGroupResource;
+import org.genomebridge.boss.http.resources.FsObjectResource;
 import org.genomebridge.boss.http.resources.GroupResource;
 import org.genomebridge.boss.http.resources.ObjectResource;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import javax.ws.rs.core.MediaType;
-import java.net.URL;
-
 import static org.fest.assertions.api.Assertions.assertThat;
 
-public class ObjectResourceAcceptanceTest extends AbstractTest {
+public class FsObjectResourceAcceptanceTest extends AbstractTest {
 
     @ClassRule
     public static final DropwizardAppRule<BossConfiguration> RULE =
@@ -40,18 +39,18 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
     public void registerObjectTest() {
         Client client = new Client();
 
-        GroupResource grp = new GroupResource();
+        FsGroupResource grp = new FsGroupResource();
         grp.ownerId = "tdanford";
         grp.readers = new String[]{"tdanford"};
-        grp.sizeEstimateBytes = 1000L;
+        grp.directory = "test_dir";
 
-        String groupPath = String.format("http://localhost:%d/group/store/objecttest1_group", RULE.getLocalPort());
+        String groupPath = String.format("http://localhost:%d/group/fs/objecttest1_group", RULE.getLocalPort());
 
         ClientResponse response = post(client, groupPath, grp);
 
         assertThat(response.getStatus()).isEqualTo(200);
 
-        ObjectResource obj = new ObjectResource();
+        FsObjectResource obj = new FsObjectResource();
         obj.name = "Test Object";
         obj.ownerId = "carlyeks";
         obj.readers = new String[]{"carlyeks", "tdanford"};
@@ -63,7 +62,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
         assertThat(response.getStatus()).isEqualTo(200);
 
-        ObjectResource created = response.getEntity(ObjectResource.class);
+        FsObjectResource created = response.getEntity(FsObjectResource.class);
 
         assertThat(created.objectId).isEqualTo(objectPath);
         assertThat(created.name).isEqualTo(obj.name);
@@ -77,18 +76,18 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
     public void registerObjectAndDescribeTest() {
         Client client = new Client();
 
-        GroupResource grp = new GroupResource();
+        FsGroupResource grp = new FsGroupResource();
         grp.ownerId = "tdanford";
         grp.readers = new String[]{"tdanford"};
-        grp.sizeEstimateBytes = 1000L;
+        grp.directory = "test_dir";
 
-        String groupPath = String.format("http://localhost:%d/group/store/objecttest2_group", RULE.getLocalPort());
+        String groupPath = String.format("http://localhost:%d/group/fs/objecttest2_group", RULE.getLocalPort());
 
         ClientResponse response = post(client, groupPath, grp);
 
         assertThat(response.getStatus()).isEqualTo(200);
 
-        ObjectResource obj = new ObjectResource();
+        FsObjectResource obj = new FsObjectResource();
         obj.name = "Test Described Object";
         obj.ownerId = "tdanford";
         obj.readers = new String[]{"carlyeks", "tdanford"};
@@ -104,7 +103,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
         assertThat(response.getStatus()).isEqualTo(200);
 
-        ObjectResource created = response.getEntity(ObjectResource.class);
+        FsObjectResource created = response.getEntity(FsObjectResource.class);
 
         assertThat(created.objectId).isEqualTo(objectPath);
         assertThat(created.name).isEqualTo(obj.name);
@@ -118,18 +117,18 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
     public void registerDescribeAndDeleteTest() {
         Client client = new Client();
 
-        GroupResource grp = new GroupResource();
+        FsGroupResource grp = new FsGroupResource();
         grp.ownerId = "tdanford";
         grp.readers = new String[]{"tdanford"};
-        grp.sizeEstimateBytes = 1000L;
+        grp.directory = "test_dir";
 
-        String groupPath = String.format("http://localhost:%d/group/store/objecttest3_group", RULE.getLocalPort());
+        String groupPath = String.format("http://localhost:%d/group/fs/objecttest3_group", RULE.getLocalPort());
 
         ClientResponse response = post(client, groupPath, grp);
 
         assertThat(response.getStatus()).isEqualTo(200);
 
-        ObjectResource obj = new ObjectResource();
+        FsObjectResource obj = new FsObjectResource();
         obj.name = "Test Described Object";
         obj.ownerId = "tdanford";
         obj.readers = new String[]{"carlyeks", "tdanford"};
@@ -145,7 +144,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
         assertThat(response.getStatus()).isEqualTo(200);
 
-        ObjectResource created = response.getEntity(ObjectResource.class);
+        FsObjectResource created = response.getEntity(FsObjectResource.class);
 
         assertThat(created.objectId).isEqualTo(objectPath);
         assertThat(created.name).isEqualTo(obj.name);

@@ -19,13 +19,14 @@ package org.genomebridge.boss.http;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import io.dropwizard.testing.junit.DropwizardAppRule;
+import org.genomebridge.boss.http.resources.FsGroupResource;
 import org.genomebridge.boss.http.resources.GroupResource;
 import org.junit.ClassRule;
 import org.junit.Test;
 
 import static org.fest.assertions.api.Assertions.assertThat;
 
-public class GroupResourceAcceptanceTest extends AbstractTest {
+public class FsGroupResourceAcceptanceTest extends AbstractTest {
 
     @ClassRule
     public static final DropwizardAppRule<BossConfiguration> RULE =
@@ -34,38 +35,38 @@ public class GroupResourceAcceptanceTest extends AbstractTest {
 
 
     @Test
-    public void registerGroupTest() {
+    public void registerFsGroupTest() {
         Client client = new Client();
 
-        GroupResource grp = new GroupResource();
+        FsGroupResource grp = new FsGroupResource();
         grp.ownerId = "tdanford";
         grp.readers = new String[] { "tdanford" };
-        grp.sizeEstimateBytes = 1000L;
+        grp.directory = "test_dir";
 
-        String groupPath = String.format("http://localhost:%d/group/store/foo", RULE.getLocalPort());
+        String groupPath = String.format("http://localhost:%d/group/fs/foo", RULE.getLocalPort());
 
         ClientResponse response = post(client, groupPath, grp);
 
         assertThat(response.getStatus()).isEqualTo(200);
 
-        GroupResource respGrp = response.getEntity(GroupResource.class);
+        FsGroupResource respGrp = response.getEntity(FsGroupResource.class);
 
         assertThat(respGrp.groupId).isEqualTo(groupPath);
         assertThat(respGrp.ownerId).isEqualTo(grp.ownerId);
         assertThat(respGrp.readers).isEqualTo(grp.readers);
-        assertThat(respGrp.sizeEstimateBytes).isEqualTo(grp.sizeEstimateBytes);
+        assertThat(respGrp.directory).isEqualTo(grp.directory);
     }
 
     @Test
     public void registerAndDescribeGroupTest() {
         Client client = new Client();
 
-        GroupResource grp = new GroupResource();
+        FsGroupResource grp = new FsGroupResource();
         grp.ownerId = "tdanford";
         grp.readers = new String[] { "tdanford", "carlyeks" };
-        grp.sizeEstimateBytes = 1000L;
+        grp.directory = "test_dir";
 
-        String groupPath = String.format("http://localhost:%d/group/store/testgroup1", RULE.getLocalPort());
+        String groupPath = String.format("http://localhost:%d/group/fs/testgroup1", RULE.getLocalPort());
 
         ClientResponse response = post(client, groupPath, grp);
 
@@ -75,10 +76,10 @@ public class GroupResourceAcceptanceTest extends AbstractTest {
 
         assertThat(response.getStatus()).isEqualTo(200);
 
-        GroupResource described = response.getEntity(GroupResource.class);
+        FsGroupResource described = response.getEntity(FsGroupResource.class);
         assertThat(described.groupId).isEqualTo(groupPath);
         assertThat(described.ownerId).isEqualTo(grp.ownerId);
         assertThat(described.readers).isEqualTo(grp.readers);
-        assertThat(described.sizeEstimateBytes).isEqualTo(grp.sizeEstimateBytes);
+        assertThat(described.directory).isEqualTo(grp.directory);
     }
 }
