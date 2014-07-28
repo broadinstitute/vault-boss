@@ -66,7 +66,7 @@ public class FsGroupResourceAcceptanceTest extends AbstractTest {
 
         assertThat(respGrp.groupId).isEqualTo(groupId);
         assertThat(respGrp.ownerId).isEqualTo(grp.ownerId);
-        assertThat(respGrp.readers).isEqualTo(grp.readers);
+        assertThat(respGrp.readers).containsOnly(grp.readers);
         assertThat(respGrp.directory).isEqualTo(grp.directory);
     }
 
@@ -93,7 +93,7 @@ public class FsGroupResourceAcceptanceTest extends AbstractTest {
         FsGroupResource described = response.getEntity(FsGroupResource.class);
         assertThat(described.groupId).isEqualTo(groupId);
         assertThat(described.ownerId).isEqualTo(grp.ownerId);
-        assertThat(described.readers).isEqualTo(grp.readers);
+        assertThat(described.readers).containsOnly(grp.readers);
         assertThat(described.directory).isEqualTo(grp.directory);
     }
 
@@ -129,8 +129,8 @@ public class FsGroupResourceAcceptanceTest extends AbstractTest {
         FsGroupResource described = response.getEntity(FsGroupResource.class);
         assertThat(described.groupId).isEqualTo(groupId);
         assertThat(described.ownerId).isEqualTo(grp.ownerId);
-        assertThat(described.readers).isEqualTo(grp.readers);
-        assertThat(described.writers).isEqualTo(grp.writers);
+        assertThat(described.readers).containsOnly(grp.readers);
+        assertThat(described.writers).containsOnly(grp.writers);
         assertThat(described.directory).isEqualTo(grp.directory);
     }
 

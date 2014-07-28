@@ -16,15 +16,38 @@
 package org.genomebridge.boss.http;
 
 import com.google.inject.AbstractModule;
+import com.google.inject.Provides;
+import io.dropwizard.jdbi.DBIFactory;
+import io.dropwizard.setup.Environment;
+import org.genomebridge.boss.http.db.BossDAO;
+import org.genomebridge.boss.http.resources.AllGroupsResource;
+import org.genomebridge.boss.http.resources.FsGroupResource;
+import org.genomebridge.boss.http.resources.GroupDBResource;
+import org.genomebridge.boss.http.resources.GroupResource;
 import org.genomebridge.boss.http.service.BossAPI;
+import org.genomebridge.boss.http.service.DatabaseBossAPI;
 import org.genomebridge.boss.http.service.MemoryBossAPI;
+import org.skife.jdbi.v2.DBI;
 
 public class BossModule extends AbstractModule {
 
-    private BossAPI memoryApi = new MemoryBossAPI();
-
     @Override
     protected void configure() {
-        bind(BossAPI.class).toInstance(memoryApi);
     }
+
+    @Provides
+    public BossAPI providesAPI(Environment env, BossConfiguration config) {
+        final DBIFactory factory = new DBIFactory();
+        try {
+            final DBI jdbi = factory.build(env, config.getDataSourceFactory(), "db");
+            final BossDAO dao = jdbi.onDemand(BossDAO.class);
+
+            return new DatabaseBossAPI(dao);
+
+        } catch (ClassNotFoundException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+
 }

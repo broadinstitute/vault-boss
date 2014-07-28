@@ -32,15 +32,10 @@ import java.util.UUID;
 
 import static org.fest.assertions.api.Assertions.assertThat;
 
-abstract public class AbstractTest {
+abstract public class AbstractTest extends ResourcedTest {
 
     abstract public DropwizardAppRule<BossConfiguration> rule();
 
-    public static String resourceFilePath(String name) {
-        ClassLoader loader = Thread.currentThread().getContextClassLoader();
-        URL resource = loader.getResource(name);
-        return resource != null ? resource.getFile() : null;
-    }
 
     /*
      * Some utility methods for interacting with HTTP-services.

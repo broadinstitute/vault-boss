@@ -26,12 +26,17 @@ import org.genomebridge.boss.http.resources.ObjectResource;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import javax.ws.rs.core.Response;
 import java.util.Arrays;
 import java.util.TreeSet;
 
 import static org.fest.assertions.api.Assertions.assertThat;
 
 public class FsObjectResourceAcceptanceTest extends AbstractTest {
+
+    public static int FORBIDDEN = Response.Status.FORBIDDEN.getStatusCode();
+    public static int CREATED = Response.Status.CREATED.getStatusCode();
+    public static int GONE = Response.Status.GONE.getStatusCode();
 
     @ClassRule
     public static final DropwizardAppRule<BossConfiguration> RULE =
@@ -147,9 +152,7 @@ public class FsObjectResourceAcceptanceTest extends AbstractTest {
         assertThat(response.getStatus()).isEqualTo(200);
 
         // Step 3
-        response = get(client, fsObjectPath(objectId, groupId));
-
-        assertThat(response.getStatus()).isEqualTo(200);
+        response = check200( get(client, fsObjectPath(objectId, groupId)) );
 
         FsObjectResource created = response.getEntity(FsObjectResource.class);
 
@@ -163,13 +166,9 @@ public class FsObjectResourceAcceptanceTest extends AbstractTest {
         assertThat(created.writers).contains("testuser");
 
         // Step 4
-        response = delete(client, fsObjectPath(objectId, groupId));
-
-        assertThat(response.getStatus()).isEqualTo(200);
+        check200( delete(client, fsObjectPath(objectId, groupId)) );
 
         // Step 5
-        response = get(client, fsObjectPath(objectId, groupId));
-
-        assertThat(response.getStatus()).isEqualTo(410);
+        checkStatus(GONE, get(client, fsObjectPath(objectId, groupId)));
     }
 }

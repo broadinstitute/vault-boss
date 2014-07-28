@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2014 Broad Institute
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,23 +15,14 @@
  */
 package org.genomebridge.boss.http;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import io.dropwizard.Configuration;
-import io.dropwizard.db.DataSourceFactory;
+import java.net.URL;
 
-import javax.validation.Valid;
-import javax.validation.constraints.NotNull;
+abstract public class ResourcedTest {
 
-public class BossConfiguration extends Configuration {
-
-    public BossConfiguration() {}
-
-    @Valid
-    @NotNull
-    @JsonProperty
-    private DataSourceFactory database = new DataSourceFactory();
-
-    public DataSourceFactory getDataSourceFactory() {
-        return database;
+    public static String resourceFilePath(String name) {
+        ClassLoader loader = ClassLoader.getSystemClassLoader();
+        URL resource = loader.getResource(name);
+        if(resource == null) { throw new IllegalStateException("Couldn't find resource " + name); }
+        return resource.getFile();
     }
 }

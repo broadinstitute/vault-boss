@@ -16,6 +16,7 @@
 
 package org.genomebridge.boss.http.resources;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.google.inject.Inject;
 import com.sun.jersey.api.NotFoundException;
 import org.apache.log4j.Logger;
@@ -30,6 +31,7 @@ import java.net.URI;
 import java.util.UUID;
 
 @Path("group/fs/{groupId}")
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class FsGroupResource extends PermissionedResource {
 
     private BossAPI api;

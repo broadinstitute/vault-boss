@@ -16,6 +16,7 @@
 
 package org.genomebridge.boss.http.resources;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import org.apache.log4j.Logger;
 import org.genomebridge.boss.http.service.BossAPI;
 import org.genomebridge.boss.http.service.DeregisteredObjectException;
@@ -27,13 +28,14 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import java.net.URL;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class FsObjectResource extends PermissionedResource {
 
     private BossAPI api;
 
     public String objectId;
     public String group;
-    public URL objectUrl;
+
     public Long sizeEstimateBytes;
     public String name;
     public String ownerId;
@@ -83,10 +85,9 @@ public class FsObjectResource extends PermissionedResource {
     }
 
     private boolean populateFromAPI() {
-        FsObjectResource fromApi = api.getFsObject(objectId);
+        FsObjectResource fromApi = api.getFsObject(objectId, group);
 
         if(fromApi != null) {
-            objectUrl = fromApi.objectUrl;
             sizeEstimateBytes = fromApi.sizeEstimateBytes;
             name = fromApi.name;
             ownerId = fromApi.ownerId;
@@ -111,7 +112,6 @@ public class FsObjectResource extends PermissionedResource {
                         "Can't update the objectId (from \"%s\" to \"%s\")", objectId, newRec.objectId));
             }
 
-            objectUrl = errorIfSet(objectUrl, newRec.objectUrl, "objectUrl");
             readers = setFrom(readers, newRec.readers);
             writers = setFrom(writers, newRec.writers);
             name = errorIfSet(name, newRec.name, "name");
@@ -135,6 +135,7 @@ public class FsObjectResource extends PermissionedResource {
             parentGroup.checkUserWrite(headers);
 
             newRec.objectId = objectId;
+            newRec.group = group;
             api.updateFsObject(newRec);
             return newRec;
         }
