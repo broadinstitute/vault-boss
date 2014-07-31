@@ -15,37 +15,49 @@
  */
 package org.genomebridge.boss.http.resources;
 
+import org.apache.log4j.Logger;
 import org.genomebridge.boss.http.service.BossAPI;
 import org.genomebridge.boss.http.service.DeregisteredObjectException;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import java.net.URI;
 import java.net.URL;
 
-public class ObjectResource extends AbstractResource {
+public class ObjectResource extends PermissionedResource {
 
     private BossAPI api;
 
     public String objectId;
+    public String group;
+
     public URL objectUrl;
     public Long sizeEstimateBytes;
     public String name;
     public String ownerId;
     public String[] readers, writers;
 
-    public ObjectResource() {}
+    public ObjectResource() {
+    }
 
-    public ObjectResource(BossAPI api, String objectId) {
+    public ObjectResource(BossAPI api, String groupId, String objectId) {
         this.api = api;
+        this.group = groupId;
         this.objectId = objectId;
     }
 
+    public Logger logger() { return Logger.getLogger(String.format("%s/%s", group, objectId)); }
+    public void checkUserRead( String user ) { checkUser(user, "READ", readers); }
+    public void checkUserWrite( String user ) { checkUser(user, "WRITE", writers); }
+
     @DELETE
-    public String delete() {
+    public String delete(@Context HttpHeaders headers) {
         try {
+            populateFromAPI();
+            checkUserWrite(headers);
             deleteFromAPI();
             return this.objectId;
 
@@ -60,9 +72,10 @@ public class ObjectResource extends AbstractResource {
 
     @Produces("application/json")
     @GET
-    public ObjectResource describe() {
+    public ObjectResource describe(@Context HttpHeaders headers) {
         try {
             populateFromAPI();
+            checkUserRead(headers);
             return this;
 
         } catch(DeregisteredObjectException e) {
@@ -89,7 +102,10 @@ public class ObjectResource extends AbstractResource {
     @Path("resolve")
     @Produces("application/json")
     @POST
-    public ResolutionResource resolve(@Context UriInfo uriInfo) {
+    public ResolutionResource resolve(@Context UriInfo uriInfo, @Context HttpHeaders headers) {
+
+        checkUserRead(headers);
+
         int seconds = 1000;
         return new ResolutionResource( getPresignedURL(seconds), uriInfo.getBaseUri(), seconds );
     }
@@ -101,9 +117,14 @@ public class ObjectResource extends AbstractResource {
     @Consumes("application/json")
     @Produces("application/json")
     @POST
-    public ObjectResource update(@Context UriInfo uriInfo, ObjectResource newRec) {
+    public ObjectResource update(@Context UriInfo uriInfo,
+                                 @Context HttpHeaders headers,
+                                 ObjectResource newRec) {
 
         if(populateFromAPI()) {
+
+            checkUserWrite(headers);
+
             if (newRec.objectId != null && !objectId.equals(newRec.objectId)) {
                 throw new IllegalArgumentException(String.format(
                         "Can't update the objectId (from \"%s\" to \"%s\")", objectId, newRec.objectId));
@@ -112,6 +133,7 @@ public class ObjectResource extends AbstractResource {
             objectUrl = errorIfSet(objectUrl, newRec.objectUrl, "objectUrl");
             readers = setFrom(readers, newRec.readers);
             writers = setFrom(writers, newRec.writers);
+            group = errorIfSet(group, newRec.group, "group");
             name = errorIfSet(name, newRec.name, "name");
             ownerId = setFrom(ownerId, newRec.ownerId);
             sizeEstimateBytes = errorIfSet(sizeEstimateBytes, newRec.sizeEstimateBytes, "sizeEstimateBytes");
@@ -121,7 +143,18 @@ public class ObjectResource extends AbstractResource {
 
         } else {
 
-            newRec.objectId = uriInfo.getRequestUri().toString();
+            /**
+             * Registering a new object is a 'write' to the parent group, so we need to retrieve
+             * the parent group and check its write permissions.
+             */
+            GroupResource parentGroup = api.getGroup(group);
+            if(parentGroup == null) {
+                throw new WebApplicationException(Response.status(Response.Status.NOT_FOUND)
+                    .entity(String.format("Couldn't find group %s", group)).build());
+            }
+            parentGroup.checkUserWrite(headers);
+
+            newRec.objectId = objectId;
             api.updateObject(newRec);
             return newRec;
         }

@@ -15,6 +15,8 @@
  */
 package org.genomebridge.boss.http.resources;
 
+import org.apache.log4j.Logger;
+
 import java.net.URI;
 import java.net.URL;
 
@@ -31,4 +33,6 @@ public class ResolutionResource extends AbstractResource {
         this.objectUrl = objectUrl;
         this.validityPeriodSeconds = validityPeriodSeconds;
     }
+
+    public Logger logger() { return Logger.getLogger(ResolutionResource.class); }
 }

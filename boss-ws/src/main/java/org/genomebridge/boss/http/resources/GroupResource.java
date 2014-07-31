@@ -17,26 +17,30 @@
 package org.genomebridge.boss.http.resources;
 
 import com.google.inject.Inject;
+import com.sun.jersey.api.NotFoundException;
+import org.apache.log4j.Logger;
 import org.genomebridge.boss.http.service.BossAPI;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
+import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
 @Path("group/store/{groupId}")
-public class GroupResource extends AbstractResource {
+public class GroupResource extends PermissionedResource {
 
     private BossAPI api;
 
-    @Context UriInfo uriInfo;
+    @PathParam("groupId") public String groupId;
 
-    public String groupId;
     public String ownerId;
     public Long sizeEstimateBytes;
     public String typeHint;
     public String[] readers, writers;
 
-    public GroupResource() {}
+    public GroupResource() {
+    }
 
     @Inject
     public GroupResource(BossAPI api) {
@@ -53,7 +57,13 @@ public class GroupResource extends AbstractResource {
      */
     @Path("{objectId}")
     public ObjectResource getObject(@PathParam("objectId") String objectId) {
-        return new ObjectResource(api, uriInfo.getRequestUri().toString());
+        if(!populateFromAPI()) {
+            throw new WebApplicationException(Response
+                    .status(Response.Status.NOT_FOUND)
+                    .entity(String.format("Couldn't find group with id %s", groupId))
+                    .build());
+        }
+        return new ObjectResource(api, groupId, objectId);
     }
 
     /**
@@ -65,16 +75,23 @@ public class GroupResource extends AbstractResource {
      */
     @GET
     @Produces("application/json")
-    public GroupResource describe() {
+    public GroupResource describe(@Context HttpHeaders headers, @Context UriInfo uriInfo) {
 
         populateFromAPI();
+        checkUserRead(headers);
 
         return this;
     }
 
+    public Logger logger() {
+        return Logger.getLogger(groupId);
+    }
+
+    public void checkUserRead( String user ) { checkUser(user, "READ", readers); }
+    public void checkUserWrite( String user ) { checkUser(user, "WRITE", writers); }
+
     private boolean populateFromAPI() {
 
-        groupId = uriInfo.getRequestUri().toString();
         GroupResource rec = api.getGroup(groupId);
 
         if(rec != null) {
@@ -106,9 +123,10 @@ public class GroupResource extends AbstractResource {
     @POST
     @Consumes("application/json")
     @Produces("application/json")
-    public GroupResource update(GroupResource newrec) {
+    public GroupResource update(@Context HttpHeaders header, @Context UriInfo info, GroupResource newrec) {
 
         if(populateFromAPI()) {
+            checkUserWrite(header);
 
             this.groupId = errorIfSet(groupId, newrec.groupId, "groupId");
             this.ownerId = setFrom(ownerId, newrec.ownerId);
@@ -123,10 +141,21 @@ public class GroupResource extends AbstractResource {
             return this;
         } else {
 
-            newrec.groupId = uriInfo.getRequestUri().toString();
+            newrec.groupId = groupId;
             api.updateGroup(newrec);
             return newrec;
         }
+    }
+
+    @DELETE
+    public void delete(@Context HttpHeaders headers) {
+        if(!populateFromAPI()) {
+            throw new NotFoundException();
+        }
+
+        checkUserWrite(headers);
+
+
     }
 
     private void updateInAPI() {
