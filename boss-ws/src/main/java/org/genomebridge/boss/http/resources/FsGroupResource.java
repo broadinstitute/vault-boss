@@ -17,20 +17,21 @@
 package org.genomebridge.boss.http.resources;
 
 import com.google.inject.Inject;
+import org.apache.log4j.Logger;
 import org.genomebridge.boss.http.service.BossAPI;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.UriInfo;
 
 @Path("group/fs/{groupId}")
-public class FsGroupResource extends AbstractResource {
+public class FsGroupResource extends PermissionedResource {
 
     private BossAPI api;
 
-    @Context UriInfo uriInfo;
+    @PathParam("groupId") public String groupId;
 
-    public String groupId;
     public String ownerId;
     public String directory;
     public String typeHint;
@@ -43,6 +44,10 @@ public class FsGroupResource extends AbstractResource {
         this.api = api;
     }
 
+    public Logger logger() { return Logger.getLogger(groupId); }
+    public void checkUserRead( String user ) { checkUser(user, "READ", readers); }
+    public void checkUserWrite( String user ) { checkUser(user, "WRITE", writers); }
+
     /**
      * Objects are sub-resources of the groups to which they belong.  This method
      * returns an ObjectResource corresponding to the associated objectId within
@@ -53,7 +58,7 @@ public class FsGroupResource extends AbstractResource {
      */
     @Path("{objectId}")
     public FsObjectResource getObject(@PathParam("objectId") String objectId) {
-        return new FsObjectResource(api, uriInfo.getRequestUri().toString());
+        return new FsObjectResource(api, groupId, objectId);
     }
 
     /**
@@ -65,16 +70,16 @@ public class FsGroupResource extends AbstractResource {
      */
     @GET
     @Produces("application/json")
-    public FsGroupResource describe() {
+    public FsGroupResource describe(@Context HttpHeaders headers) {
 
         populateFromAPI();
+        checkUserRead(headers);
 
         return this;
     }
 
     private boolean populateFromAPI() {
 
-        groupId = uriInfo.getRequestUri().toString();
         FsGroupResource rec = api.getFsGroup(groupId);
 
         if(rec != null) {
@@ -106,9 +111,10 @@ public class FsGroupResource extends AbstractResource {
     @POST
     @Consumes("application/json")
     @Produces("application/json")
-    public FsGroupResource update(FsGroupResource newrec) {
+    public FsGroupResource update(@Context HttpHeaders headers, FsGroupResource newrec) {
 
         if(populateFromAPI()) {
+            checkUserWrite(headers);
 
             this.groupId = errorIfSet(groupId, newrec.groupId, "groupId");
             this.ownerId = setFrom(ownerId, newrec.ownerId);
@@ -122,7 +128,7 @@ public class FsGroupResource extends AbstractResource {
             return this;
         } else {
 
-            newrec.groupId = uriInfo.getRequestUri().toString();
+            newrec.groupId = groupId;
             api.updateFsGroup(newrec);
             return newrec;
         }

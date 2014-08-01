@@ -15,7 +15,10 @@
  */
 package org.genomebridge.boss.http.resources;
 
+import org.apache.log4j.Logger;
+
 import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import java.util.Arrays;
 
@@ -79,5 +82,7 @@ public abstract class AbstractResource {
             return Arrays.equals(mine, theirs);
         }
     }
+
+    abstract public Logger logger();
 
 }

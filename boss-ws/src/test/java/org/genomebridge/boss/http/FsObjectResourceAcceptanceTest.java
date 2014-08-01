@@ -26,6 +26,9 @@ import org.genomebridge.boss.http.resources.ObjectResource;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import java.util.Arrays;
+import java.util.TreeSet;
+
 import static org.fest.assertions.api.Assertions.assertThat;
 
 public class FsObjectResourceAcceptanceTest extends AbstractTest {
@@ -35,128 +38,137 @@ public class FsObjectResourceAcceptanceTest extends AbstractTest {
             new DropwizardAppRule<>(BossApplication.class,
                     resourceFilePath("boss-config.yml"));
 
+    public DropwizardAppRule<BossConfiguration> rule() { return RULE; }
+
     @Test
     public void registerObjectTest() {
-        Client client = new Client();
+        /**
+         * Step 1. Register a group (and check the response is 200)
+         * Step 2. Register an object (and check the response is 200)
+         */
 
-        FsGroupResource grp = new FsGroupResource();
-        grp.ownerId = "tdanford";
-        grp.readers = new String[]{"tdanford"};
-        grp.directory = "test_dir";
+        String groupId = "objecttest1_group";
+        String owner = "tdanford";
+        String directory = "test_dir";
 
-        String groupPath = String.format("http://localhost:%d/group/fs/objecttest1_group", RULE.getLocalPort());
-
-        ClientResponse response = post(client, groupPath, grp);
-
-        assertThat(response.getStatus()).isEqualTo(200);
-
-        FsObjectResource obj = new FsObjectResource();
-        obj.name = "Test Object";
-        obj.ownerId = "carlyeks";
-        obj.readers = new String[]{"carlyeks", "tdanford"};
-        obj.sizeEstimateBytes = 500L;
-
-        String objectPath = String.format("%s/object1", groupPath);
-
-        response = post(client, objectPath, obj);
+        ClientResponse response = createFsGroup(groupId, owner, directory);
 
         assertThat(response.getStatus()).isEqualTo(200);
+
+        String objectId = "object1";
+        String name = "Test Object";
+        Long sizeEstimate = 500L;
+
+        response = createFsObject(objectId, groupId, name, owner, sizeEstimate);
+
+        assertThat(response.getStatus())
+                .describedAs("response to registering the object")
+                .isEqualTo(200);
 
         FsObjectResource created = response.getEntity(FsObjectResource.class);
 
-        assertThat(created.objectId).isEqualTo(objectPath);
-        assertThat(created.name).isEqualTo(obj.name);
-        assertThat(created.ownerId).isEqualTo(obj.ownerId);
-        assertThat(created.sizeEstimateBytes).isEqualTo(obj.sizeEstimateBytes);
-        assertThat(created.readers).isEqualTo(obj.readers);
-
+        assertThat(created.objectId).isEqualTo(objectId);
+        assertThat(created.name).isEqualTo(name);
+        assertThat(created.ownerId).isEqualTo(owner);
+        assertThat(created.sizeEstimateBytes).isEqualTo(sizeEstimate);
+        assertThat(created.readers).contains(owner);
+        assertThat(created.readers).contains("testuser");
     }
 
     @Test
     public void registerObjectAndDescribeTest() {
+        /**
+         * 1. Create a group -- check that it returns 200
+         * 2. Register an object -- check that it returns 200
+         * 3. GET the object -- check that it returns 200, and an object with values identical
+         *    to those that were registered.
+         */
         Client client = new Client();
 
-        FsGroupResource grp = new FsGroupResource();
-        grp.ownerId = "tdanford";
-        grp.readers = new String[]{"tdanford"};
-        grp.directory = "test_dir";
+        // Step 1
+        String groupId = "objecttest2_group";
+        String owner = "tdanford";
+        String directory = "test_dir";
 
-        String groupPath = String.format("http://localhost:%d/group/fs/objecttest2_group", RULE.getLocalPort());
-
-        ClientResponse response = post(client, groupPath, grp);
+        ClientResponse response = createFsGroup(groupId, owner, directory);
 
         assertThat(response.getStatus()).isEqualTo(200);
 
-        FsObjectResource obj = new FsObjectResource();
-        obj.name = "Test Described Object";
-        obj.ownerId = "tdanford";
-        obj.readers = new String[]{"carlyeks", "tdanford"};
-        obj.sizeEstimateBytes = 500L;
+        // Step 2
 
-        String objectPath = String.format("%s/object2", groupPath);
+        String objectId = "object2";
+        String name = "Test Described Object";
+        Long sizeEstimate = 500L;
 
-        response = post(client, objectPath, obj);
+        response = createFsObject(objectId, groupId, name, owner, sizeEstimate);
 
         assertThat(response.getStatus()).isEqualTo(200);
 
-        response = get(client, objectPath);
+        // Step 3
+        response = get(client, fsObjectPath(objectId, groupId));
 
         assertThat(response.getStatus()).isEqualTo(200);
 
         FsObjectResource created = response.getEntity(FsObjectResource.class);
 
-        assertThat(created.objectId).isEqualTo(objectPath);
-        assertThat(created.name).isEqualTo(obj.name);
-        assertThat(created.ownerId).isEqualTo(obj.ownerId);
-        assertThat(created.sizeEstimateBytes).isEqualTo(obj.sizeEstimateBytes);
-        assertThat(created.readers).isEqualTo(obj.readers);
+        assertThat(created.objectId).isEqualTo(objectId);
+        assertThat(created.name).isEqualTo(name);
+        assertThat(created.ownerId).isEqualTo(owner);
+        assertThat(created.sizeEstimateBytes).isEqualTo(sizeEstimate);
+        assertThat(created.readers).contains(owner);
+        assertThat(created.readers).contains("testuser");
 
     }
 
     @Test
     public void registerDescribeAndDeleteTest() {
+        /**
+         * 1. Create a group
+         * 2. Register an object
+         * 3. Get the object and show that it returns 200 with the right fields
+         * 4. Delete the object (and show that the delete call returns 200)
+         * 5. Get the object again -- show that it returns 410 (Gone)
+         */
         Client client = new Client();
 
-        FsGroupResource grp = new FsGroupResource();
-        grp.ownerId = "tdanford";
-        grp.readers = new String[]{"tdanford"};
-        grp.directory = "test_dir";
+        // Step 1
+        String groupId = "objecttest3_group";
 
-        String groupPath = String.format("http://localhost:%d/group/fs/objecttest3_group", RULE.getLocalPort());
-
-        ClientResponse response = post(client, groupPath, grp);
-
+        ClientResponse response = createFsGroup(groupId, "tdanford", "test_dir");
         assertThat(response.getStatus()).isEqualTo(200);
 
-        FsObjectResource obj = new FsObjectResource();
-        obj.name = "Test Described Object";
-        obj.ownerId = "tdanford";
-        obj.readers = new String[]{"carlyeks", "tdanford"};
-        obj.sizeEstimateBytes = 500L;
+        // Step 2
+        String objectId = "object_to_delete";
+        String name = "Test Object";
+        String owner = "tdanford";
+        Long sizeEstimate = 500L;
 
-        String objectPath = String.format("%s/object_to_delete", groupPath);
-
-        response = post(client, objectPath, obj);
-
+        response = createFsObject(objectId, groupId, name, owner, sizeEstimate );
         assertThat(response.getStatus()).isEqualTo(200);
 
-        response = get(client, objectPath);
+        // Step 3
+        response = get(client, fsObjectPath(objectId, groupId));
 
         assertThat(response.getStatus()).isEqualTo(200);
 
         FsObjectResource created = response.getEntity(FsObjectResource.class);
 
-        assertThat(created.objectId).isEqualTo(objectPath);
-        assertThat(created.name).isEqualTo(obj.name);
-        assertThat(created.ownerId).isEqualTo(obj.ownerId);
-        assertThat(created.sizeEstimateBytes).isEqualTo(obj.sizeEstimateBytes);
-        assertThat(created.readers).isEqualTo(obj.readers);
+        assertThat(created.objectId).isEqualTo(objectId);
+        assertThat(created.name).isEqualTo(name);
+        assertThat(created.ownerId).isEqualTo(owner);
+        assertThat(created.sizeEstimateBytes).isEqualTo(sizeEstimate);
+        assertThat(created.readers).contains(owner);
+        assertThat(created.readers).contains("testuser");
+        assertThat(created.writers).contains(owner);
+        assertThat(created.writers).contains("testuser");
 
-        response = delete(client, objectPath);
+        // Step 4
+        response = delete(client, fsObjectPath(objectId, groupId));
 
         assertThat(response.getStatus()).isEqualTo(200);
 
-        response = get(client, objectPath);
+        // Step 5
+        response = get(client, fsObjectPath(objectId, groupId));
 
         assertThat(response.getStatus()).isEqualTo(410);
     }

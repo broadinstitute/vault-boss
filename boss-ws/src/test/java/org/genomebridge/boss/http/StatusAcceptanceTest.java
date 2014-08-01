@@ -30,6 +30,12 @@ public class StatusAcceptanceTest extends AbstractTest {
             new DropwizardAppRule<>(BossApplication.class,
                     resourceFilePath("boss-config.yml"));
 
+
+    @Override
+    public DropwizardAppRule<BossConfiguration> rule() {
+        return RULE;
+    }
+
     @Test
     public void statusMessageTest() {
         Client client = new Client();
