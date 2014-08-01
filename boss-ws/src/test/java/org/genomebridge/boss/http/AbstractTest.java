@@ -24,6 +24,7 @@ import org.genomebridge.boss.http.resources.GroupResource;
 import org.genomebridge.boss.http.resources.ObjectResource;
 
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.MultivaluedMap;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.TreeSet;
@@ -82,6 +83,12 @@ abstract public class AbstractTest {
         return response;
     }
 
+    public String checkHeader( ClientResponse response, String header ) {
+        MultivaluedMap<String,String> map = response.getHeaders();
+        assertThat(map).describedAs(String.format("header \"%s\"", header)).containsKey(header);
+        return map.getFirst(header);
+    }
+
     public String randomID() {
         return UUID.randomUUID().toString();
     }
@@ -97,11 +104,24 @@ abstract public class AbstractTest {
         return String.format("http://localhost:%d/group/store/%s", rule().getLocalPort(), groupId);
     }
 
+    public String fsGroupsPath() {
+        return String.format("http://localhost:%d/groups/fs", rule().getLocalPort());
+    }
+    public String groupsPath() {
+        return String.format("http://localhost:%d/groups/store", rule().getLocalPort());
+    }
+
     public String fsObjectPath(String objectId, String groupId) {
-        return String.format("%s/%s", fsGroupPath(groupId), objectId);
+        return String.format("%s/object/%s", fsGroupPath(groupId), objectId);
     }
     public String objectPath(String objectId, String groupId) {
-        return String.format("%s/%s", groupPath(groupId), objectId);
+        return String.format("%s/object/%s", groupPath(groupId), objectId);
+    }
+    public String fsObjectsPath(String groupId) {
+        return String.format("%s/objects", fsGroupPath(groupId));
+    }
+    public String objectsPath(String groupId) {
+        return String.format("%s/objects", groupPath(groupId));
     }
 
     public static String[] arraySet( String... vals ) {
@@ -127,6 +147,20 @@ abstract public class AbstractTest {
         return post(client, groupPath, grp);
     }
 
+    public ClientResponse createAnonymousFsGroup(String owner, String directory) {
+        Client client = new Client();
+        FsGroupResource grp = new FsGroupResource();
+        grp.ownerId = owner;
+        grp.readers = arraySet( "testuser", owner );
+        grp.writers = arraySet( "testuser", owner );
+        grp.directory = directory;
+
+        String groupPath = fsGroupsPath();
+
+        return post(client, groupPath, grp);
+    }
+
+
     public ClientResponse createFsObject(String objectId, String groupId,
                                          String name, String owner, long sizeEstimateBytes) {
         Client client = new Client();
@@ -139,6 +173,21 @@ abstract public class AbstractTest {
         obj.sizeEstimateBytes = sizeEstimateBytes;
 
         String objectPath = fsObjectPath(objectId, groupId);
+
+        return post(client, objectPath, obj);
+    }
+
+    public ClientResponse createAnonymousFsObject(String groupId, String name, String owner, long sizeEstimateBytes) {
+        Client client = new Client();
+
+        FsObjectResource obj = new FsObjectResource();
+        obj.name = name;
+        obj.ownerId = owner;
+        obj.readers = arraySet( owner, "testuser" );
+        obj.writers = arraySet( owner, "testuser" );
+        obj.sizeEstimateBytes = sizeEstimateBytes;
+
+        String objectPath = fsObjectsPath(groupId);
 
         return post(client, objectPath, obj);
     }
@@ -157,6 +206,20 @@ abstract public class AbstractTest {
         return post(client, groupPath, grp);
     }
 
+    public ClientResponse createAnonymousGroup(String owner, String typeHint, Long sizeEstimate) {
+        Client client = new Client();
+        GroupResource grp = new GroupResource();
+        grp.ownerId = owner;
+        grp.readers = arraySet( "testuser", owner );
+        grp.writers = arraySet( "testuser", owner );
+        grp.typeHint = typeHint;
+        grp.sizeEstimateBytes = sizeEstimate;
+
+        String groupPath = groupsPath();
+
+        return post(client, groupPath, grp);
+    }
+
     public ClientResponse createObject(String objectId, String groupId,
                                          String name, String owner, long sizeEstimateBytes) {
         Client client = new Client();
@@ -169,6 +232,21 @@ abstract public class AbstractTest {
         obj.sizeEstimateBytes = sizeEstimateBytes;
 
         String objectPath = objectPath(objectId, groupId);
+
+        return post(client, objectPath, obj);
+    }
+
+    public ClientResponse createAnonymousObject(String groupId, String name, String owner, long sizeEstimateBytes) {
+        Client client = new Client();
+
+        ObjectResource obj = new ObjectResource();
+        obj.name = name;
+        obj.ownerId = owner;
+        obj.readers = arraySet( owner, "testuser" );
+        obj.writers = arraySet( owner, "testuser" );
+        obj.sizeEstimateBytes = sizeEstimateBytes;
+
+        String objectPath = objectsPath(groupId);
 
         return post(client, objectPath, obj);
     }

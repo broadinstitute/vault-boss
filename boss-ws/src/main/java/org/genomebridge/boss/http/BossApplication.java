@@ -20,6 +20,7 @@ import io.dropwizard.Application;
 import io.dropwizard.assets.AssetsBundle;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
+import org.genomebridge.boss.http.resources.AllGroupsResource;
 import org.genomebridge.boss.http.resources.FsGroupResource;
 import org.genomebridge.boss.http.resources.GroupResource;
 import org.genomebridge.boss.http.resources.StatusResource;
@@ -34,6 +35,7 @@ public class BossApplication extends Application<BossConfiguration> {
         env.jersey().register(StatusResource.class);
         env.jersey().register(GroupResource.class);
         env.jersey().register(FsGroupResource.class);
+        env.jersey().register(AllGroupsResource.class);
 
         env.healthChecks().register("db", new DbHealthCheck());
     }

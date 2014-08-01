@@ -26,6 +26,8 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
+import java.net.URI;
+import java.util.UUID;
 
 @Path("group/store/{groupId}")
 public class GroupResource extends PermissionedResource {
@@ -55,7 +57,7 @@ public class GroupResource extends PermissionedResource {
      * @param objectId The id of the object requested.
      * @return A resource value representing the object requested.
      */
-    @Path("{objectId}")
+    @Path("object/{objectId}")
     public ObjectResource getObject(@PathParam("objectId") String objectId) {
         if(!populateFromAPI()) {
             throw new WebApplicationException(Response
@@ -64,6 +66,29 @@ public class GroupResource extends PermissionedResource {
                     .build());
         }
         return new ObjectResource(api, groupId, objectId);
+    }
+
+    @POST
+    @Path("objects")
+    @Produces("application/json")
+    @Consumes("application/json")
+    public Response createNewObject( @Context UriInfo info, @Context HttpHeaders headers, ObjectResource rec ) {
+        if(!populateFromAPI()) {
+            throw new NotFoundException(String.format("Couldn't find group with ID %s", groupId));
+        }
+
+        checkUserWrite(headers);
+
+        rec.objectId = UUID.randomUUID().toString();
+        rec.group = groupId;
+
+        api.updateObject(rec);
+
+        URI location = info.getBaseUriBuilder()
+                .path("group/store/{groupId}/object/{objectId}")
+                .build(groupId, rec.objectId);
+
+        return Response.created(location).type("application/json").entity(rec).build();
     }
 
     /**

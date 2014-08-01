@@ -20,14 +20,19 @@ import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import io.dropwizard.testing.junit.DropwizardAppRule;
 import org.genomebridge.boss.http.resources.GroupResource;
+import org.genomebridge.boss.http.resources.ObjectResource;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import javax.ws.rs.core.Response;
 import java.util.Arrays;
 
 import static org.fest.assertions.api.Assertions.assertThat;
 
 public class GroupResourceAcceptanceTest extends AbstractTest {
+
+    public static int FORBIDDEN = Response.Status.FORBIDDEN.getStatusCode();
+    public static int CREATED = Response.Status.CREATED.getStatusCode();
 
     @ClassRule
     public static final DropwizardAppRule<BossConfiguration> RULE =
@@ -296,6 +301,7 @@ public class GroupResourceAcceptanceTest extends AbstractTest {
          * Step 1: Create a group
          * Step 2: POST to the group with a modified owner field but as a user who is *not* in the
          *         writers field, and verify that we receive a 403 Forbidden response.
+         * Step 3: Check that a GET on the group returns the original owner field.
          */
 
         Client client = new Client();
@@ -303,24 +309,53 @@ public class GroupResourceAcceptanceTest extends AbstractTest {
         // Step 1
         String groupId = "permissions_group4";
 
-        ClientResponse response = createGroup(groupId, "tdanford", "typeHint", 500L);
-
-        assertThat(response.getStatus())
-                .describedAs("Response to registering the group")
-                .isEqualTo(200);
+        ClientResponse response = check200(createGroup(groupId, "tdanford", "typeHint", 500L));
 
         GroupResource posted = response.getEntity(GroupResource.class);
 
         // Step 2
         posted.ownerId = "new_owner";
 
-        response = post(client, groupPath(groupId), "new_reader", posted);
+        checkStatus(FORBIDDEN, post(client, groupPath(groupId), "new_reader", posted));
 
-        assertThat(response.getStatus())
-                .describedAs("response to illegal setting of the owner")
-                .isEqualTo(403);
+        // Step 3
+        response = check200( get(client, groupPath(groupId) ));
+
+        posted = response.getEntity(GroupResource.class);
+
+        assertThat(posted).isNotNull();
+        assertThat(posted.ownerId).isEqualTo("tdanford");
     }
 
 
+    @Test
+    public void testAnonymousObjectCreation() {
+        /**
+         * "Users should be able to create a new Object without an ID in hand, by
+         * POSTing to /group/store/{groupId}/objects"
+         */
 
+        Client client = new Client();
+
+        ClientResponse response = checkStatus(CREATED, createAnonymousGroup("tdanford", "typeHint", 1000L));
+
+        String location = checkHeader(response, "Location");
+
+        response = check200( get(client, location ));
+
+        GroupResource group = response.getEntity(GroupResource.class);
+
+        response = checkStatus(CREATED, createAnonymousObject(group.groupId, "Test Name", "tdanford", 500L));
+
+        String objectLocation = checkHeader(response, "Location");
+
+        response = check200( get(client, objectLocation ));
+
+        ObjectResource obj = response.getEntity(ObjectResource.class);
+
+        assertThat(obj).isNotNull();
+        assertThat(obj.ownerId).isEqualTo("tdanford");
+        assertThat(obj.name).isEqualTo("Test Name");
+        assertThat(obj.sizeEstimateBytes).isEqualTo(500L);
+    }
 }

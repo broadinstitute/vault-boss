@@ -17,13 +17,17 @@
 package org.genomebridge.boss.http.resources;
 
 import com.google.inject.Inject;
+import com.sun.jersey.api.NotFoundException;
 import org.apache.log4j.Logger;
 import org.genomebridge.boss.http.service.BossAPI;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
+import java.net.URI;
+import java.util.UUID;
 
 @Path("group/fs/{groupId}")
 public class FsGroupResource extends PermissionedResource {
@@ -56,9 +60,32 @@ public class FsGroupResource extends PermissionedResource {
      * @param objectId The id of the object requested.
      * @return A resource value representing the object requested.
      */
-    @Path("{objectId}")
+    @Path("object/{objectId}")
     public FsObjectResource getObject(@PathParam("objectId") String objectId) {
         return new FsObjectResource(api, groupId, objectId);
+    }
+
+    @POST
+    @Path("objects")
+    @Produces("application/json")
+    @Consumes("application/json")
+    public Response createNewObject( @Context UriInfo info, @Context HttpHeaders headers, FsObjectResource rec ) {
+        if(!populateFromAPI()) {
+            throw new NotFoundException(String.format("Couldn't find FsGroup with ID %s", groupId));
+        }
+
+        checkUserWrite(headers);
+
+        rec.objectId = UUID.randomUUID().toString();
+        rec.group = groupId;
+
+        api.updateFsObject(rec);
+
+        URI location = info.getBaseUriBuilder()
+                .path("group/fs/{groupId}/object/{objectId}")
+                .build(groupId, rec.objectId);
+
+        return Response.created(location).type("application/json").entity(rec).build();
     }
 
     /**
