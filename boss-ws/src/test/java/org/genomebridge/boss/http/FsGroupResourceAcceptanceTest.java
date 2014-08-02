@@ -20,12 +20,20 @@ import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import io.dropwizard.testing.junit.DropwizardAppRule;
 import org.genomebridge.boss.http.resources.FsGroupResource;
+import org.genomebridge.boss.http.resources.FsObjectResource;
+import org.genomebridge.boss.http.resources.GroupResource;
+import org.genomebridge.boss.http.resources.ObjectResource;
 import org.junit.ClassRule;
 import org.junit.Test;
+
+import javax.ws.rs.core.Response;
 
 import static org.fest.assertions.api.Assertions.assertThat;
 
 public class FsGroupResourceAcceptanceTest extends AbstractTest {
+
+    public static int CREATED = Response.Status.CREATED.getStatusCode();
+    public static int FORBIDDEN = Response.Status.FORBIDDEN.getStatusCode();
 
     @ClassRule
     public static final DropwizardAppRule<BossConfiguration> RULE =
@@ -126,4 +134,34 @@ public class FsGroupResourceAcceptanceTest extends AbstractTest {
         assertThat(described.directory).isEqualTo(grp.directory);
     }
 
+    @Test
+    public void testAnonymousFsObjectCreation() {
+        /**
+         * "Users should be able to create a new FsObjectResource without an ID in hand, by
+         * POSTing to /group/fs/{groupId}/objects"
+         */
+
+        Client client = new Client();
+
+        ClientResponse response = checkStatus(CREATED, createAnonymousFsGroup("tdanford", "test_dir"));
+
+        String location = checkHeader(response, "Location");
+
+        response = check200( get(client, location ));
+
+        FsGroupResource group = response.getEntity(FsGroupResource.class);
+
+        response = checkStatus(CREATED, createAnonymousFsObject(group.groupId, "Test Name", "tdanford", 500L));
+
+        String objectLocation = checkHeader(response, "Location");
+
+        response = check200( get(client, objectLocation ));
+
+        FsObjectResource obj = response.getEntity(FsObjectResource.class);
+
+        assertThat(obj).isNotNull();
+        assertThat(obj.ownerId).isEqualTo("tdanford");
+        assertThat(obj.name).isEqualTo("Test Name");
+        assertThat(obj.sizeEstimateBytes).isEqualTo(500L);
+    }
 }
