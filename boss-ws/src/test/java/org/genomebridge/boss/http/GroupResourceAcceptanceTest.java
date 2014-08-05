@@ -26,6 +26,7 @@ import org.junit.Test;
 
 import javax.ws.rs.core.Response;
 import java.util.Arrays;
+import java.util.UUID;
 
 import static org.fest.assertions.api.Assertions.assertThat;
 
@@ -46,26 +47,19 @@ public class GroupResourceAcceptanceTest extends AbstractTest {
 
     @Test
     public void registerGroupTest() {
-        /**
-         * Step 1: create a group (and check the response is 200, and that the fields match the given fields)
-         */
-        String groupId = "foo";
+        String groupId = randomID();
         String owner = "tdanford";
         String typeHint = "test_type_hint";
         Long sizeEstimate = 500L;
 
-        ClientResponse response = createGroup(groupId, owner, typeHint, sizeEstimate);
-
-        assertThat(response.getStatus()).isEqualTo(200);
+        ClientResponse response = check200(createGroup(groupId, owner, typeHint, sizeEstimate));
 
         GroupResource respGrp = response.getEntity(GroupResource.class);
 
         assertThat(respGrp.groupId).isEqualTo(groupId);
         assertThat(respGrp.ownerId).isEqualTo(owner);
-        assertThat(respGrp.readers).contains(owner);
-        assertThat(respGrp.readers).contains("testuser");
-        assertThat(respGrp.writers).contains(owner);
-        assertThat(respGrp.writers).contains("testuser");
+        assertThat(respGrp.readers).containsOnly(owner, "testuser");
+        assertThat(respGrp.writers).containsOnly(owner, "testuser");
         assertThat(respGrp.typeHint).isEqualTo(typeHint);
         assertThat(respGrp.sizeEstimateBytes).isEqualTo(sizeEstimate);
     }

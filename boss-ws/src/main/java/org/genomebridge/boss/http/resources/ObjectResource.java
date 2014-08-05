@@ -15,6 +15,7 @@
  */
 package org.genomebridge.boss.http.resources;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import org.apache.log4j.Logger;
 import org.genomebridge.boss.http.service.BossAPI;
 import org.genomebridge.boss.http.service.DeregisteredObjectException;
@@ -27,6 +28,7 @@ import javax.ws.rs.core.UriInfo;
 import java.net.URI;
 import java.net.URL;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ObjectResource extends PermissionedResource {
 
     private BossAPI api;
@@ -34,7 +36,6 @@ public class ObjectResource extends PermissionedResource {
     public String objectId;
     public String group;
 
-    public URL objectUrl;
     public Long sizeEstimateBytes;
     public String name;
     public String ownerId;
@@ -74,7 +75,7 @@ public class ObjectResource extends PermissionedResource {
     @GET
     public ObjectResource describe(@Context HttpHeaders headers) {
         try {
-            populateFromAPI();
+            if(!populateFromAPI()) { throw new WebApplicationException(Response.Status.NOT_FOUND); }
             checkUserRead(headers);
             return this;
 
@@ -84,10 +85,9 @@ public class ObjectResource extends PermissionedResource {
     }
 
     private boolean populateFromAPI() {
-        ObjectResource fromApi = api.getObject(objectId);
+        ObjectResource fromApi = api.getObject(objectId, group);
 
         if(fromApi != null) {
-            objectUrl = fromApi.objectUrl;
             sizeEstimateBytes = fromApi.sizeEstimateBytes;
             name = fromApi.name;
             ownerId = fromApi.ownerId;
@@ -130,7 +130,6 @@ public class ObjectResource extends PermissionedResource {
                         "Can't update the objectId (from \"%s\" to \"%s\")", objectId, newRec.objectId));
             }
 
-            objectUrl = errorIfSet(objectUrl, newRec.objectUrl, "objectUrl");
             readers = setFrom(readers, newRec.readers);
             writers = setFrom(writers, newRec.writers);
             group = errorIfSet(group, newRec.group, "group");
@@ -155,6 +154,7 @@ public class ObjectResource extends PermissionedResource {
             parentGroup.checkUserWrite(headers);
 
             newRec.objectId = objectId;
+            newRec.group = group;
             api.updateObject(newRec);
             return newRec;
         }

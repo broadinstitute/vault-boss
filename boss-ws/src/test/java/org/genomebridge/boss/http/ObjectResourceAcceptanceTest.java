@@ -29,6 +29,11 @@ import static org.fest.assertions.api.Assertions.assertThat;
 
 public class ObjectResourceAcceptanceTest extends AbstractTest {
 
+    public static int FORBIDDEN = Response.Status.FORBIDDEN.getStatusCode();
+    public static int CREATED = Response.Status.CREATED.getStatusCode();
+    public static int GONE = Response.Status.GONE.getStatusCode();
+    public static int OK = 200;
+
     @ClassRule
     public static final DropwizardAppRule<BossConfiguration> RULE =
             new DropwizardAppRule<>(BossApplication.class,
@@ -96,14 +101,16 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
     public void registerDescribeAndDeleteTest() {
         Client client = new Client();
 
-        String groupId = "group_with_deletable_objects_1";
-        String objectId = "deletable_1";
+        String groupId = randomID();
+        String objectId = randomID();
 
-        check200( createGroup(groupId, "tdanford", "test_hint", 1020L) );
-        check200( createObject(objectId, groupId, "Test Name", "tdanford", 1010L) );
-        check200( get(client, objectPath(objectId, groupId)) );
-        check200(delete(client, objectPath(objectId, groupId)));
-        checkStatus( 410, get(client, objectPath(objectId, groupId)) );
+        checkStatus( OK, createGroup(groupId, "tdanford", "test_hint", 1020L) );
+        checkStatus( OK, createObject(objectId, groupId, "Test Name", "tdanford", 1010L) );
+        checkStatus( OK, get(client, objectPath(objectId, groupId)) );
+
+        checkStatus( OK, delete(client, objectPath(objectId, groupId)) );
+
+        checkStatus( GONE, get(client, objectPath(objectId, groupId)) );
     }
 
     @Test
@@ -116,8 +123,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         check200( createObject(objectId, groupId, "Deletable", "tdanford", 100L ));
 
         // trying a DELETE with a username 'fake_user' should fail
-        checkStatus(Response.Status.FORBIDDEN.getStatusCode(),
-                delete(client, objectPath(objectId, groupId), "fake_user"));
+        checkStatus( FORBIDDEN, delete(client, objectPath(objectId, groupId), "fake_user"));
 
         // object should still be there
         check200( get(client, objectPath(objectId, groupId)) );
@@ -215,7 +221,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         rec.readers = arrayAppend(rec.readers, "new_reader");
 
         // It's illegal, as the user 'fake_user', to update the readers field of the ObjectResource
-        checkStatus(403, post(client, objectPath(objectId, groupId), "fake_user", rec));
+        checkStatus(FORBIDDEN, post(client, objectPath(objectId, groupId), "fake_user", rec));
 
         response = check200( get(client, objectPath(objectId, groupId)) );
 

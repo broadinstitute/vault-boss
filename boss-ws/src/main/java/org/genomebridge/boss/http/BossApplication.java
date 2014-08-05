@@ -18,12 +18,18 @@ package org.genomebridge.boss.http;
 import com.hubspot.dropwizard.guice.GuiceBundle;
 import io.dropwizard.Application;
 import io.dropwizard.assets.AssetsBundle;
+import io.dropwizard.jdbi.DBIFactory;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
+import org.genomebridge.boss.http.db.BossDAO;
 import org.genomebridge.boss.http.resources.AllGroupsResource;
 import org.genomebridge.boss.http.resources.FsGroupResource;
+import org.genomebridge.boss.http.resources.GroupDBResource;
 import org.genomebridge.boss.http.resources.GroupResource;
 import org.genomebridge.boss.http.resources.StatusResource;
+import org.genomebridge.boss.http.service.BossAPI;
+import org.genomebridge.boss.http.service.DatabaseBossAPI;
+import org.skife.jdbi.v2.DBI;
 
 public class BossApplication extends Application<BossConfiguration> {
 
@@ -33,9 +39,23 @@ public class BossApplication extends Application<BossConfiguration> {
 
     public void run(BossConfiguration config, Environment env) {
         env.jersey().register(StatusResource.class);
-        env.jersey().register(GroupResource.class);
-        env.jersey().register(FsGroupResource.class);
-        env.jersey().register(AllGroupsResource.class);
+
+        final DBIFactory factory = new DBIFactory();
+
+        try {
+            final DBI jdbi = factory.build(env, config.getDataSourceFactory(), "db");
+            final BossDAO dao = jdbi.onDemand(BossDAO.class);
+
+            env.jersey().register(new GroupDBResource(dao));
+            env.jersey().register(GroupResource.class);
+            env.jersey().register(FsGroupResource.class);
+            env.jersey().register(AllGroupsResource.class);
+
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace(System.err);
+
+            throw new IllegalStateException("Couldn't start up the application", e);
+        }
 
         env.healthChecks().register("db", new DbHealthCheck());
     }

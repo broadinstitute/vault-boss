@@ -27,14 +27,14 @@ public interface BossAPI {
     public GroupResource getGroup(String groupId);
     public void updateGroup(GroupResource rec);
 
-    public ObjectResource getObject(String objectId);
+    public ObjectResource getObject(String objectId, String groupId);
     public void updateObject(ObjectResource rec);
     public void deregisterObject(ObjectResource rec);
 
     public FsGroupResource getFsGroup(String groupId);
     public void updateFsGroup(FsGroupResource rec);
 
-    public FsObjectResource getFsObject(String objectId);
+    public FsObjectResource getFsObject(String objectId, String groupId);
     public void updateFsObject(FsObjectResource rec);
     public void deregisterFsObject(FsObjectResource rec);
 

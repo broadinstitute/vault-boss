@@ -32,12 +32,19 @@ public class MemoryBossAPI implements BossAPI {
     private Set<String> deregisteredObjects;
 
     public MemoryBossAPI() {
-        groups = new TreeMap<String,GroupResource>();
-        objects = new TreeMap<String,ObjectResource>();
-        fsgroups = new TreeMap<String,FsGroupResource>();
-        fsobjects = new TreeMap<String,FsObjectResource>();
-        deregisteredObjects = new TreeSet<String>();
+        groups = new TreeMap<>();
+        objects = new TreeMap<>();
+        fsgroups = new TreeMap<>();
+        fsobjects = new TreeMap<>();
+        deregisteredObjects = new TreeSet<>();
     }
+
+    public String composite(String groupId, String objectId) {
+        return String.format("%s/%s", groupId, objectId);
+    }
+
+    public String key(ObjectResource rec) { return composite(rec.group, rec.objectId); }
+    public String key(FsObjectResource rec) { return composite(rec.group, rec.objectId); }
 
     @Override
     public GroupResource getGroup(String groupId) {
@@ -50,20 +57,22 @@ public class MemoryBossAPI implements BossAPI {
     }
 
     @Override
-    public ObjectResource getObject(String objectId) {
-        if(deregisteredObjects.contains(objectId)) {
-            throw new DeregisteredObjectException(objectId);
+    public ObjectResource getObject(String objectId, String groupId) {
+        String id = composite(groupId, objectId);
+        if(deregisteredObjects.contains(id)) {
+            throw new DeregisteredObjectException(id);
         }
-        return objects.get(objectId);
+        return objects.get(id);
     }
 
     @Override
     public void deregisterObject(ObjectResource object) {
-        if(objects.containsKey(object.objectId)) {
-            objects.remove(object.objectId);
-            deregisteredObjects.add(object.objectId);
+        String id = key(object);
+        if(objects.containsKey(id)) {
+            objects.remove(id);
+            deregisteredObjects.add(id);
         } else {
-            throw new DeregisteredObjectException(object.objectId);
+            throw new DeregisteredObjectException(id);
         }
     }
 
@@ -74,29 +83,35 @@ public class MemoryBossAPI implements BossAPI {
     public void updateFsGroup(FsGroupResource rec) { fsgroups.put(rec.groupId, rec); }
 
     @Override
-    public FsObjectResource getFsObject(String objectId) {
-        if(deregisteredObjects.contains(objectId)) {
-            throw new DeregisteredObjectException(objectId);
+    public FsObjectResource getFsObject(String objectId, String groupId) {
+        String id = composite(groupId, objectId);
+        if(deregisteredObjects.contains(id)) {
+            throw new DeregisteredObjectException(id);
         }
-        return fsobjects.get(objectId);
+        return fsobjects.get(id);
     }
 
     @Override
-    public void updateFsObject(FsObjectResource rec) { fsobjects.put(rec.objectId, rec); }
+    public void updateFsObject(FsObjectResource rec) {
+        String id = key(rec);
+        fsobjects.put(id, rec);
+    }
 
     @Override
     public void deregisterFsObject(FsObjectResource rec) {
-        if(fsobjects.containsKey(rec.objectId)) {
-            fsobjects.remove(rec.objectId);
-            deregisteredObjects.add(rec.objectId);
+        String id = key(rec);
+        if(fsobjects.containsKey(id)) {
+            fsobjects.remove(id);
+            deregisteredObjects.add(id);
         } else {
-            throw new DeregisteredObjectException(rec.objectId);
+            throw new DeregisteredObjectException(id);
         }
     }
 
     @Override
     public void updateObject(ObjectResource rec) {
-        objects.put(rec.objectId, rec);
+        String id = key(rec);
+        objects.put(id, rec);
     }
 
     @Override

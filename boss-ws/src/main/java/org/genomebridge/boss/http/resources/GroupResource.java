@@ -16,6 +16,9 @@
 
 package org.genomebridge.boss.http.resources;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import static com.fasterxml.jackson.annotation.JsonInclude.Include;
+
 import com.google.inject.Inject;
 import com.sun.jersey.api.NotFoundException;
 import org.apache.log4j.Logger;
@@ -30,6 +33,7 @@ import java.net.URI;
 import java.util.UUID;
 
 @Path("group/store/{groupId}")
+@JsonInclude(Include.NON_NULL)
 public class GroupResource extends PermissionedResource {
 
     private BossAPI api;
@@ -166,21 +170,11 @@ public class GroupResource extends PermissionedResource {
             return this;
         } else {
 
+            assert groupId != null : info.getRequestUri().toString();
             newrec.groupId = groupId;
             api.updateGroup(newrec);
             return newrec;
         }
-    }
-
-    @DELETE
-    public void delete(@Context HttpHeaders headers) {
-        if(!populateFromAPI()) {
-            throw new NotFoundException();
-        }
-
-        checkUserWrite(headers);
-
-
     }
 
     private void updateInAPI() {
@@ -201,8 +195,8 @@ public class GroupResource extends PermissionedResource {
 
     public int hashCode() {
         int code = 17;
-        code += groupId.hashCode(); code *= 37;
-        if(ownerId != null) { code += ownerId.hashCode(); code *= 37; }
+        code += hash(groupId); code *= 37;
+        code += hash(ownerId); code *= 37;
         return code;
     }
 }
