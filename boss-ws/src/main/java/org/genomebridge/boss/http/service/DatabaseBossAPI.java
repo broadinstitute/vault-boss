@@ -17,6 +17,8 @@ package org.genomebridge.boss.http.service;
 
 import com.google.inject.Inject;
 import org.genomebridge.boss.http.db.BossDAO;
+import org.genomebridge.boss.http.objectstore.HttpMethod;
+import org.genomebridge.boss.http.objectstore.ObjectStore;
 import org.genomebridge.boss.http.resources.FsGroupResource;
 import org.genomebridge.boss.http.resources.FsObjectResource;
 import org.genomebridge.boss.http.resources.GroupResource;
@@ -29,9 +31,12 @@ public class DatabaseBossAPI implements BossAPI {
 
     private BossDAO dao;
 
+    private ObjectStore objectStore;
+
     @Inject
-    public DatabaseBossAPI( BossDAO dao ) {
+    public DatabaseBossAPI( BossDAO dao, ObjectStore store ) {
         this.dao = dao;
+        this.objectStore = store;
     }
 
     private String composite(String groupId, String objectId) {
@@ -58,7 +63,7 @@ public class DatabaseBossAPI implements BossAPI {
         String random = UUID.randomUUID().toString();
         String[] splits = random.split("-");
         String last = splits[splits.length-1];
-        return String.format("%s-%s-%s", rec.group, rec.objectId, last);
+        return String.format("%s/%s-%s", rec.group, rec.objectId, last);
     }
 
     private void updateReaders(String id, String[] target) {
@@ -197,7 +202,8 @@ public class DatabaseBossAPI implements BossAPI {
     }
 
     @Override
-    public URI getPresignedURL(int seconds) {
-        return URI.create("http://localhost/presigned_url");
+    public URI getPresignedURL(ObjectResource rec, HttpMethod method, long millis) {
+        String location = dao.findObjectLocation(rec.objectId, rec.group);
+        return objectStore.generatePresignedURL(location, method, millis);
     }
 }

@@ -25,6 +25,8 @@ import org.junit.Test;
 
 import javax.ws.rs.core.Response;
 
+import java.util.Random;
+
 import static org.fest.assertions.api.Assertions.assertThat;
 
 public class ObjectResourceAcceptanceTest extends AbstractTest {
@@ -229,5 +231,45 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
         // The readers are unchanged.
         assertThat(rec.readers).containsOnly("testuser", "tdanford");
+    }
+
+    @Test
+    public void testObjectResolve() {
+        Client client = new Client();
+        Random rand = new Random();
+
+        String groupId = randomID(), objectId = randomID();
+        int seconds = rand.nextInt(100) + 10;
+
+        check200( createGroup(groupId, "tdanford", "test_hint", 100L));
+        check200( createObject(objectId, groupId, "test object", "tdanford", 100L));
+
+        ResolutionRequest req = new ResolutionRequest("GET", seconds);
+
+        ClientResponse response = check200( post(client, resolveObjectPath(objectId, groupId), req) );
+
+        ResolutionResource rec = response.getEntity(ResolutionResource.class);
+
+        assertThat(rec).isNotNull();
+        assertThat(rec.url.toString()).startsWith(
+                String.format("https://genomebridge-variantstore-ci.s3.amazonaws.com/%s/%s-",
+                        groupId, objectId));
+        assertThat(rec.validityPeriodSeconds).isEqualTo(seconds);
+    }
+
+    @Test
+    public void testIllegalObjectResolve() {
+        Client client = new Client();
+        Random rand = new Random();
+
+        String groupId = randomID(), objectId = randomID();
+        int seconds = rand.nextInt(100) + 10;
+
+        check200( createGroup(groupId, "tdanford", "test_hint", 100L));
+        check200( createObject(objectId, groupId, "test object", "tdanford", 100L));
+
+        ResolutionRequest req = new ResolutionRequest("GET", seconds);
+
+        checkStatus( FORBIDDEN, post(client, resolveObjectPath(objectId, groupId), "fake_user", req) );
     }
 }
