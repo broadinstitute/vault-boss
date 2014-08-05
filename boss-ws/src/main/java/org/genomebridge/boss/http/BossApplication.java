@@ -18,7 +18,9 @@ package org.genomebridge.boss.http;
 import com.hubspot.dropwizard.guice.GuiceBundle;
 import io.dropwizard.Application;
 import io.dropwizard.assets.AssetsBundle;
+import io.dropwizard.db.DataSourceFactory;
 import io.dropwizard.jdbi.DBIFactory;
+import io.dropwizard.migrations.MigrationsBundle;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import org.genomebridge.boss.http.db.BossDAO;
@@ -68,6 +70,13 @@ public class BossApplication extends Application<BossConfiguration> {
                 .build();
 
         bootstrap.addBundle(guiceBundle);
+
+        bootstrap.addBundle(new MigrationsBundle<BossConfiguration>() {
+            @Override
+            public DataSourceFactory getDataSourceFactory(BossConfiguration configuration) {
+                return configuration.getDataSourceFactory();
+            }
+        });
 
         bootstrap.addBundle(new AssetsBundle("/assets/", "/site"));
     }
