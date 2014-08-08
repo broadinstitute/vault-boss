@@ -26,7 +26,6 @@ import io.dropwizard.setup.Environment;
 import org.genomebridge.boss.http.db.BossDAO;
 import org.genomebridge.boss.http.resources.AllGroupsResource;
 import org.genomebridge.boss.http.resources.FsGroupResource;
-import org.genomebridge.boss.http.resources.GroupDBResource;
 import org.genomebridge.boss.http.resources.GroupResource;
 import org.genomebridge.boss.http.resources.StatusResource;
 import org.genomebridge.boss.http.service.BossAPI;
@@ -48,7 +47,6 @@ public class BossApplication extends Application<BossConfiguration> {
             final DBI jdbi = factory.build(env, config.getDataSourceFactory(), "db");
             final BossDAO dao = jdbi.onDemand(BossDAO.class);
 
-            env.jersey().register(new GroupDBResource(dao));
             env.jersey().register(GroupResource.class);
             env.jersey().register(FsGroupResource.class);
             env.jersey().register(AllGroupsResource.class);

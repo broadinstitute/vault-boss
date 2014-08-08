@@ -20,13 +20,8 @@ import com.google.inject.Provides;
 import io.dropwizard.jdbi.DBIFactory;
 import io.dropwizard.setup.Environment;
 import org.genomebridge.boss.http.db.BossDAO;
-import org.genomebridge.boss.http.resources.AllGroupsResource;
-import org.genomebridge.boss.http.resources.FsGroupResource;
-import org.genomebridge.boss.http.resources.GroupDBResource;
-import org.genomebridge.boss.http.resources.GroupResource;
 import org.genomebridge.boss.http.service.BossAPI;
 import org.genomebridge.boss.http.service.DatabaseBossAPI;
-import org.genomebridge.boss.http.service.MemoryBossAPI;
 import org.skife.jdbi.v2.DBI;
 
 public class BossModule extends AbstractModule {
