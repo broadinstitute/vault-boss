@@ -16,7 +16,9 @@
 package org.genomebridge.boss.http.resources;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.sun.jersey.api.NotFoundException;
 import org.apache.log4j.Logger;
+import org.genomebridge.boss.http.objectstore.HttpMethod;
 import org.genomebridge.boss.http.service.BossAPI;
 import org.genomebridge.boss.http.service.DeregisteredObjectException;
 
@@ -26,7 +28,6 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import java.net.URI;
-import java.net.URL;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ObjectResource extends PermissionedResource {
@@ -102,16 +103,30 @@ public class ObjectResource extends PermissionedResource {
     @Path("resolve")
     @Produces("application/json")
     @POST
-    public ResolutionResource resolve(@Context UriInfo uriInfo, @Context HttpHeaders headers) {
+    public ResolutionResource resolve(
+            @Context UriInfo uriInfo, @Context HttpHeaders headers, ResolutionRequest request) {
 
+        if(!populateFromAPI()) { throw new NotFoundException(String.format("%s/%s", group, objectId)); }
         checkUserRead(headers);
 
-        int seconds = 1000;
-        return new ResolutionResource( getPresignedURL(seconds), uriInfo.getBaseUri(), seconds );
+        try {
+            long timeoutMillis = 1000L * request.validityPeriodSeconds;
+            HttpMethod method = HttpMethod.valueOf(request.httpMethod);
+
+            return new ResolutionResource(
+                    getPresignedURL(method, timeoutMillis),
+                    uriInfo.getBaseUri(),
+                    request.validityPeriodSeconds);
+
+        } catch(IllegalArgumentException e) {
+            String msg = String.format("Error in request, with message \"%s\"", e.getMessage());
+            throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST)
+                .entity(msg).build());
+        }
     }
 
-    private URI getPresignedURL(int seconds) {
-        return api.getPresignedURL(seconds);
+    private URI getPresignedURL(HttpMethod method, long millis) {
+        return api.getPresignedURL(this, method, millis);
     }
 
     @Consumes("application/json")

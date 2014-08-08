@@ -15,6 +15,7 @@
  */
 package org.genomebridge.boss.http.service;
 
+import org.genomebridge.boss.http.objectstore.HttpMethod;
 import org.genomebridge.boss.http.resources.FsGroupResource;
 import org.genomebridge.boss.http.resources.FsObjectResource;
 import org.genomebridge.boss.http.resources.GroupResource;
@@ -38,5 +39,5 @@ public interface BossAPI {
     public void updateFsObject(FsObjectResource rec);
     public void deregisterFsObject(FsObjectResource rec);
 
-    public URI getPresignedURL(int seconds);
+    public URI getPresignedURL(ObjectResource rec, HttpMethod method, long millis);
 }

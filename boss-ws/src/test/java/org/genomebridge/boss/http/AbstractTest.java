@@ -112,6 +112,10 @@ abstract public class AbstractTest extends ResourcedTest {
     public String objectPath(String objectId, String groupId) {
         return String.format("%s/object/%s", groupPath(groupId), objectId);
     }
+    public String resolveObjectPath(String objectId, String groupId) {
+        return String.format("%s/resolve", objectPath(objectId, groupId));
+    }
+
     public String fsObjectsPath(String groupId) {
         return String.format("%s/objects", fsGroupPath(groupId));
     }

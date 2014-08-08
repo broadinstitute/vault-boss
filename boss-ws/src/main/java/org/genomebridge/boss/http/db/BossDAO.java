@@ -37,6 +37,9 @@ public interface BossDAO {
     @SqlQuery("select * from objects where objectId = :objectId and groupId = :group")
     public ObjectResource findObjectById(@Bind("objectId") String objectId, @Bind("group") String group);
 
+    @SqlQuery("select location from objects where objectId = :objectId and groupId = :groupId")
+    public String findObjectLocation(@Bind("objectId") String objectId, @Bind("groupId") String groupId);
+
     @SqlQuery("select * from groups where groupId = :groupId")
     public GroupResource findGroupById(@Bind("groupId") String groupId);
 

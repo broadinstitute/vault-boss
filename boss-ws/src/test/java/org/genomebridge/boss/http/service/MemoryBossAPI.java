@@ -15,6 +15,7 @@
  */
 package org.genomebridge.boss.http.service;
 
+import org.genomebridge.boss.http.objectstore.HttpMethod;
 import org.genomebridge.boss.http.resources.FsGroupResource;
 import org.genomebridge.boss.http.resources.FsObjectResource;
 import org.genomebridge.boss.http.resources.GroupResource;
@@ -115,7 +116,7 @@ public class MemoryBossAPI implements BossAPI {
     }
 
     @Override
-    public URI getPresignedURL(int seconds) {
-        return URI.create("http://localhost:8080/presigned_url");
+    public URI getPresignedURL(ObjectResource rec, HttpMethod method, long millis) {
+        return URI.create(String.format("http://localhost:8080/%s/presigned_url", rec.objectId));
     }
 }

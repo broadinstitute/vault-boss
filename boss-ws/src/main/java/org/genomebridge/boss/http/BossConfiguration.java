@@ -34,4 +34,11 @@ public class BossConfiguration extends Configuration {
     public DataSourceFactory getDataSourceFactory() {
         return database;
     }
+
+    @JsonProperty
+    private ObjectStoreConfiguration objectStore = new ObjectStoreConfiguration();
+
+    public ObjectStoreConfiguration getObjectStoreConfiguration() {
+        return objectStore;
+    }
 }

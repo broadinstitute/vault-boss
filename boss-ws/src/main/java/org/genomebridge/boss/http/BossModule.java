@@ -20,6 +20,8 @@ import com.google.inject.Provides;
 import io.dropwizard.jdbi.DBIFactory;
 import io.dropwizard.setup.Environment;
 import org.genomebridge.boss.http.db.BossDAO;
+import org.genomebridge.boss.http.objectstore.ObjectStore;
+import org.genomebridge.boss.http.objectstore.S3ObjectStore;
 import org.genomebridge.boss.http.service.BossAPI;
 import org.genomebridge.boss.http.service.DatabaseBossAPI;
 import org.skife.jdbi.v2.DBI;
@@ -31,13 +33,19 @@ public class BossModule extends AbstractModule {
     }
 
     @Provides
+    public ObjectStore providesObjectStore(Environment env, BossConfiguration config) {
+        ObjectStoreConfiguration osConfig = config.getObjectStoreConfiguration();
+        return new S3ObjectStore(osConfig.createClient(), osConfig.getBucket());
+    }
+
+    @Provides
     public BossAPI providesAPI(Environment env, BossConfiguration config) {
         final DBIFactory factory = new DBIFactory();
         try {
             final DBI jdbi = factory.build(env, config.getDataSourceFactory(), "db");
             final BossDAO dao = jdbi.onDemand(BossDAO.class);
 
-            return new DatabaseBossAPI(dao);
+            return new DatabaseBossAPI(dao, providesObjectStore(env, config));
 
         } catch (ClassNotFoundException e) {
             throw new IllegalStateException(e);
