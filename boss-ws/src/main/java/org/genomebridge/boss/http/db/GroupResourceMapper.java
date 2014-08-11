@@ -33,6 +33,8 @@ public class GroupResourceMapper implements ResultSetMapper<GroupResource> {
         rec.ownerId = r.getString("ownerId");
         rec.typeHint = r.getString("typeHint");
         rec.sizeEstimateBytes = r.getLong("sizeEstimateBytes");
+        rec.directory = r.getString("location");
+        rec.storagePlatform = r.getString("storagePlatform");
 
         return rec;
     }

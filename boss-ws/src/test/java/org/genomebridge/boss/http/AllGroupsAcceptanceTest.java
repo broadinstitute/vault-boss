@@ -18,12 +18,9 @@ package org.genomebridge.boss.http;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import io.dropwizard.testing.junit.DropwizardAppRule;
-import org.genomebridge.boss.http.resources.FsGroupResource;
 import org.genomebridge.boss.http.resources.GroupResource;
 import org.junit.ClassRule;
 import org.junit.Test;
-
-import java.net.URI;
 
 import static org.fest.assertions.api.Assertions.assertThat;
 
@@ -63,27 +60,5 @@ public class AllGroupsAcceptanceTest extends AbstractTest {
         assertThat(rec.ownerId).isEqualTo("tdanford");
         assertThat(rec.typeHint).isEqualTo("typeHint");
         assertThat(rec.sizeEstimateBytes).isEqualTo(500L);
-    }
-
-    @Test
-    public void testFilesystemGroupCreation() {
-        /**
-         * "The user should be able to create a new FsGroupResource by POSTing to
-         * groups/fs"
-         */
-
-        Client client = new Client();
-
-        ClientResponse response = checkStatus(CREATED, createAnonymousFsGroup("tdanford", "test_dir"));
-
-        String location = checkHeader(response, "Location");
-
-        response = check200( get(client, location) );
-
-        FsGroupResource rec = response.getEntity(FsGroupResource.class);
-
-        assertThat(rec).isNotNull();
-        assertThat(rec.ownerId).isEqualTo("tdanford");
-        assertThat(rec.directory).isEqualTo("test_dir");
     }
 }

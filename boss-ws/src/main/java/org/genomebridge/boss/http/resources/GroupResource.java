@@ -32,7 +32,7 @@ import javax.ws.rs.core.UriInfo;
 import java.net.URI;
 import java.util.UUID;
 
-@Path("group/store/{groupId}")
+@Path("group/{groupId}")
 @JsonInclude(Include.NON_NULL)
 public class GroupResource extends PermissionedResource {
 
@@ -41,9 +41,12 @@ public class GroupResource extends PermissionedResource {
     @PathParam("groupId") public String groupId;
 
     public String ownerId;
-    public Long sizeEstimateBytes;
-    public String typeHint;
     public String[] readers, writers;
+
+    public String typeHint;
+    public Long sizeEstimateBytes;
+    public String directory;
+    public String storagePlatform;
 
     public GroupResource() {
     }
@@ -89,7 +92,7 @@ public class GroupResource extends PermissionedResource {
         api.updateObject(rec);
 
         URI location = info.getBaseUriBuilder()
-                .path("group/store/{groupId}/object/{objectId}")
+                .path("group/{groupId}/object/{objectId}")
                 .build(groupId, rec.objectId);
 
         return Response.created(location).type("application/json").entity(rec).build();
@@ -129,6 +132,8 @@ public class GroupResource extends PermissionedResource {
             typeHint = rec.typeHint;
             readers = rec.readers;
             writers = rec.writers;
+            storagePlatform = rec.storagePlatform;
+            directory = rec.directory;
 
             return true;
         }
@@ -164,6 +169,8 @@ public class GroupResource extends PermissionedResource {
             this.typeHint = errorIfSet(typeHint, newrec.typeHint, "typeHint");
             this.readers = setFrom(readers, newrec.readers);
             this.writers = setFrom(writers, newrec.writers);
+            this.storagePlatform = errorIfSet(storagePlatform, newrec.storagePlatform, "storagePlatform");
+            this.directory = errorIfSet(directory, newrec.directory, "directory");
 
             updateInAPI();
 
@@ -189,6 +196,8 @@ public class GroupResource extends PermissionedResource {
                 eq(ownerId, r.ownerId) &&
                 eq(sizeEstimateBytes, r.sizeEstimateBytes) &&
                 eq(typeHint, r.typeHint) &&
+                eq(directory, r.directory) &&
+                eq(storagePlatform, r.storagePlatform) &&
                 arrayEq(readers, r.readers) &&
                 arrayEq(writers, r.writers);
     }

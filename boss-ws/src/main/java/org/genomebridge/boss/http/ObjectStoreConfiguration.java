@@ -21,13 +21,17 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.S3ClientOptions;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.log4j.Logger;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Properties;
 
+/**
+ * Configuration for the object store behind the BOSS API.  This is configured
+ * using the 'objectStore:' clause in the YAML configuration file, and from a
+ * Java Properties file at /etc/s3.conf for defaults (if it exists).
+ */
 public class ObjectStoreConfiguration {
 
     private String username, password, endpoint;
@@ -64,6 +68,12 @@ public class ObjectStoreConfiguration {
         }
     }
 
+    /**
+     * Creates and configures a client for an S3-compatible object store, using
+     * the properties in the configuration files.
+     *
+     * @return an AmazonS3 object capable of generating calls against an S3-compatible API.
+     */
     public AmazonS3 createClient() {
         AmazonS3 client = null;
 

@@ -36,11 +36,12 @@ public class ObjectResource extends PermissionedResource {
 
     public String objectId;
     public String group;
+    public String ownerId;
+    public String[] readers, writers;
 
     public Long sizeEstimateBytes;
     public String name;
-    public String ownerId;
-    public String[] readers, writers;
+    public String storagePlatform;
 
     public ObjectResource() {
     }
@@ -94,6 +95,7 @@ public class ObjectResource extends PermissionedResource {
             ownerId = fromApi.ownerId;
             readers = fromApi.readers;
             writers = fromApi.writers;
+            storagePlatform = fromApi.storagePlatform;
             return true;
         }
 
@@ -108,6 +110,16 @@ public class ObjectResource extends PermissionedResource {
 
         if(!populateFromAPI()) { throw new NotFoundException(String.format("%s/%s", group, objectId)); }
         checkUserRead(headers);
+
+        /*
+        If we're looking at a filesystem object, then a RESOLVE request isn't a well-formed
+        request.
+         */
+        if(!storagePlatform.equals("objectstore")) {
+            String msg = String.format("Can't resolve a non-objectstore object %s", objectId);
+            throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST)
+                    .entity(msg).build());
+        }
 
         try {
             long timeoutMillis = 1000L * request.validityPeriodSeconds;
@@ -151,6 +163,7 @@ public class ObjectResource extends PermissionedResource {
             name = errorIfSet(name, newRec.name, "name");
             ownerId = setFrom(ownerId, newRec.ownerId);
             sizeEstimateBytes = errorIfSet(sizeEstimateBytes, newRec.sizeEstimateBytes, "sizeEstimateBytes");
+            storagePlatform = errorIfSet(storagePlatform, newRec.storagePlatform, "storagePlatform");
 
             updateInAPI();
             return this;

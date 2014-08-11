@@ -16,7 +16,6 @@
 
 package org.genomebridge.boss.http.db;
 
-import org.genomebridge.boss.http.resources.GroupResource;
 import org.genomebridge.boss.http.resources.ObjectResource;
 import org.genomebridge.boss.http.service.DeregisteredObjectException;
 import org.skife.jdbi.v2.StatementContext;
@@ -36,6 +35,7 @@ public class ObjectResourceMapper implements ResultSetMapper<ObjectResource> {
         rec.ownerId = r.getString("ownerId");
         rec.sizeEstimateBytes = r.getLong("sizeEstimateBytes");
         rec.name = r.getString("name");
+        rec.storagePlatform = r.getString("storagePlatform");
 
         return rec;
     }

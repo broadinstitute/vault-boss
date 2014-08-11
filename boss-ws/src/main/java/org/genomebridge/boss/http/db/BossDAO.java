@@ -24,15 +24,8 @@ import org.skife.jdbi.v2.sqlobject.customizers.RegisterMapper;
 
 import java.util.List;
 
-@RegisterMapper({ GroupResourceMapper.class, ObjectResourceMapper.class,
-        FsGroupResourceMapper.class, FsObjectResourceMapper.class})
+@RegisterMapper({ GroupResourceMapper.class, ObjectResourceMapper.class })
 public interface BossDAO {
-
-    @SqlQuery("select * from objects where objectId = :objectId and groupId = :group")
-    public FsObjectResource findFsObjectById(@Bind("objectId") String objectId, @Bind("group") String group);
-
-    @SqlQuery("select * from groups where groupId = :groupId")
-    public FsGroupResource findFsGroupById(@Bind("groupId") String groupId);
 
     @SqlQuery("select * from objects where objectId = :objectId and groupId = :group")
     public ObjectResource findObjectById(@Bind("objectId") String objectId, @Bind("group") String group);
@@ -43,22 +36,26 @@ public interface BossDAO {
     @SqlQuery("select * from groups where groupId = :groupId")
     public GroupResource findGroupById(@Bind("groupId") String groupId);
 
-    @SqlUpdate("insert into groups (groupId, ownerId, sizeEstimateBytes, typeHint, location) values " +
-            "(:groupId, :ownerId, :sizeEstimate, :typeHint, :location)")
+    @SqlUpdate("insert into groups " +
+            "(groupId, ownerId, sizeEstimateBytes, typeHint, location, storagePlatform) values " +
+            "(:groupId, :ownerId, :sizeEstimate, :typeHint, :location, :storagePlatform)")
     public void insertGroup(@Bind("groupId") String groupId,
                             @Bind("ownerId") String ownerId,
                             @Bind("sizeEstimate") Long sizeEstimate,
                             @Bind("typeHint") String typeHint,
-                            @Bind("location") String location);
+                            @Bind("location") String location,
+                            @Bind("storagePlatform") String storagePlatform);
 
-    @SqlUpdate("insert into objects (objectId, groupId, ownerId, name, sizeEstimateBytes, location) values " +
-            "(:objectId, :group, :ownerId, :name, :sizeEstimate, :location)")
+    @SqlUpdate("insert into objects " +
+            "(objectId, groupId, ownerId, name, sizeEstimateBytes, location, storagePlatform) values " +
+            "(:objectId, :group, :ownerId, :name, :sizeEstimate, :location, :storagePlatform)")
     public void insertObject(@Bind("objectId") String objectId,
                              @Bind("group") String group,
                              @Bind("ownerId") String ownerId,
                              @Bind("sizeEstimate") Long sizeEstimate,
                              @Bind("name") String name,
-                             @Bind("location") String location);
+                             @Bind("location") String location,
+                             @Bind("storagePlatform") String storagePlatform);
 
     @SqlUpdate("update groups set ownerId = :ownerId, sizeEstimateBytes = :sizeEstimate, typeHint = :typeHint " +
             "where groupId = :groupId")

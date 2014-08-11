@@ -19,8 +19,6 @@ import com.google.inject.Inject;
 import org.genomebridge.boss.http.db.BossDAO;
 import org.genomebridge.boss.http.objectstore.HttpMethod;
 import org.genomebridge.boss.http.objectstore.ObjectStore;
-import org.genomebridge.boss.http.resources.FsGroupResource;
-import org.genomebridge.boss.http.resources.FsObjectResource;
 import org.genomebridge.boss.http.resources.GroupResource;
 import org.genomebridge.boss.http.resources.ObjectResource;
 
@@ -47,16 +45,8 @@ public class DatabaseBossAPI implements BossAPI {
         return rec.groupId;
     }
 
-    private String id(FsGroupResource rec) {
-        return "fs-" + rec.groupId;
-    }
-
     private String id(ObjectResource rec) {
         return composite(rec.group, rec.objectId);
-    }
-
-    private String id(FsObjectResource rec) {
-        return composite("fs-" + rec.group, rec.objectId);
     }
 
     public static String location(ObjectResource rec) {
@@ -116,7 +106,7 @@ public class DatabaseBossAPI implements BossAPI {
         if(dao.findGroupById(rec.groupId) != null) {
             dao.updateGroup(rec.groupId, rec.ownerId, rec.sizeEstimateBytes, rec.typeHint);
         } else {
-            dao.insertGroup(rec.groupId, rec.ownerId, rec.sizeEstimateBytes, rec.typeHint, null);
+            dao.insertGroup(rec.groupId, rec.ownerId, rec.sizeEstimateBytes, rec.typeHint, rec.directory, rec.storagePlatform);
         }
         updateReaders(rec.groupId, rec.readers);
         updateWriters(rec.groupId, rec.writers);
@@ -137,7 +127,7 @@ public class DatabaseBossAPI implements BossAPI {
         if(dao.findObjectById(rec.objectId, rec.group) != null) {
             dao.updateObject(rec.objectId, rec.group, rec.ownerId, rec.sizeEstimateBytes, rec.name);
         } else {
-            dao.insertObject(rec.objectId, rec.group, rec.ownerId, rec.sizeEstimateBytes, rec.name, location(rec));
+            dao.insertObject(rec.objectId, rec.group, rec.ownerId, rec.sizeEstimateBytes, rec.name, location(rec), rec.storagePlatform);
         }
         String id = id(rec);
         updateReaders(id, rec.readers);
@@ -147,61 +137,6 @@ public class DatabaseBossAPI implements BossAPI {
     @Override
     public void deregisterObject(ObjectResource rec) {
         dao.deleteObject(rec.objectId, rec.group);
-    }
-
-    @Override
-    public FsGroupResource getFsGroup(String groupId) {
-        String id = "fs-" + groupId;
-        FsGroupResource rec = dao.findFsGroupById(id);
-        if(rec != null) {
-            rec.readers = dao.findReadersById(id).toArray(new String[0]);
-            rec.writers = dao.findWritersById(id).toArray(new String[0]);
-        }
-        return rec;
-    }
-
-    @Override
-    public void updateFsGroup(FsGroupResource rec) {
-        String id = id(rec);
-        if(dao.findFsGroupById(id) != null) {
-            dao.updateGroup(id, rec.ownerId, -1L, rec.typeHint);
-        } else {
-            dao.insertGroup(id, rec.ownerId, -1L, rec.typeHint, rec.directory);
-        }
-        updateReaders(id, rec.readers);
-        updateWriters(id, rec.writers);
-    }
-
-    @Override
-    public FsObjectResource getFsObject(String objectId, String groupId) {
-        String gid = "fs-" + groupId;
-        String id = composite(groupId, objectId);
-        FsObjectResource rec = dao.findFsObjectById(id, gid);
-        if(rec != null) {
-            rec.readers = dao.findReadersById(id).toArray(new String[0]);
-            rec.writers = dao.findWritersById(id).toArray(new String[0]);
-        }
-        return rec;
-    }
-
-    @Override
-    public void updateFsObject(FsObjectResource rec) {
-        String gid = "fs-" + rec.group;
-        String oid = composite(rec.group, rec.objectId);
-        if(dao.findFsObjectById(oid, gid) != null) {
-            dao.updateObject(oid, gid, rec.ownerId, rec.sizeEstimateBytes, rec.name);
-        } else {
-            dao.insertObject(oid, gid, rec.ownerId, rec.sizeEstimateBytes, rec.name, null);
-        }
-        updateReaders(oid, rec.readers);
-        updateWriters(oid, rec.writers);
-    }
-
-    @Override
-    public void deregisterFsObject(FsObjectResource rec) {
-        String gid = "fs-" + rec.group;
-        String oid = composite(rec.group, rec.objectId);
-        dao.deleteObject(oid, gid);
     }
 
     @Override

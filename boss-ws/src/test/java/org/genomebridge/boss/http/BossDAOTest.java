@@ -115,8 +115,9 @@ public class BossDAOTest extends ResourcedTest {
         rec.ownerId = "tdanford";
         rec.sizeEstimateBytes = 1000L;
         rec.typeHint = "type";
+        rec.storagePlatform = "platform";
 
-        dao.insertGroup(rec.groupId, rec.ownerId, rec.sizeEstimateBytes, rec.typeHint, null);
+        dao.insertGroup(rec.groupId, rec.ownerId, rec.sizeEstimateBytes, rec.typeHint, null, rec.storagePlatform);
 
         GroupResource fetched = dao.findGroupById(rec.groupId);
 
@@ -124,6 +125,7 @@ public class BossDAOTest extends ResourcedTest {
         assertThat(fetched.ownerId).isEqualTo(rec.ownerId);
         assertThat(fetched.sizeEstimateBytes).isEqualTo(rec.sizeEstimateBytes);
         assertThat(fetched.typeHint).isEqualTo(rec.typeHint);
+        assertThat(fetched.storagePlatform).isEqualTo(rec.storagePlatform);
     }
 
     @Test
@@ -133,8 +135,9 @@ public class BossDAOTest extends ResourcedTest {
         rec.ownerId = "tdanford";
         rec.sizeEstimateBytes = 1000L;
         rec.typeHint = "type";
+        rec.storagePlatform = "platform";
 
-        dao.insertGroup(rec.groupId, rec.ownerId, rec.sizeEstimateBytes, rec.typeHint, null);
+        dao.insertGroup(rec.groupId, rec.ownerId, rec.sizeEstimateBytes, rec.typeHint, null, rec.storagePlatform);
 
         GroupResource fetched = dao.findGroupById(rec.groupId);
 
@@ -142,6 +145,7 @@ public class BossDAOTest extends ResourcedTest {
         assertThat(fetched.ownerId).isEqualTo(rec.ownerId);
         assertThat(fetched.sizeEstimateBytes).isEqualTo(rec.sizeEstimateBytes);
         assertThat(fetched.typeHint).isEqualTo(rec.typeHint);
+        assertThat(fetched.storagePlatform).isEqualTo(rec.storagePlatform);
 
         rec.ownerId = "carlyeks";
         rec.typeHint = rec.typeHint + randomID();
@@ -155,6 +159,7 @@ public class BossDAOTest extends ResourcedTest {
         assertThat(fetched.ownerId).isEqualTo(rec.ownerId);
         assertThat(fetched.sizeEstimateBytes).isEqualTo(rec.sizeEstimateBytes);
         assertThat(fetched.typeHint).isEqualTo(rec.typeHint);
+        assertThat(fetched.storagePlatform).isEqualTo(rec.storagePlatform);
     }
 
     @Test
@@ -165,8 +170,9 @@ public class BossDAOTest extends ResourcedTest {
         rec.ownerId = "tdanford";
         rec.sizeEstimateBytes = 1000L;
         rec.name = "Name";
+        rec.storagePlatform = "platform";
 
-        dao.insertObject(rec.objectId, rec.group, rec.ownerId, rec.sizeEstimateBytes, rec.name, null);
+        dao.insertObject(rec.objectId, rec.group, rec.ownerId, rec.sizeEstimateBytes, rec.name, null, rec.storagePlatform);
 
         ObjectResource fetched = dao.findObjectById(rec.objectId, rec.group);
 
@@ -175,6 +181,7 @@ public class BossDAOTest extends ResourcedTest {
         assertThat(fetched.ownerId).isEqualTo(rec.ownerId);
         assertThat(fetched.sizeEstimateBytes).isEqualTo(rec.sizeEstimateBytes);
         assertThat(fetched.name).isEqualTo(rec.name);
+        assertThat(fetched.storagePlatform).isEqualTo(rec.storagePlatform);
     }
 
     @Test
@@ -185,8 +192,9 @@ public class BossDAOTest extends ResourcedTest {
         rec.ownerId = "tdanford";
         rec.sizeEstimateBytes = 1000L;
         rec.name = "Name";
+        rec.storagePlatform = "platform";
 
-        dao.insertObject(rec.objectId, rec.group, rec.ownerId, rec.sizeEstimateBytes, rec.name, null);
+        dao.insertObject(rec.objectId, rec.group, rec.ownerId, rec.sizeEstimateBytes, rec.name, null, rec.storagePlatform);
 
         ObjectResource fetched = dao.findObjectById(rec.objectId, rec.group);
 
@@ -195,6 +203,7 @@ public class BossDAOTest extends ResourcedTest {
         assertThat(fetched.ownerId).isEqualTo(rec.ownerId);
         assertThat(fetched.sizeEstimateBytes).isEqualTo(rec.sizeEstimateBytes);
         assertThat(fetched.name).isEqualTo(rec.name);
+        assertThat(fetched.storagePlatform).isEqualTo(rec.storagePlatform);
 
         rec.name = rec.name + randomID();
         rec.ownerId = "carlyeks";
@@ -208,6 +217,7 @@ public class BossDAOTest extends ResourcedTest {
         assertThat(fetched.ownerId).isEqualTo(rec.ownerId);
         assertThat(fetched.sizeEstimateBytes).isEqualTo(rec.sizeEstimateBytes);
         assertThat(fetched.name).isEqualTo(rec.name);
+        assertThat(fetched.storagePlatform).isEqualTo(rec.storagePlatform);
     }
 
 }

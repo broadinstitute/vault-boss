@@ -80,4 +80,17 @@
             </column>
         </createTable>
     </changeSet>
+
+    <changeSet author="tdanford" id="addColumn-storagePlatform">
+        <addColumn tableName="objects">
+            <column name="storagePlatform" type="varchar(255)" defaultValue="objectstore">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <addColumn tableName="groups">
+            <column name="storagePlatform" type="varchar(255)" defaultValue="objectstore">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

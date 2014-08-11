@@ -16,8 +16,6 @@
 package org.genomebridge.boss.http.service;
 
 import org.genomebridge.boss.http.objectstore.HttpMethod;
-import org.genomebridge.boss.http.resources.FsGroupResource;
-import org.genomebridge.boss.http.resources.FsObjectResource;
 import org.genomebridge.boss.http.resources.GroupResource;
 import org.genomebridge.boss.http.resources.ObjectResource;
 
@@ -28,15 +26,11 @@ public class MemoryBossAPI implements BossAPI {
 
     private Map<String,GroupResource> groups;
     private Map<String,ObjectResource> objects;
-    private Map<String,FsGroupResource> fsgroups;
-    private Map<String,FsObjectResource> fsobjects;
     private Set<String> deregisteredObjects;
 
     public MemoryBossAPI() {
         groups = new TreeMap<>();
         objects = new TreeMap<>();
-        fsgroups = new TreeMap<>();
-        fsobjects = new TreeMap<>();
         deregisteredObjects = new TreeSet<>();
     }
 
@@ -45,7 +39,6 @@ public class MemoryBossAPI implements BossAPI {
     }
 
     public String key(ObjectResource rec) { return composite(rec.group, rec.objectId); }
-    public String key(FsObjectResource rec) { return composite(rec.group, rec.objectId); }
 
     @Override
     public GroupResource getGroup(String groupId) {
@@ -71,38 +64,6 @@ public class MemoryBossAPI implements BossAPI {
         String id = key(object);
         if(objects.containsKey(id)) {
             objects.remove(id);
-            deregisteredObjects.add(id);
-        } else {
-            throw new DeregisteredObjectException(id);
-        }
-    }
-
-    @Override
-    public FsGroupResource getFsGroup(String groupId) { return fsgroups.get(groupId); }
-
-    @Override
-    public void updateFsGroup(FsGroupResource rec) { fsgroups.put(rec.groupId, rec); }
-
-    @Override
-    public FsObjectResource getFsObject(String objectId, String groupId) {
-        String id = composite(groupId, objectId);
-        if(deregisteredObjects.contains(id)) {
-            throw new DeregisteredObjectException(id);
-        }
-        return fsobjects.get(id);
-    }
-
-    @Override
-    public void updateFsObject(FsObjectResource rec) {
-        String id = key(rec);
-        fsobjects.put(id, rec);
-    }
-
-    @Override
-    public void deregisterFsObject(FsObjectResource rec) {
-        String id = key(rec);
-        if(fsobjects.containsKey(id)) {
-            fsobjects.remove(id);
             deregisteredObjects.add(id);
         } else {
             throw new DeregisteredObjectException(id);

@@ -18,14 +18,11 @@ package org.genomebridge.boss.http;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import io.dropwizard.testing.junit.DropwizardAppRule;
-import org.genomebridge.boss.http.resources.FsGroupResource;
-import org.genomebridge.boss.http.resources.FsObjectResource;
 import org.genomebridge.boss.http.resources.GroupResource;
 import org.genomebridge.boss.http.resources.ObjectResource;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
-import java.net.URL;
 import java.util.Arrays;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -35,7 +32,6 @@ import static org.fest.assertions.api.Assertions.assertThat;
 abstract public class AbstractTest extends ResourcedTest {
 
     abstract public DropwizardAppRule<BossConfiguration> rule();
-
 
     /*
      * Some utility methods for interacting with HTTP-services.
@@ -92,23 +88,14 @@ abstract public class AbstractTest extends ResourcedTest {
      * Utility methods for interacting with the BOSS API
      */
 
-    public String fsGroupPath(String groupId) {
-        return String.format("http://localhost:%d/group/fs/%s", rule().getLocalPort(), groupId);
-    }
     public String groupPath(String groupId) {
-        return String.format("http://localhost:%d/group/store/%s", rule().getLocalPort(), groupId);
+        return String.format("http://localhost:%d/group/%s", rule().getLocalPort(), groupId);
     }
 
-    public String fsGroupsPath() {
-        return String.format("http://localhost:%d/groups/fs", rule().getLocalPort());
-    }
     public String groupsPath() {
-        return String.format("http://localhost:%d/groups/store", rule().getLocalPort());
+        return String.format("http://localhost:%d/groups", rule().getLocalPort());
     }
 
-    public String fsObjectPath(String objectId, String groupId) {
-        return String.format("%s/object/%s", fsGroupPath(groupId), objectId);
-    }
     public String objectPath(String objectId, String groupId) {
         return String.format("%s/object/%s", groupPath(groupId), objectId);
     }
@@ -116,9 +103,6 @@ abstract public class AbstractTest extends ResourcedTest {
         return String.format("%s/resolve", objectPath(objectId, groupId));
     }
 
-    public String fsObjectsPath(String groupId) {
-        return String.format("%s/objects", fsGroupPath(groupId));
-    }
     public String objectsPath(String groupId) {
         return String.format("%s/objects", groupPath(groupId));
     }
@@ -133,64 +117,6 @@ abstract public class AbstractTest extends ResourcedTest {
         return set.toArray(new String[0]);
     }
 
-    public ClientResponse createFsGroup(String groupId, String owner, String directory) {
-        Client client = new Client();
-        FsGroupResource grp = new FsGroupResource();
-        grp.ownerId = owner;
-        grp.readers = arraySet( "testuser", owner );
-        grp.writers = arraySet( "testuser", owner );
-        grp.directory = directory;
-
-        String groupPath = fsGroupPath(groupId);
-
-        return post(client, groupPath, grp);
-    }
-
-    public ClientResponse createAnonymousFsGroup(String owner, String directory) {
-        Client client = new Client();
-        FsGroupResource grp = new FsGroupResource();
-        grp.ownerId = owner;
-        grp.readers = arraySet( "testuser", owner );
-        grp.writers = arraySet( "testuser", owner );
-        grp.directory = directory;
-
-        String groupPath = fsGroupsPath();
-
-        return post(client, groupPath, grp);
-    }
-
-
-    public ClientResponse createFsObject(String objectId, String groupId,
-                                         String name, String owner, long sizeEstimateBytes) {
-        Client client = new Client();
-
-        FsObjectResource obj = new FsObjectResource();
-        obj.name = name;
-        obj.ownerId = owner;
-        obj.readers = arraySet( owner, "testuser" );
-        obj.writers = arraySet( owner, "testuser" );
-        obj.sizeEstimateBytes = sizeEstimateBytes;
-
-        String objectPath = fsObjectPath(objectId, groupId);
-
-        return post(client, objectPath, obj);
-    }
-
-    public ClientResponse createAnonymousFsObject(String groupId, String name, String owner, long sizeEstimateBytes) {
-        Client client = new Client();
-
-        FsObjectResource obj = new FsObjectResource();
-        obj.name = name;
-        obj.ownerId = owner;
-        obj.readers = arraySet( owner, "testuser" );
-        obj.writers = arraySet( owner, "testuser" );
-        obj.sizeEstimateBytes = sizeEstimateBytes;
-
-        String objectPath = fsObjectsPath(groupId);
-
-        return post(client, objectPath, obj);
-    }
-
     public ClientResponse createGroup(String groupId, String owner, String typeHint, Long sizeEstimate) {
         Client client = new Client();
         GroupResource grp = new GroupResource();
@@ -199,6 +125,7 @@ abstract public class AbstractTest extends ResourcedTest {
         grp.writers = arraySet( "testuser", owner );
         grp.typeHint = typeHint;
         grp.sizeEstimateBytes = sizeEstimate;
+        grp.storagePlatform = "objectstore";
 
         String groupPath = groupPath(groupId);
 
@@ -213,6 +140,7 @@ abstract public class AbstractTest extends ResourcedTest {
         grp.writers = arraySet( "testuser", owner );
         grp.typeHint = typeHint;
         grp.sizeEstimateBytes = sizeEstimate;
+        grp.storagePlatform = "objectstore";
 
         String groupPath = groupsPath();
 
@@ -229,6 +157,7 @@ abstract public class AbstractTest extends ResourcedTest {
         obj.readers = arraySet( owner, "testuser" );
         obj.writers = arraySet( owner, "testuser" );
         obj.sizeEstimateBytes = sizeEstimateBytes;
+        obj.storagePlatform = "objectstore";
 
         String objectPath = objectPath(objectId, groupId);
 
@@ -244,6 +173,7 @@ abstract public class AbstractTest extends ResourcedTest {
         obj.readers = arraySet( owner, "testuser" );
         obj.writers = arraySet( owner, "testuser" );
         obj.sizeEstimateBytes = sizeEstimateBytes;
+        obj.storagePlatform = "objectstore";
 
         String objectPath = objectsPath(groupId);
 

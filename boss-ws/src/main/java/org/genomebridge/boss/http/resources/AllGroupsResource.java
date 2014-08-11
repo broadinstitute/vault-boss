@@ -43,30 +43,13 @@ public class AllGroupsResource {
     public String randomID() { return UUID.randomUUID().toString(); }
 
     @POST
-    @Path("store")
     @Consumes("application/json")
     @Produces("application/json")
     public Response createNewGroup( @Context UriInfo info, GroupResource rec ) {
         rec.groupId = randomID();
         api.updateGroup(rec);
 
-        URI uri = info.getBaseUriBuilder().path("/group/store/{groupId}").build(rec.groupId);
-        return Response.status(Response.Status.CREATED)
-                .location(uri)
-                .type("application/json")
-                .entity(rec)
-                .build();
-    }
-
-    @POST
-    @Path("fs")
-    @Consumes("application/json")
-    @Produces("application/json")
-    public Response createNewFsGroup( @Context UriInfo info, FsGroupResource rec ) {
-        rec.groupId = randomID();
-        api.updateFsGroup(rec);
-
-        URI uri = info.getBaseUriBuilder().path("/group/fs/{groupId}").build(rec.groupId);
+        URI uri = info.getBaseUriBuilder().path("/group/{groupId}").build(rec.groupId);
         return Response.status(Response.Status.CREATED)
                 .location(uri)
                 .type("application/json")

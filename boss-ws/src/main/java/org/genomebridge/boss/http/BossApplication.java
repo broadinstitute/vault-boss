@@ -25,11 +25,8 @@ import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import org.genomebridge.boss.http.db.BossDAO;
 import org.genomebridge.boss.http.resources.AllGroupsResource;
-import org.genomebridge.boss.http.resources.FsGroupResource;
 import org.genomebridge.boss.http.resources.GroupResource;
 import org.genomebridge.boss.http.resources.StatusResource;
-import org.genomebridge.boss.http.service.BossAPI;
-import org.genomebridge.boss.http.service.DatabaseBossAPI;
 import org.skife.jdbi.v2.DBI;
 
 public class BossApplication extends Application<BossConfiguration> {
@@ -48,7 +45,6 @@ public class BossApplication extends Application<BossConfiguration> {
             final BossDAO dao = jdbi.onDemand(BossDAO.class);
 
             env.jersey().register(GroupResource.class);
-            env.jersey().register(FsGroupResource.class);
             env.jersey().register(AllGroupsResource.class);
 
         } catch (ClassNotFoundException e) {
@@ -56,8 +52,6 @@ public class BossApplication extends Application<BossConfiguration> {
 
             throw new IllegalStateException("Couldn't start up the application", e);
         }
-
-        env.healthChecks().register("db", new DbHealthCheck());
     }
 
     public void initialize(Bootstrap<BossConfiguration> bootstrap) {
