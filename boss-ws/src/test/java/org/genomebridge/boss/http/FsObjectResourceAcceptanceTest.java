@@ -95,9 +95,7 @@ public class FsObjectResourceAcceptanceTest extends AbstractTest {
         String owner = "tdanford";
         String directory = "test_dir";
 
-        ClientResponse response = createFsGroup(groupId, owner, directory);
-
-        assertThat(response.getStatus()).isEqualTo(200);
+        check200( createFsGroup(groupId, owner, directory) );
 
         // Step 2
 
@@ -105,14 +103,10 @@ public class FsObjectResourceAcceptanceTest extends AbstractTest {
         String name = "Test Described Object";
         Long sizeEstimate = 500L;
 
-        response = createFsObject(objectId, groupId, name, owner, sizeEstimate);
-
-        assertThat(response.getStatus()).isEqualTo(200);
+        check200( createFsObject(objectId, groupId, name, owner, sizeEstimate) );
 
         // Step 3
-        response = get(client, fsObjectPath(objectId, groupId));
-
-        assertThat(response.getStatus()).isEqualTo(200);
+        ClientResponse response = check200( get(client, fsObjectPath(objectId, groupId)) );
 
         FsObjectResource created = response.getEntity(FsObjectResource.class);
 
@@ -120,9 +114,7 @@ public class FsObjectResourceAcceptanceTest extends AbstractTest {
         assertThat(created.name).isEqualTo(name);
         assertThat(created.ownerId).isEqualTo(owner);
         assertThat(created.sizeEstimateBytes).isEqualTo(sizeEstimate);
-        assertThat(created.readers).contains(owner);
-        assertThat(created.readers).contains("testuser");
-
+        assertThat(created.readers).containsOnly(owner, "testuser");
     }
 
     @Test
