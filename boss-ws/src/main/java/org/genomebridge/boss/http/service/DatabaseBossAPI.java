@@ -175,8 +175,8 @@ public class DatabaseBossAPI implements BossAPI {
     @Override
     public FsObjectResource getFsObject(String objectId, String groupId) {
         String gid = "fs-" + groupId;
-        String id = composite(gid, objectId);
-        FsObjectResource rec = dao.findFsObjectById(objectId, gid);
+        String id = composite(groupId, objectId);
+        FsObjectResource rec = dao.findFsObjectById(id, gid);
         if(rec != null) {
             rec.readers = dao.findReadersById(id).toArray(new String[0]);
             rec.writers = dao.findWritersById(id).toArray(new String[0]);
@@ -187,18 +187,21 @@ public class DatabaseBossAPI implements BossAPI {
     @Override
     public void updateFsObject(FsObjectResource rec) {
         String gid = "fs-" + rec.group;
-        if(dao.findFsObjectById(rec.objectId, gid) != null) {
-            dao.updateObject(rec.objectId, gid, rec.ownerId, rec.sizeEstimateBytes, rec.name);
+        String oid = composite(rec.group, rec.objectId);
+        if(dao.findFsObjectById(oid, gid) != null) {
+            dao.updateObject(oid, gid, rec.ownerId, rec.sizeEstimateBytes, rec.name);
         } else {
-            dao.insertObject(rec.objectId, gid, rec.ownerId, rec.sizeEstimateBytes, rec.name, null);
+            dao.insertObject(oid, gid, rec.ownerId, rec.sizeEstimateBytes, rec.name, null);
         }
-        updateReaders(id(rec), rec.readers);
-        updateWriters(id(rec), rec.writers);
+        updateReaders(oid, rec.readers);
+        updateWriters(oid, rec.writers);
     }
 
     @Override
     public void deregisterFsObject(FsObjectResource rec) {
-        dao.deleteObject(rec.objectId, "fs-" + rec.group);
+        String gid = "fs-" + rec.group;
+        String oid = composite(rec.group, rec.objectId);
+        dao.deleteObject(oid, gid);
     }
 
     @Override

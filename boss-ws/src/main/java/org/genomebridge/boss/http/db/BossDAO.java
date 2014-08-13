@@ -78,9 +78,8 @@ public interface BossDAO {
     @SqlUpdate("update groups set active=false where groupId = :groupId")
     public void deleteGroup(@Bind("groupId") String groupId);
 
-    @SqlUpdate("update objects set active=false where objectId = :objectId")
+    @SqlUpdate("update objects set active=false where objectId = :objectId and groupId = :groupId")
     public void deleteObject(@Bind("objectId") String objectId, @Bind("groupId") String groupId);
-
 
     @SqlQuery("select distinct(username) from readers where id = :id")
     public List<String> findReadersById(@Bind("id") String id);
