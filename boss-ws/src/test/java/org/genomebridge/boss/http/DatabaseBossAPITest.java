@@ -83,6 +83,7 @@ public class DatabaseBossAPITest extends ResourcedTest {
         group.typeHint = "typeHint";
         group.readers = new String[] { "tdanford", "testuser" };
         group.writers = new String[] { "carlyeks", "tdanford", "testuser" };
+        group.storagePlatform = "platform";
 
         api.updateGroup(group);
 
@@ -94,6 +95,7 @@ public class DatabaseBossAPITest extends ResourcedTest {
         assertThat(retrieved.typeHint).isEqualTo(group.typeHint);
         assertThat(retrieved.readers).containsOnly("tdanford", "testuser");
         assertThat(retrieved.writers).containsOnly("tdanford", "carlyeks", "testuser");
+        assertThat(retrieved.storagePlatform).isEqualTo(group.storagePlatform);
     }
 
     @Test
@@ -105,6 +107,7 @@ public class DatabaseBossAPITest extends ResourcedTest {
         group.typeHint = "typeHint";
         group.readers = new String[] { "tdanford", "testuser" };
         group.writers = new String[] { "carlyeks", "tdanford", "testuser" };
+        group.storagePlatform = "platform";
 
         api.updateGroup(group);
 
@@ -121,6 +124,7 @@ public class DatabaseBossAPITest extends ResourcedTest {
         assertThat(retrieved.typeHint).isEqualTo(group.typeHint);
         assertThat(retrieved.readers).containsOnly("tdanford");
         assertThat(retrieved.writers).containsOnly("carlyeks", "foo");
+        assertThat(retrieved.storagePlatform).isEqualTo(group.storagePlatform);
     }
 
     @Test
@@ -133,6 +137,7 @@ public class DatabaseBossAPITest extends ResourcedTest {
         obj.name = "Test Name";
         obj.readers = new String[] { "tdanford", "testuser" };
         obj.writers = new String[] { "carlyeks", "tdanford", "testuser" };
+        obj.storagePlatform = "platform";
 
         api.updateObject(obj);
 
@@ -145,6 +150,7 @@ public class DatabaseBossAPITest extends ResourcedTest {
         assertThat(retrieved.name).isEqualTo(obj.name);
         assertThat(retrieved.readers).containsOnly("tdanford", "testuser");
         assertThat(retrieved.writers).containsOnly("tdanford", "carlyeks", "testuser");
+        assertThat(retrieved.storagePlatform).isEqualTo(obj.storagePlatform);
     }
 
 
@@ -159,6 +165,7 @@ public class DatabaseBossAPITest extends ResourcedTest {
         obj.name = "Test Name";
         obj.readers = new String[] { "tdanford", "testuser" };
         obj.writers = new String[] { "carlyeks", "tdanford", "testuser" };
+        obj.storagePlatform = "objectstore";
 
         api.updateObject(obj);
 
