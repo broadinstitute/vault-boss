@@ -28,15 +28,15 @@ import javax.ws.rs.core.UriInfo;
 import java.net.URI;
 import java.util.UUID;
 
-@Path("/groups")
-public class AllGroupsResource {
+@Path("/objects")
+public class AllObjectsResource {
 
     private BossAPI api;
 
-    public AllGroupsResource() {}
+    public AllObjectsResource() {}
 
     @Inject
-    public AllGroupsResource(BossAPI api) {
+    public AllObjectsResource(BossAPI api) {
         this.api = api;
     }
 
@@ -45,11 +45,11 @@ public class AllGroupsResource {
     @POST
     @Consumes("application/json")
     @Produces("application/json")
-    public Response createNewGroup( @Context UriInfo info, GroupResource rec ) {
-        rec.groupId = randomID();
-        api.updateGroup(rec);
+    public Response createNewGroup( @Context UriInfo info, ObjectResource rec ) {
+        rec.objectId = randomID();
+        api.updateObject(rec.objectId, rec);
 
-        URI uri = info.getBaseUriBuilder().path("/group/{groupId}").build(rec.groupId);
+        URI uri = info.getBaseUriBuilder().path("/objects/{objectId}").build(rec.objectId);
         return Response.status(Response.Status.CREATED)
                 .location(uri)
                 .type("application/json")
