@@ -108,8 +108,10 @@ public class GroupResource extends PermissionedResource {
     @GET
     @Produces("application/json")
     public GroupResource describe(@Context HttpHeaders headers, @Context UriInfo uriInfo) {
-
-        populateFromAPI();
+        if (!populateFromAPI()) {
+            throw new NotFoundException(String.format("Couldn't find group with Id %s", groupId));
+        }
+        
         checkUserRead(headers);
 
         return this;
