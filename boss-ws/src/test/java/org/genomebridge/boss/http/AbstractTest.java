@@ -29,6 +29,11 @@ import java.util.UUID;
 
 import static org.fest.assertions.api.Assertions.assertThat;
 
+/**
+ * An abstract superclass for Tests that involve the BOSS API, includes helper methods for setting up
+ * a Dropwizard Configuration as well as for all the standard calls (createObject, etc) into the API
+ * through the Jersey client API.
+ */
 abstract public class AbstractTest extends ResourcedTest {
 
     abstract public DropwizardAppRule<BossConfiguration> rule();

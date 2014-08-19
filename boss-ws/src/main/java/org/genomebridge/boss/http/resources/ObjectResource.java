@@ -29,6 +29,9 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import java.net.URI;
 
+/**
+ * 'Object' is the core, addressable unit in the BOSS API definition.
+ */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ObjectResource extends PermissionedResource {
 

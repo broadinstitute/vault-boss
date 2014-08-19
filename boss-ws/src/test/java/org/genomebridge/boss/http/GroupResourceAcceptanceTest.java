@@ -66,26 +66,18 @@ public class GroupResourceAcceptanceTest extends AbstractTest {
 
     @Test
     public void registerAndDescribeGroupTest() {
-        /**
-         * Step 1: Create a group, and check that the response is 200
-         * Step 2: GET the group, and make sure the fields match the original inputs.
-         */
         Client client = new Client();
 
-        // Step 1
         String groupId = "testgroup1";
         String owner = "tdanford";
         String typeHint = "test_type_hint";
         Long sizeEstimate = 1000L;
 
-        ClientResponse response = createGroup(groupId, owner, typeHint, sizeEstimate);
-
-        assertThat(response.getStatus()).isEqualTo(200);
+        // Step 1
+        check200( createGroup(groupId, owner, typeHint, sizeEstimate) );
 
         // Step 2
-        response = get(client, groupPath(groupId), "testuser");
-
-        assertThat(response.getStatus()).isEqualTo(200);
+        ClientResponse response = check200( get(client, groupPath(groupId), "testuser") );
 
         GroupResource described = response.getEntity(GroupResource.class);
         assertThat(described.groupId).isEqualTo(groupId);
@@ -108,27 +100,19 @@ public class GroupResourceAcceptanceTest extends AbstractTest {
          */
         Client client = new Client();
 
-        // Step 1
         String groupId = "testgroup1";
         String owner = "tdanford";
         String typeHint = "test_type_hint";
         Long sizeEstimate = 1000L;
 
-        ClientResponse response = createGroup(groupId, owner, typeHint, sizeEstimate);
-
-        assertThat(response.getStatus()).isEqualTo(200);
+        // Step 1
+        check200( createGroup(groupId, owner, typeHint, sizeEstimate) );
 
         // Step 2
-        response = get(client, groupPath(groupId), "illegal_user");
-
-        assertThat(response.getStatus())
-                .describedAs("response code of illegal access")
-                .isEqualTo(403);
+        checkStatus(FORBIDDEN, get(client, groupPath(groupId), "illegal_user"));
 
         // Step 3
-        response = get(client, groupPath(groupId), "testuser");
-
-        assertThat(response.getStatus()).isEqualTo(200);
+        ClientResponse response = check200( get(client, groupPath(groupId), "testuser") );
 
         GroupResource described = response.getEntity(GroupResource.class);
         assertThat(described.groupId).isEqualTo(groupId);
@@ -155,19 +139,10 @@ public class GroupResourceAcceptanceTest extends AbstractTest {
         // Step 1
         String groupId = "permissions_group3";
 
-        ClientResponse response = createGroup(groupId, "tdanford", "typeHint", 500L);
-
-        assertThat(response.getStatus())
-                .describedAs("Response to registering the group")
-                .isEqualTo(200);
-
+        check200( createGroup(groupId, "tdanford", "typeHint", 500L) );
 
         // Step 2
-        response = get(client, groupPath(groupId));
-
-        assertThat(response.getStatus())
-                .describedAs("Response to GETting the registered group")
-                .isEqualTo(200);
+        ClientResponse response = check200( get(client, groupPath(groupId)) );
 
         GroupResource posted = response.getEntity(GroupResource.class);
 
@@ -178,18 +153,10 @@ public class GroupResourceAcceptanceTest extends AbstractTest {
         // Step 3
         posted.ownerId = "testuser";
 
-        response = post(client, groupPath(groupId), posted);
-
-        assertThat(response.getStatus())
-                .describedAs("response to updating the group")
-                .isEqualTo(200);
+        check200( post(client, groupPath(groupId), posted) );
 
         // Step 4
-        response = get(client, groupPath(groupId));
-
-        assertThat(response.getStatus())
-                .describedAs("response to getting the resource a second time")
-                .isEqualTo(200);
+        response = check200( get(client, groupPath(groupId)) );
 
         posted = response.getEntity(GroupResource.class);
 
@@ -214,19 +181,10 @@ public class GroupResourceAcceptanceTest extends AbstractTest {
         // Step 1
         String groupId = "permissions_group1";
 
-        ClientResponse response = createGroup(groupId, "tdanford", "typeHint", 500L);
-
-        assertThat(response.getStatus())
-                .describedAs("Response to registering the group")
-                .isEqualTo(200);
-
+        check200( createGroup(groupId, "tdanford", "typeHint", 500L) );
 
         // Step 2
-        response = get(client, groupPath(groupId));
-
-        assertThat(response.getStatus())
-                .describedAs("Response to GETting the registered group")
-                .isEqualTo(200);
+        ClientResponse response = check200( get(client, groupPath(groupId)) );
 
         GroupResource posted = response.getEntity(GroupResource.class);
 
@@ -237,18 +195,10 @@ public class GroupResourceAcceptanceTest extends AbstractTest {
         // Step 3
         posted.readers = arrayAppend( posted.readers, "new_reader" );
 
-        response = post(client, groupPath(groupId), posted);
-
-        assertThat(response.getStatus())
-                .describedAs("response to updating the group")
-                .isEqualTo(200);
+        check200( post(client, groupPath(groupId), posted) );
 
         // Step 4
-        response = get(client, groupPath(groupId));
-
-        assertThat(response.getStatus())
-                .describedAs("response to getting the resource a second time")
-                .isEqualTo(200);
+        response = check200( get(client, groupPath(groupId)) );
 
         posted = response.getEntity(GroupResource.class);
 
@@ -271,22 +221,14 @@ public class GroupResourceAcceptanceTest extends AbstractTest {
         // Step 1
         String groupId = "permissions_group2";
 
-        ClientResponse response = createGroup(groupId, "tdanford", "typeHint", 500L);
-
-        assertThat(response.getStatus())
-                .describedAs("Response to registering the group")
-                .isEqualTo(200);
+        ClientResponse response = check200( createGroup(groupId, "tdanford", "typeHint", 500L) );
 
         GroupResource posted = response.getEntity(GroupResource.class);
 
         // Step 2
         posted.readers = arrayAppend( posted.readers, "new_reader" );
 
-        response = post(client, groupPath(groupId), "new_reader", posted);
-
-        assertThat(response.getStatus())
-                .describedAs("response to illegal setting of the permissions")
-                .isEqualTo(403);
+        response = checkStatus(FORBIDDEN, post(client, groupPath(groupId), "new_reader", posted) );
     }
 
     @Test

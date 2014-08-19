@@ -25,6 +25,10 @@ import org.genomebridge.boss.http.resources.ObjectResource;
 import java.net.URI;
 import java.util.*;
 
+/**
+ * Basically, a shim between the BossAPI and the BossDAO (which is defined as a JDBI-style annotated
+ * interface, but is the class which handles direct interaction with the database).
+ */
 public class DatabaseBossAPI implements BossAPI {
 
     private BossDAO dao;

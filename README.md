@@ -4,18 +4,16 @@ A RESTful implementation of the BOSS API spec.
 
 ## Resources 
 
-This implementation identifies two types of resource: Group and Object, both coming in two flavors (``store``, for groups/objects tracking data in a backing object store that is under the BOSS API management, and ``fs``, for groups/objects that track data in an underlying filesystem).  
+This implementation identifies two types of resource: Group and Object.
 
 Groups are named by URL schemes 
 ```
-/group/fs/{groupId}
-/group/store/{groupId}
+/group/groupId}
 ```
 
 Every Object is attached to exactly one Group, so the Objects are named as sub-resources of the corresponding Group:
 ```
-/group/fs/{groupId}/{objectId}
-/group/store/{groupId}/{objectId}
+/group/{groupId}/object/{objectId}
 ```
 
 ## Methods 

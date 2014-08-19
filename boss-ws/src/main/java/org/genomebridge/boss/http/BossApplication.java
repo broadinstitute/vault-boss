@@ -29,6 +29,13 @@ import org.genomebridge.boss.http.resources.GroupResource;
 import org.genomebridge.boss.http.resources.StatusResource;
 import org.skife.jdbi.v2.DBI;
 
+/**
+ * Top-level entry point to the entire application.
+ *
+ * See the Dropwizard docs here:
+ *   https://dropwizard.github.io/dropwizard/manual/core.html
+ *
+ */
 public class BossApplication extends Application<BossConfiguration> {
 
     public static void main(String[] args) throws Exception {

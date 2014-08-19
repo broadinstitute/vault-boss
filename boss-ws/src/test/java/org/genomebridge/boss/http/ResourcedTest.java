@@ -17,6 +17,9 @@ package org.genomebridge.boss.http;
 
 import java.net.URL;
 
+/**
+ * Abstract super-class for tests, that allows easy loading of resources from the classpath.
+ */
 abstract public class ResourcedTest {
 
     public static String resourceFilePath(String name) {

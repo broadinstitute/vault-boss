@@ -21,6 +21,13 @@ import org.genomebridge.boss.http.resources.ObjectResource;
 
 import java.net.URI;
 
+/**
+ * Code-level interface for the BOSS system itself.
+ *
+ * Separating this out not only to test different implementations (in-memory, database) but also
+ * to experiment (later) with things like Thrift implementations that make this API directly available
+ * in code.
+ */
 public interface BossAPI {
 
     public GroupResource getGroup(String groupId);
