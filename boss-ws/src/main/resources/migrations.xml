@@ -99,7 +99,10 @@
         <dropColumn tableName="objects" columnName="groupId"/>
         <dropTable tableName="groups" />
         <addPrimaryKey tableName="objects" columnNames="objectId"/>
-        <renameColumn tableName="objects" oldColumnName="name" newColumnName="objectName"/>
+        <renameColumn tableName="objects"
+                      oldColumnName="name"
+                      newColumnName="objectName"
+                      columnDataType="varchar(255)"/>
     </changeSet>
 
 </databaseChangeLog>
