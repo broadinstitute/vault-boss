@@ -19,7 +19,6 @@ import io.dropwizard.jdbi.DBIFactory;
 import io.dropwizard.setup.Environment;
 import io.dropwizard.testing.junit.DropwizardAppRule;
 import org.genomebridge.boss.http.db.BossDAO;
-import org.genomebridge.boss.http.resources.GroupResource;
 import org.genomebridge.boss.http.resources.ObjectResource;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -109,78 +108,22 @@ public class BossDAOTest extends ResourcedTest {
     }
 
     @Test
-    public void testInsertAndGetGroup() {
-        GroupResource rec = new GroupResource();
-        rec.groupId = randomID();
-        rec.ownerId = "tdanford";
-        rec.sizeEstimateBytes = 1000L;
-        rec.typeHint = "type";
-        rec.storagePlatform = "platform";
-
-        dao.insertGroup(rec.groupId, rec.ownerId, rec.sizeEstimateBytes, rec.typeHint, null, rec.storagePlatform);
-
-        GroupResource fetched = dao.findGroupById(rec.groupId);
-
-        assertThat(fetched.groupId).isEqualTo(rec.groupId);
-        assertThat(fetched.ownerId).isEqualTo(rec.ownerId);
-        assertThat(fetched.sizeEstimateBytes).isEqualTo(rec.sizeEstimateBytes);
-        assertThat(fetched.typeHint).isEqualTo(rec.typeHint);
-        assertThat(fetched.storagePlatform).isEqualTo(rec.storagePlatform);
-    }
-
-    @Test
-    public void testInsertAndUpdateGroup() {
-        GroupResource rec = new GroupResource();
-        rec.groupId = randomID();
-        rec.ownerId = "tdanford";
-        rec.sizeEstimateBytes = 1000L;
-        rec.typeHint = "type";
-        rec.storagePlatform = "platform";
-
-        dao.insertGroup(rec.groupId, rec.ownerId, rec.sizeEstimateBytes, rec.typeHint, null, rec.storagePlatform);
-
-        GroupResource fetched = dao.findGroupById(rec.groupId);
-
-        assertThat(fetched.groupId).isEqualTo(rec.groupId);
-        assertThat(fetched.ownerId).isEqualTo(rec.ownerId);
-        assertThat(fetched.sizeEstimateBytes).isEqualTo(rec.sizeEstimateBytes);
-        assertThat(fetched.typeHint).isEqualTo(rec.typeHint);
-        assertThat(fetched.storagePlatform).isEqualTo(rec.storagePlatform);
-
-        rec.ownerId = "carlyeks";
-        rec.typeHint = rec.typeHint + randomID();
-        rec.sizeEstimateBytes += 100L;
-
-        dao.updateGroup(rec.groupId, rec.ownerId, rec.sizeEstimateBytes, rec.typeHint);
-
-        fetched = dao.findGroupById(rec.groupId);
-
-        assertThat(fetched.groupId).isEqualTo(rec.groupId);
-        assertThat(fetched.ownerId).isEqualTo(rec.ownerId);
-        assertThat(fetched.sizeEstimateBytes).isEqualTo(rec.sizeEstimateBytes);
-        assertThat(fetched.typeHint).isEqualTo(rec.typeHint);
-        assertThat(fetched.storagePlatform).isEqualTo(rec.storagePlatform);
-    }
-
-    @Test
     public void testInsertAndGetObject() {
         ObjectResource rec = new ObjectResource();
         rec.objectId = randomID();
-        rec.group = randomID();
         rec.ownerId = "tdanford";
         rec.sizeEstimateBytes = 1000L;
-        rec.name = "Name";
+        rec.objectName = "Name";
         rec.storagePlatform = "platform";
 
-        dao.insertObject(rec.objectId, rec.group, rec.ownerId, rec.sizeEstimateBytes, rec.name, null, rec.storagePlatform);
+        dao.insertObject(rec.objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes, null, rec.storagePlatform);
 
-        ObjectResource fetched = dao.findObjectById(rec.objectId, rec.group);
+        ObjectResource fetched = dao.findObjectById(rec.objectId);
 
         assertThat(fetched.objectId).isEqualTo(rec.objectId);
-        assertThat(fetched.group).isEqualTo(rec.group);
         assertThat(fetched.ownerId).isEqualTo(rec.ownerId);
         assertThat(fetched.sizeEstimateBytes).isEqualTo(rec.sizeEstimateBytes);
-        assertThat(fetched.name).isEqualTo(rec.name);
+        assertThat(fetched.objectName).isEqualTo(rec.objectName);
         assertThat(fetched.storagePlatform).isEqualTo(rec.storagePlatform);
     }
 
@@ -188,35 +131,32 @@ public class BossDAOTest extends ResourcedTest {
     public void testInsertAndUpdateObject() {
         ObjectResource rec = new ObjectResource();
         rec.objectId = randomID();
-        rec.group = randomID();
         rec.ownerId = "tdanford";
         rec.sizeEstimateBytes = 1000L;
-        rec.name = "Name";
+        rec.objectName = "Name";
         rec.storagePlatform = "platform";
 
-        dao.insertObject(rec.objectId, rec.group, rec.ownerId, rec.sizeEstimateBytes, rec.name, null, rec.storagePlatform);
+        dao.insertObject(rec.objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes, null, rec.storagePlatform);
 
-        ObjectResource fetched = dao.findObjectById(rec.objectId, rec.group);
+        ObjectResource fetched = dao.findObjectById(rec.objectId);
 
         assertThat(fetched.objectId).isEqualTo(rec.objectId);
-        assertThat(fetched.group).isEqualTo(rec.group);
         assertThat(fetched.ownerId).isEqualTo(rec.ownerId);
         assertThat(fetched.sizeEstimateBytes).isEqualTo(rec.sizeEstimateBytes);
-        assertThat(fetched.name).isEqualTo(rec.name);
+        assertThat(fetched.objectName).isEqualTo(rec.objectName);
         assertThat(fetched.storagePlatform).isEqualTo(rec.storagePlatform);
 
-        rec.name = rec.name + randomID();
+        rec.objectName = rec.objectName + randomID();
         rec.ownerId = "carlyeks";
 
-        dao.updateObject(rec.objectId, rec.group, rec.ownerId, rec.sizeEstimateBytes, rec.name);
+        dao.updateObject(rec.objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes, rec.storagePlatform);
 
-        fetched = dao.findObjectById(rec.objectId, rec.group);
+        fetched = dao.findObjectById(rec.objectId);
 
         assertThat(fetched.objectId).isEqualTo(rec.objectId);
-        assertThat(fetched.group).isEqualTo(rec.group);
         assertThat(fetched.ownerId).isEqualTo(rec.ownerId);
         assertThat(fetched.sizeEstimateBytes).isEqualTo(rec.sizeEstimateBytes);
-        assertThat(fetched.name).isEqualTo(rec.name);
+        assertThat(fetched.objectName).isEqualTo(rec.objectName);
         assertThat(fetched.storagePlatform).isEqualTo(rec.storagePlatform);
     }
 

@@ -93,4 +93,13 @@
             </column>
         </addColumn>
     </changeSet>
+
+    <changeSet author="tdanford" id="rev3-schema-changes">
+        <dropPrimaryKey tableName="objects"/>
+        <dropColumn tableName="objects" columnName="groupId"/>
+        <dropTable tableName="groups" />
+        <addPrimaryKey tableName="objects" columnNames="objectId"/>
+        <renameColumn tableName="objects" oldColumnName="name" newColumnName="objectName"/>
+    </changeSet>
+
 </databaseChangeLog>

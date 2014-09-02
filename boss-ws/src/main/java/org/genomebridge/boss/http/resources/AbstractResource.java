@@ -83,7 +83,7 @@ public abstract class AbstractResource {
         }
     }
 
-    abstract public Logger logger();
+    protected abstract Logger logger();
 
     public static int hash(Object v) {
         return v != null ? v.hashCode() : 1;

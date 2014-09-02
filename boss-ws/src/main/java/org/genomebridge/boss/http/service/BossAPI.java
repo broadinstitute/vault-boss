@@ -16,26 +16,15 @@
 package org.genomebridge.boss.http.service;
 
 import org.genomebridge.boss.http.objectstore.HttpMethod;
-import org.genomebridge.boss.http.resources.GroupResource;
 import org.genomebridge.boss.http.resources.ObjectResource;
 
 import java.net.URI;
 
-/**
- * Code-level interface for the BOSS system itself.
- *
- * Separating this out not only to test different implementations (in-memory, database) but also
- * to experiment (later) with things like Thrift implementations that make this API directly available
- * in code.
- */
 public interface BossAPI {
 
-    public GroupResource getGroup(String groupId);
-    public void updateGroup(GroupResource rec);
+    public ObjectResource getObject(String objectId);
+    public void updateObject(String objectId, ObjectResource rec);
+    public void deleteObject(String objectId);
 
-    public ObjectResource getObject(String objectId, String groupId);
-    public void updateObject(ObjectResource rec);
-    public void deregisterObject(ObjectResource rec);
-
-    public URI getPresignedURL(ObjectResource rec, HttpMethod method, long millis);
+    public URI getPresignedURL(String objectId, HttpMethod method, long millis);
 }

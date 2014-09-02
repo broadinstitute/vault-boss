@@ -18,13 +18,13 @@ package org.genomebridge.boss.http;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import io.dropwizard.testing.junit.DropwizardAppRule;
-import org.genomebridge.boss.http.resources.GroupResource;
+import org.genomebridge.boss.http.resources.ObjectResource;
 import org.junit.ClassRule;
 import org.junit.Test;
 
 import static org.fest.assertions.api.Assertions.assertThat;
 
-public class AllGroupsAcceptanceTest extends AbstractTest {
+public class AllObjectsAcceptanceTest extends AbstractTest {
 
     public static int CREATED = ClientResponse.Status.CREATED.getStatusCode();
 
@@ -40,25 +40,24 @@ public class AllGroupsAcceptanceTest extends AbstractTest {
     }
 
     @Test
-    public void testObjectStoreGroupCreation() {
+    public void testObjectStoreObjectCreation() {
         /**
-         * "The user should be able to create a new GroupResource by POSTing to
-         * groups/store"
+         * "The user should be able to create a new ObjectResource by POSTing to objects"
          */
 
         Client client = new Client();
 
-        ClientResponse response = checkStatus(CREATED, createAnonymousGroup("tdanford", "typeHint", 500L));
+        ClientResponse response = checkStatus(CREATED, createObject("Name", "tdanford", 500L));
 
         String location = checkHeader(response, "Location");
 
         response = check200( get(client, location) );
 
-        GroupResource rec = response.getEntity(GroupResource.class);
+        ObjectResource rec = response.getEntity(ObjectResource.class);
 
         assertThat(rec).isNotNull();
+        assertThat(rec.objectName).isEqualTo("Name");
         assertThat(rec.ownerId).isEqualTo("tdanford");
-        assertThat(rec.typeHint).isEqualTo("typeHint");
         assertThat(rec.sizeEstimateBytes).isEqualTo(500L);
     }
 }

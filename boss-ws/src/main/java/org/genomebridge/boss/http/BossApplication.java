@@ -24,9 +24,8 @@ import io.dropwizard.migrations.MigrationsBundle;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import org.genomebridge.boss.http.db.BossDAO;
-import org.genomebridge.boss.http.resources.AllGroupsResource;
-import org.genomebridge.boss.http.resources.GroupResource;
-import org.genomebridge.boss.http.resources.StatusResource;
+import org.genomebridge.boss.http.resources.AllObjectsResource;
+import org.genomebridge.boss.http.resources.ObjectResource;
 import org.skife.jdbi.v2.DBI;
 
 /**
@@ -43,22 +42,24 @@ public class BossApplication extends Application<BossConfiguration> {
     }
 
     public void run(BossConfiguration config, Environment env) {
-        env.jersey().register(StatusResource.class);
 
-        final DBIFactory factory = new DBIFactory();
-
+        /*
+        These lines don't appear to do anything -- but they cause a DB health
+        check to be added to the application, which is why we leave them in.
+         */
         try {
+            final DBIFactory factory = new DBIFactory();
             final DBI jdbi = factory.build(env, config.getDataSourceFactory(), "db");
-            final BossDAO dao = jdbi.onDemand(BossDAO.class);
-
-            env.jersey().register(GroupResource.class);
-            env.jersey().register(AllGroupsResource.class);
 
         } catch (ClassNotFoundException e) {
             e.printStackTrace(System.err);
-
-            throw new IllegalStateException("Couldn't start up the application", e);
         }
+
+        /*
+        Set up the resources themselves.
+         */
+        env.jersey().register(ObjectResource.class);
+        env.jersey().register(AllObjectsResource.class);
     }
 
     public void initialize(Bootstrap<BossConfiguration> bootstrap) {

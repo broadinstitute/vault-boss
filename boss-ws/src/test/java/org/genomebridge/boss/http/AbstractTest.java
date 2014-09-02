@@ -18,7 +18,6 @@ package org.genomebridge.boss.http;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import io.dropwizard.testing.junit.DropwizardAppRule;
-import org.genomebridge.boss.http.resources.GroupResource;
 import org.genomebridge.boss.http.resources.ObjectResource;
 
 import javax.ws.rs.core.MediaType;
@@ -93,23 +92,19 @@ abstract public class AbstractTest extends ResourcedTest {
      * Utility methods for interacting with the BOSS API
      */
 
-    public String groupPath(String groupId) {
-        return String.format("http://localhost:%d/group/%s", rule().getLocalPort(), groupId);
+    public String basePath() {
+        return String.format("http://localhost:%d", rule().getLocalPort());
     }
 
-    public String groupsPath() {
-        return String.format("http://localhost:%d/groups", rule().getLocalPort());
+    public String objectsPath() {
+        return String.format("%s/objects", basePath());
     }
 
-    public String objectPath(String objectId, String groupId) {
-        return String.format("%s/object/%s", groupPath(groupId), objectId);
+    public String objectPath(String objectId) {
+        return String.format("%s/objects/%s", basePath(), objectId);
     }
-    public String resolveObjectPath(String objectId, String groupId) {
-        return String.format("%s/resolve", objectPath(objectId, groupId));
-    }
-
-    public String objectsPath(String groupId) {
-        return String.format("%s/objects", groupPath(groupId));
+    public String resolveObjectPath(String objectId) {
+        return String.format("%s/resolve", objectPath(objectId));
     }
 
     public static String[] arraySet( String... vals ) {
@@ -122,67 +117,20 @@ abstract public class AbstractTest extends ResourcedTest {
         return set.toArray(new String[0]);
     }
 
-    public ClientResponse createGroup(String groupId, String owner, String typeHint, Long sizeEstimate) {
-        Client client = new Client();
-        GroupResource grp = new GroupResource();
-        grp.ownerId = owner;
-        grp.readers = arraySet( "testuser", owner );
-        grp.writers = arraySet( "testuser", owner );
-        grp.typeHint = typeHint;
-        grp.sizeEstimateBytes = sizeEstimate;
-        grp.storagePlatform = "objectstore";
-
-        String groupPath = groupPath(groupId);
-
-        return post(client, groupPath, grp);
-    }
-
-    public ClientResponse createAnonymousGroup(String owner, String typeHint, Long sizeEstimate) {
-        Client client = new Client();
-        GroupResource grp = new GroupResource();
-        grp.ownerId = owner;
-        grp.readers = arraySet( "testuser", owner );
-        grp.writers = arraySet( "testuser", owner );
-        grp.typeHint = typeHint;
-        grp.sizeEstimateBytes = sizeEstimate;
-        grp.storagePlatform = "objectstore";
-
-        String groupPath = groupsPath();
-
-        return post(client, groupPath, grp);
-    }
-
-    public ClientResponse createObject(String objectId, String groupId,
-                                         String name, String owner, long sizeEstimateBytes) {
+    public ClientResponse createObject(String objectName, String owner, long size) {
         Client client = new Client();
 
         ObjectResource obj = new ObjectResource();
-        obj.name = name;
         obj.ownerId = owner;
+        obj.objectName = objectName;
         obj.readers = arraySet( owner, "testuser" );
         obj.writers = arraySet( owner, "testuser" );
-        obj.sizeEstimateBytes = sizeEstimateBytes;
+        obj.sizeEstimateBytes = size;
         obj.storagePlatform = "objectstore";
 
-        String objectPath = objectPath(objectId, groupId);
+        String objectsPath = objectsPath();
 
-        return post(client, objectPath, obj);
-    }
-
-    public ClientResponse createAnonymousObject(String groupId, String name, String owner, long sizeEstimateBytes) {
-        Client client = new Client();
-
-        ObjectResource obj = new ObjectResource();
-        obj.name = name;
-        obj.ownerId = owner;
-        obj.readers = arraySet( owner, "testuser" );
-        obj.writers = arraySet( owner, "testuser" );
-        obj.sizeEstimateBytes = sizeEstimateBytes;
-        obj.storagePlatform = "objectstore";
-
-        String objectPath = objectsPath(groupId);
-
-        return post(client, objectPath, obj);
+        return post(client, objectsPath, obj);
     }
 
 }
