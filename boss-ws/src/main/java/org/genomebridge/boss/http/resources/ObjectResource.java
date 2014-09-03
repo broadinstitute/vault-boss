@@ -42,6 +42,7 @@ public class ObjectResource extends PermissionedResource {
     public String objectId;
     public String objectName;
     public String storagePlatform;
+    public String directoryPath;
     public Long sizeEstimateBytes;
     public String ownerId;
     public String[] readers, writers;
@@ -86,6 +87,11 @@ public class ObjectResource extends PermissionedResource {
             objectName = rec.objectName;
             storagePlatform = rec.storagePlatform;
             sizeEstimateBytes = rec.sizeEstimateBytes;
+
+            if(storagePlatform.equals("filesystem")) {
+                directoryPath = rec.directoryPath;
+            }
+
             readers = rec.readers;
             writers = rec.writers;
 
@@ -154,6 +160,8 @@ public class ObjectResource extends PermissionedResource {
             this.storagePlatform = errorIfSet(storagePlatform, newrec.storagePlatform, "storagePlatform");
             this.sizeEstimateBytes = errorIfSet(
                     sizeEstimateBytes, newrec.sizeEstimateBytes, "sizeEstimateBytes");
+            this.directoryPath = errorIfSet(
+                    directoryPath, newrec.directoryPath, "directoryPath");
             this.readers = setFrom(readers, newrec.readers);
             this.writers = setFrom(writers, newrec.writers);
 
@@ -178,6 +186,9 @@ public class ObjectResource extends PermissionedResource {
             populateFromAPI(objectId);
             checkUserWrite(headers);
             deleteFromAPI(objectId);
+
+            // TODO(davidan) need to delete 'objectstore'-type objects from the Object store
+
             return this.objectId;
 
         } catch(DeregisteredObjectException e) {

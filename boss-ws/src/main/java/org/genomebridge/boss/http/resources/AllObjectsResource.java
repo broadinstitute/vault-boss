@@ -45,7 +45,7 @@ public class AllObjectsResource {
     @POST
     @Consumes("application/json")
     @Produces("application/json")
-    public Response createNewGroup( @Context UriInfo info, ObjectResource rec ) {
+    public Response createObject( @Context UriInfo info, ObjectResource rec ) {
         rec.objectId = randomID();
         api.updateObject(rec.objectId, rec);
 
