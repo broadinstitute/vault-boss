@@ -85,6 +85,30 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         assertThat(objectPath).endsWith(created.objectId);
         assertThat(created.objectName).describedAs("created object name").isEqualTo("Test Name");
         assertThat(created.sizeEstimateBytes).isEqualTo(1010L);
+        assertThat(created.storagePlatform).isEqualTo("objectstore");
+        assertThat(created.directoryPath).isNull();
+        assertThat(created.writers).describedAs("created object writers").containsOnly("tdanford", "testuser");
+        assertThat(created.readers).describedAs("created object readers").containsOnly("tdanford", "testuser");
+    }
+
+    @Test
+    public void registerFilesystemObjectAndDescribeTest() {
+        Client client = new Client();
+
+        ClientResponse response = checkStatus( CREATED,
+                createObject("Test Name", "tdanford", "filesystem", "/my/path", 1010L) );
+        String objectPath = checkHeader(response, "Location");
+
+        response = check200( get(client, objectPath) );
+
+        ObjectResource created = response.getEntity(ObjectResource.class);
+
+        assertThat(objectPath).endsWith(created.objectId);
+        assertThat(created.objectName).describedAs("created object name").isEqualTo("Test Name");
+        assertThat(created.sizeEstimateBytes).isEqualTo(1010L);
+        assertThat(created.storagePlatform).isEqualTo("filesystem");
+        assertThat(created.directoryPath).isNotNull();
+        assertThat(created.directoryPath).isEqualTo("/my/path");
         assertThat(created.writers).describedAs("created object writers").containsOnly("tdanford", "testuser");
         assertThat(created.readers).describedAs("created object readers").containsOnly("tdanford", "testuser");
     }

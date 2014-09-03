@@ -95,7 +95,15 @@ public class DatabaseBossAPI implements BossAPI {
         if(dao.findObjectById(objectId) != null) {
             dao.updateObject(objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes, rec.storagePlatform);
         } else {
-            dao.insertObject(objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes, location(rec), rec.storagePlatform);
+
+            /*
+            Use the location passed in by the user if the Object is a 'filesystem'
+            type object, otherwise generate a new (fresh) location.
+             */
+            String loc = rec.storagePlatform.equals("filesystem") ?
+                    rec.directoryPath : location(rec);
+
+            dao.insertObject(objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes, loc, rec.storagePlatform);
         }
         updateReaders(objectId, rec.readers);
         updateWriters(objectId, rec.writers);

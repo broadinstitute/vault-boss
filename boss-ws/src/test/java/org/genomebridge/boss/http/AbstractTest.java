@@ -118,6 +118,10 @@ abstract public class AbstractTest extends ResourcedTest {
     }
 
     public ClientResponse createObject(String objectName, String owner, long size) {
+        return createObject(objectName, owner, "objectstore", null, size);
+    }
+
+    public ClientResponse createObject(String objectName, String owner, String platform, String path, long size) {
         Client client = new Client();
 
         ObjectResource obj = new ObjectResource();
@@ -126,7 +130,8 @@ abstract public class AbstractTest extends ResourcedTest {
         obj.readers = arraySet( owner, "testuser" );
         obj.writers = arraySet( owner, "testuser" );
         obj.sizeEstimateBytes = size;
-        obj.storagePlatform = "objectstore";
+        obj.storagePlatform = platform;
+        obj.directoryPath = path;
 
         String objectsPath = objectsPath();
 
