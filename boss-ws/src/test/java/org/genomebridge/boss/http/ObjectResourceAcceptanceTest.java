@@ -117,7 +117,10 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
     public void registerDescribeAndDeleteTest() {
         Client client = new Client();
 
-        ClientResponse response = checkStatus( CREATED, createObject("Test Name", "tdanford", 1010L) );
+        // until we have a mock object store, calling delete on an objectstore-object will fail, because
+        // the system will reach out to the real objectstore and attempt to delete it. We'll cover that test
+        // in the end-to-end integration tests.
+        ClientResponse response = checkStatus( CREATED, createObject("Test Name", "tdanford", "filesystem", "/foo/bar", 1010L) );
         String objectPath = checkHeader(response, "Location");
 
         checkStatus( OK, get(client, objectPath) );

@@ -40,6 +40,10 @@ public class DatabaseBossAPI implements BossAPI {
         this.objectStore = store;
     }
 
+    public ObjectStore getObjectStore() {
+        return this.objectStore;
+    }
+
     public static String location(ObjectResource rec) {
         String random = UUID.randomUUID().toString();
         String[] splits = random.split("-");

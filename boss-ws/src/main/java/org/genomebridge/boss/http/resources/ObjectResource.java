@@ -16,13 +16,15 @@
 
 package org.genomebridge.boss.http.resources;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import static com.fasterxml.jackson.annotation.JsonInclude.Include;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.google.inject.Inject;
 import com.sun.jersey.api.NotFoundException;
 import org.apache.log4j.Logger;
 import org.genomebridge.boss.http.models.ResolutionRequest;
+import org.genomebridge.boss.http.models.StoragePlatform;
+import org.genomebridge.boss.http.objectstore.ObjectStoreException;
 import org.genomebridge.boss.http.service.BossAPI;
 import org.genomebridge.boss.http.service.DeregisteredObjectException;
 
@@ -32,6 +34,8 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import java.net.URI;
+
+import static com.fasterxml.jackson.annotation.JsonInclude.Include;
 
 @Path("objects/{objectId}")
 @JsonInclude(Include.NON_NULL)
@@ -77,6 +81,11 @@ public class ObjectResource extends PermissionedResource {
     public void checkUserRead( String user ) { checkUser(user, "READ", readers); }
     public void checkUserWrite( String user ) { checkUser(user, "WRITE", writers); }
 
+    @JsonIgnore
+    public boolean isObjectStoreObject() { return (StoragePlatform.OBJECTSTORE.getValue()).equals( this.storagePlatform ); }
+    @JsonIgnore
+    public boolean isFilesystemObject() { return (StoragePlatform.FILESYSTEM.getValue()).equals( this.storagePlatform ); }
+
     private boolean populateFromAPI(String objectId) {
 
         ObjectResource rec = api.getObject(objectId);
@@ -118,7 +127,7 @@ public class ObjectResource extends PermissionedResource {
             org.genomebridge.boss.http.objectstore.HttpMethod method = org.genomebridge.boss.http.objectstore.HttpMethod.valueOf(request.httpMethod);
 
             URI presignedURL =
-                    storagePlatform.equals("objectstore") ?
+                    isObjectStoreObject() ?
                             getPresignedURL(objectId, method, timeoutMillis) :
                             URI.create(String.format("file://%s", directoryPath));
 
@@ -182,11 +191,17 @@ public class ObjectResource extends PermissionedResource {
             checkUserWrite(headers);
             deleteFromAPI(objectId);
 
-            // TODO(davidan) need to delete 'objectstore'-type objects from the Object store
+            // if this object resides in the object store, also delete from the object store
+            if (isObjectStoreObject()) {
+                api.getObjectStore().deleteObject(objectId);
+            }
 
             return this.objectId;
 
         } catch(DeregisteredObjectException e) {
+            throw new WebApplicationException(Response.Status.BAD_REQUEST);
+        } catch (ObjectStoreException ose) {
+            logger().error("Error deleting object '" + objectId + "' from object store: " + ose.getLocalizedMessage(), ose);
             throw new WebApplicationException(Response.Status.BAD_REQUEST);
         }
     }
