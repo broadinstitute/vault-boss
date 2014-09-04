@@ -255,6 +255,24 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
     }
 
     @Test
+    public void testFilesystemObjectResolve() {
+        Client client = new Client();
+        ClientResponse response = checkStatus( CREATED,
+                createObject("test fs object", "tdanford", "filesystem", "/path/to/file", 100L));
+        String objectPath = checkHeader( response, "Location" );
+
+        int seconds = 1000;
+        ResolutionRequest req = new ResolutionRequest("GET", seconds);
+
+        response = check200( post(client, objectPath + "/resolve", req) );
+
+        ResolutionResource rr = response.getEntity(ResolutionResource.class);
+
+        assertThat(rr).isNotNull();
+        assertThat(rr.url.toString()).isEqualTo("file:///path/to/file");
+    }
+
+    @Test
     public void testIllegalObjectResolve() {
         Client client = new Client();
         Random rand = new Random();
