@@ -63,7 +63,7 @@ public class ObjectResource extends PermissionedResource {
         if (!populateFromAPI(objectId)) {
             throw new NotFoundException(String.format("Couldn't find object with id %s", objectId));
         }
-        
+
         checkUserRead(headers);
 
         return this;
@@ -113,23 +113,18 @@ public class ObjectResource extends PermissionedResource {
         if(!populateFromAPI(objectId)) { throw new NotFoundException(objectId); }
         checkUserRead(headers);
 
-        /*
-        If we're looking at a filesystem object, then a RESOLVE request isn't a well-formed
-        request.
-         */
-        if(!storagePlatform.equals("objectstore")) {
-            String msg = String.format("Can't resolve a non-objectstore object %s", objectId);
-            throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST)
-                    .entity(msg).build());
-        }
-
         try {
             long timeoutMillis = 1000L * request.validityPeriodSeconds;
             org.genomebridge.boss.http.objectstore.HttpMethod method = org.genomebridge.boss.http.objectstore.HttpMethod.valueOf(request.httpMethod);
 
+            URI presignedURL =
+                    storagePlatform.equals("objectstore") ?
+                            getPresignedURL(objectId, method, timeoutMillis) :
+                            URI.create(String.format("file://%s", directoryPath));
+
             return new ResolutionResource(
-                    getPresignedURL(objectId, method, timeoutMillis),
-                    uriInfo.getBaseUri(),
+                    presignedURL,
+                    uriInfo.getRequestUri(),
                     request.validityPeriodSeconds);
 
         } catch(IllegalArgumentException e) {
