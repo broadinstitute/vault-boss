@@ -40,10 +40,6 @@ public class DatabaseBossAPI implements BossAPI {
         this.objectStore = store;
     }
 
-    public ObjectStore getObjectStore() {
-        return this.objectStore;
-    }
-
     public static String location(ObjectResource rec) {
         String random = UUID.randomUUID().toString();
         String[] splits = random.split("-");
@@ -114,8 +110,21 @@ public class DatabaseBossAPI implements BossAPI {
     }
 
     @Override
-    public void deleteObject(String objectId) {
-        dao.deleteObject(objectId);
+    public void deleteObject(ObjectResource rec) {
+        /* if this object resides in the object store, also delete from the object store.
+
+           BOSS rev3 spec says: If BOSS is unable to delete the underlying object from the object storage
+           (e.g. non-transient network failure, or other error from objectstore server), it will return an
+           appropriate 50x error, and the entry for this object will not be deleted from BOSS.
+
+           So, we delete from object store first, before deleting from the db. If the object store deletion fails,
+           we'll trigger the try/catch and won't delete from the db.
+        */
+        if (rec.isObjectStoreObject()) {
+            String location = dao.findObjectLocation(rec.objectId);
+            objectStore.deleteObject(location);
+        }
+        dao.deleteObject(rec.objectId);
     }
 
     @Override

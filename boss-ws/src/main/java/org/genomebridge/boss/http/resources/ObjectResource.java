@@ -189,21 +189,7 @@ public class ObjectResource extends PermissionedResource {
         try {
             populateFromAPI(objectId);
             checkUserWrite(headers);
-
-            /* if this object resides in the object store, also delete from the object store.
-
-               BOSS rev3 spec says: If BOSS is unable to delete the underlying object from the object storage
-               (e.g. non-transient network failure, or other error from objectstore server), it will return an
-               appropriate 50x error, and the entry for this object will not be deleted from BOSS.
-
-               So, we delete from object store first, before deleting from the db. If the object store deletion fails,
-               we'll trigger the try/catch and won't delete from the db.
-             */
-            if (isObjectStoreObject()) {
-                api.getObjectStore().deleteObject(objectId);
-            }
-
-            deleteFromAPI(objectId);
+            deleteFromAPI(this);
 
             return this.objectId;
 
@@ -215,7 +201,7 @@ public class ObjectResource extends PermissionedResource {
         }
     }
 
-    private void deleteFromAPI(String objectId) {
-        api.deleteObject(objectId);
+    private void deleteFromAPI(ObjectResource rec) {
+        api.deleteObject(rec);
     }
 }
