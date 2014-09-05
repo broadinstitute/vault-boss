@@ -25,9 +25,7 @@ public interface BossAPI {
 
     public ObjectResource getObject(String objectId);
     public void updateObject(String objectId, ObjectResource rec);
-    public void deleteObject(String objectId);
-
-    public ObjectStore getObjectStore();
+    public void deleteObject(ObjectResource rec);
 
     public URI getPresignedURL(String objectId, HttpMethod method, long millis);
 }
