@@ -133,7 +133,6 @@ public class ObjectResource extends PermissionedResource {
 
             return new ResolutionResource(
                     presignedURL,
-                    uriInfo.getRequestUri(),
                     request.validityPeriodSeconds);
 
         } catch(IllegalArgumentException e) {

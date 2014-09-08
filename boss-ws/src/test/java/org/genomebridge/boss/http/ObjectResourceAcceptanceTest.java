@@ -251,7 +251,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         ResolutionResource rec = response.getEntity(ResolutionResource.class);
 
         assertThat(rec).isNotNull();
-        assertThat(rec.url.toString()).startsWith(
+        assertThat(rec.objectUrl.toString()).startsWith(
                 String.format("https://genomebridge-variantstore-ci.s3.amazonaws.com/%s-",
                         created.objectId));
         assertThat(rec.validityPeriodSeconds).isEqualTo(seconds);
@@ -272,7 +272,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         ResolutionResource rr = response.getEntity(ResolutionResource.class);
 
         assertThat(rr).isNotNull();
-        assertThat(rr.url.toString()).isEqualTo("file:///path/to/file");
+        assertThat(rr.objectUrl.toString()).isEqualTo("file:///path/to/file");
     }
 
     @Test
