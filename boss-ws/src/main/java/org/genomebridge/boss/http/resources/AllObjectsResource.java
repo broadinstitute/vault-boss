@@ -17,6 +17,7 @@ package org.genomebridge.boss.http.resources;
 
 import com.google.inject.Inject;
 import org.genomebridge.boss.http.service.BossAPI;
+import org.genomebridge.boss.http.service.BossAPIProvider;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
@@ -36,8 +37,8 @@ public class AllObjectsResource {
     public AllObjectsResource() {}
 
     @Inject
-    public AllObjectsResource(BossAPI api) {
-        this.api = api;
+    public AllObjectsResource(BossAPIProvider apiWrapper) {
+        this.api = apiWrapper.getApi();
     }
 
     public String randomID() { return UUID.randomUUID().toString(); }
