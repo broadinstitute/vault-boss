@@ -26,6 +26,7 @@ import org.genomebridge.boss.http.models.ResolutionRequest;
 import org.genomebridge.boss.http.models.StoragePlatform;
 import org.genomebridge.boss.http.objectstore.ObjectStoreException;
 import org.genomebridge.boss.http.service.BossAPI;
+import org.genomebridge.boss.http.service.BossAPIProvider;
 import org.genomebridge.boss.http.service.DeregisteredObjectException;
 
 import javax.ws.rs.*;
@@ -55,8 +56,8 @@ public class ObjectResource extends PermissionedResource {
     }
 
     @Inject
-    public ObjectResource(BossAPI api) {
-        this.api = api;
+    public ObjectResource(BossAPIProvider apiWrapper) {
+        this.api = apiWrapper.getApi();
     }
 
     @GET
