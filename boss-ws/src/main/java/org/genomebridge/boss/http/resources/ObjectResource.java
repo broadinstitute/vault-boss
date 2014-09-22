@@ -19,7 +19,6 @@ package org.genomebridge.boss.http.resources;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.google.inject.Inject;
 import com.sun.jersey.api.NotFoundException;
 import org.apache.log4j.Logger;
 import org.genomebridge.boss.http.models.ResolutionRequest;
@@ -53,11 +52,7 @@ public class ObjectResource extends PermissionedResource {
     public String[] readers, writers;
 
     public ObjectResource() {
-    }
-
-    @Inject
-    public ObjectResource(BossAPIProvider apiWrapper) {
-        this.api = apiWrapper.getApi();
+        this.api = BossAPIProvider.getInstance().getApi();
     }
 
     @GET
