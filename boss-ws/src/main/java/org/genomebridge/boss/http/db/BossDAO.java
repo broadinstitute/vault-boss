@@ -24,59 +24,44 @@ import org.skife.jdbi.v2.sqlobject.customizers.RegisterMapper;
 
 import java.util.List;
 
-@RegisterMapper({ GroupResourceMapper.class, ObjectResourceMapper.class })
+@RegisterMapper({ ObjectResourceMapper.class })
 public interface BossDAO {
 
-    @SqlQuery("select * from objects where objectId = :objectId and groupId = :group")
-    public ObjectResource findObjectById(@Bind("objectId") String objectId, @Bind("group") String group);
+    /*
+    Object API
+     */
 
-    @SqlQuery("select location from objects where objectId = :objectId and groupId = :groupId")
-    public String findObjectLocation(@Bind("objectId") String objectId, @Bind("groupId") String groupId);
+    @SqlQuery("select * from objects where objectId = :objectId and active=true")
+    public ObjectResource findObjectById(@Bind("objectId") String objectId);
 
-    @SqlQuery("select * from groups where groupId = :groupId")
-    public GroupResource findGroupById(@Bind("groupId") String groupId);
-
-    @SqlUpdate("insert into groups " +
-            "(groupId, ownerId, sizeEstimateBytes, typeHint, location, storagePlatform) values " +
-            "(:groupId, :ownerId, :sizeEstimate, :typeHint, :location, :storagePlatform)")
-    public void insertGroup(@Bind("groupId") String groupId,
-                            @Bind("ownerId") String ownerId,
-                            @Bind("sizeEstimate") Long sizeEstimate,
-                            @Bind("typeHint") String typeHint,
-                            @Bind("location") String location,
-                            @Bind("storagePlatform") String storagePlatform);
+    @SqlQuery("select location from objects where objectId = :objectId and active=true")
+    public String findObjectLocation(@Bind("objectId") String objectId);
 
     @SqlUpdate("insert into objects " +
-            "(objectId, groupId, ownerId, name, sizeEstimateBytes, location, storagePlatform) values " +
-            "(:objectId, :group, :ownerId, :name, :sizeEstimate, :location, :storagePlatform)")
+            "(objectId, objectName, ownerId, sizeEstimateBytes, location, storagePlatform, active) values " +
+            "(:objectId, :objectName, :ownerId, :sizeEstimate, :location, :storagePlatform, true)")
     public void insertObject(@Bind("objectId") String objectId,
-                             @Bind("group") String group,
+                             @Bind("objectName") String objectName,
                              @Bind("ownerId") String ownerId,
                              @Bind("sizeEstimate") Long sizeEstimate,
-                             @Bind("name") String name,
                              @Bind("location") String location,
                              @Bind("storagePlatform") String storagePlatform);
 
-    @SqlUpdate("update groups set ownerId = :ownerId, sizeEstimateBytes = :sizeEstimate, typeHint = :typeHint " +
-            "where groupId = :groupId")
-    public void updateGroup(@Bind("groupId") String groupId,
-                            @Bind("ownerId") String ownerId,
-                            @Bind("sizeEstimate") Long sizeEstimate,
-                            @Bind("typeHint") String typeHint);
-
-    @SqlUpdate("update objects set ownerId = :ownerId, sizeEstimateBytes = :sizeEstimate, name = :name " +
-            "where objectId = :objectId and groupId = :group")
+    @SqlUpdate("update objects set ownerId = :ownerId, sizeEstimateBytes = :sizeEstimate, " +
+            "objectName = :objectName, storagePlatform = :storagePlatform " +
+            "where objectId = :objectId and active=true")
     public void updateObject(@Bind("objectId") String objectId,
-                             @Bind("group") String group,
+                             @Bind("objectName") String objectName,
                              @Bind("ownerId") String ownerId,
                              @Bind("sizeEstimate") Long sizeEstimate,
-                             @Bind("name") String name);
+                             @Bind("storagePlatform") String storagePlatform);
 
-    @SqlUpdate("update groups set active=false where groupId = :groupId")
-    public void deleteGroup(@Bind("groupId") String groupId);
+    @SqlUpdate("update objects set active=false where objectId = :objectId")
+    public void deleteObject(@Bind("objectId") String objectId);
 
-    @SqlUpdate("update objects set active=false where objectId = :objectId and groupId = :groupId")
-    public void deleteObject(@Bind("objectId") String objectId, @Bind("groupId") String groupId);
+    /*
+    Readers/Writers API
+     */
 
     @SqlQuery("select distinct(username) from readers where id = :id")
     public List<String> findReadersById(@Bind("id") String id);

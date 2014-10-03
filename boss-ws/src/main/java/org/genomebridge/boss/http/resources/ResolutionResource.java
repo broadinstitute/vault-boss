@@ -22,14 +22,12 @@ import java.net.URL;
 
 public class ResolutionResource extends AbstractResource {
 
-    public URI url;
     public URI objectUrl;
     public Integer validityPeriodSeconds;
 
     public ResolutionResource() {}
 
-    public ResolutionResource(URI url, URI objectUrl, Integer validityPeriodSeconds) {
-        this.url = url;
+    public ResolutionResource(URI objectUrl, Integer validityPeriodSeconds) {
         this.objectUrl = objectUrl;
         this.validityPeriodSeconds = validityPeriodSeconds;
     }

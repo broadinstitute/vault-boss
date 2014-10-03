@@ -15,7 +15,6 @@
  */
 package org.genomebridge.boss.http;
 
-import com.hubspot.dropwizard.guice.GuiceBundle;
 import io.dropwizard.Application;
 import io.dropwizard.assets.AssetsBundle;
 import io.dropwizard.db.DataSourceFactory;
@@ -24,9 +23,13 @@ import io.dropwizard.migrations.MigrationsBundle;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import org.genomebridge.boss.http.db.BossDAO;
-import org.genomebridge.boss.http.resources.AllGroupsResource;
-import org.genomebridge.boss.http.resources.GroupResource;
-import org.genomebridge.boss.http.resources.StatusResource;
+import org.genomebridge.boss.http.objectstore.ObjectStore;
+import org.genomebridge.boss.http.objectstore.S3ObjectStore;
+import org.genomebridge.boss.http.resources.AllObjectsResource;
+import org.genomebridge.boss.http.resources.ObjectResource;
+import org.genomebridge.boss.http.service.BossAPI;
+import org.genomebridge.boss.http.service.BossAPIProvider;
+import org.genomebridge.boss.http.service.DatabaseBossAPI;
 import org.skife.jdbi.v2.DBI;
 
 /**
@@ -43,32 +46,45 @@ public class BossApplication extends Application<BossConfiguration> {
     }
 
     public void run(BossConfiguration config, Environment env) {
-        env.jersey().register(StatusResource.class);
 
-        final DBIFactory factory = new DBIFactory();
+        /*
+        Set up the Boss API, which includes the object store, here. Then stash that API into the BossAPIProvider
+        singleton. We manage this singleton ourselves, instead of relying on dependency injection, due to problems
+        with Dropwizard + Guice lifecycle. See https://github.com/HubSpot/dropwizard-guice/issues/19 for discussion
+        of those lifecycle problems.
 
+        Furthermore, creating the JDBI objects in the run() method properly registers health checks and metrics
+        for the JDBI connection pool. When we tried creating the JDBI objects elsewhere, the db pool metrics
+        did not work correctly; we did not investigate workarounds for this.
+         */
         try {
+            // JDBI
+            final DBIFactory factory = new DBIFactory();
             final DBI jdbi = factory.build(env, config.getDataSourceFactory(), "db");
             final BossDAO dao = jdbi.onDemand(BossDAO.class);
 
-            env.jersey().register(GroupResource.class);
-            env.jersey().register(AllGroupsResource.class);
+            // Object store
+            ObjectStoreConfiguration osConfig = config.getObjectStoreConfiguration();
+            ObjectStore store = new S3ObjectStore(osConfig.createClient(), osConfig.getBucket());
+
+            // BOSS API
+            BossAPI api = new DatabaseBossAPI(dao, store);
+
+            // stash in singleton
+            BossAPIProvider.getInstance().setApi(api);
 
         } catch (ClassNotFoundException e) {
             e.printStackTrace(System.err);
-
-            throw new IllegalStateException("Couldn't start up the application", e);
         }
+
+        /*
+        Set up the resources themselves.
+         */
+        env.jersey().register(ObjectResource.class);
+        env.jersey().register(AllObjectsResource.class);
     }
 
     public void initialize(Bootstrap<BossConfiguration> bootstrap) {
-
-        GuiceBundle<BossConfiguration> guiceBundle = GuiceBundle.<BossConfiguration>newBuilder()
-                .addModule(new BossModule())
-                .setConfigClass(BossConfiguration.class)
-                .build();
-
-        bootstrap.addBundle(guiceBundle);
 
         bootstrap.addBundle(new MigrationsBundle<BossConfiguration>() {
             @Override

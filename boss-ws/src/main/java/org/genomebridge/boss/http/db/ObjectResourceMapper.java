@@ -29,13 +29,11 @@ public class ObjectResourceMapper implements ResultSetMapper<ObjectResource> {
         ObjectResource rec = new ObjectResource();
 
         rec.objectId = r.getString("objectId");
-        if(!r.getBoolean("active")) { throw new DeregisteredObjectException(rec.group + "/" + rec.objectId); }
-
-        rec.group = r.getString("groupId");
+        rec.objectName = r.getString("objectName");
         rec.ownerId = r.getString("ownerId");
         rec.sizeEstimateBytes = r.getLong("sizeEstimateBytes");
-        rec.name = r.getString("name");
         rec.storagePlatform = r.getString("storagePlatform");
+        rec.directoryPath = r.getString("location");
 
         return rec;
     }

@@ -19,7 +19,6 @@ import com.google.inject.Inject;
 import org.genomebridge.boss.http.db.BossDAO;
 import org.genomebridge.boss.http.objectstore.HttpMethod;
 import org.genomebridge.boss.http.objectstore.ObjectStore;
-import org.genomebridge.boss.http.resources.GroupResource;
 import org.genomebridge.boss.http.resources.ObjectResource;
 
 import java.net.URI;
@@ -41,23 +40,11 @@ public class DatabaseBossAPI implements BossAPI {
         this.objectStore = store;
     }
 
-    private String composite(String groupId, String objectId) {
-        return String.format("%s/%s", groupId, objectId);
-    }
-
-    private String id(GroupResource rec) {
-        return rec.groupId;
-    }
-
-    private String id(ObjectResource rec) {
-        return composite(rec.group, rec.objectId);
-    }
-
     public static String location(ObjectResource rec) {
         String random = UUID.randomUUID().toString();
         String[] splits = random.split("-");
         String last = splits[splits.length-1];
-        return String.format("%s/%s-%s", rec.group, rec.objectId, last);
+        return String.format("%s-%s", rec.objectId, last);
     }
 
     private void updateReaders(String id, String[] target) {
@@ -94,58 +81,55 @@ public class DatabaseBossAPI implements BossAPI {
     }
 
     @Override
-    public GroupResource getGroup(String groupId) {
-        GroupResource rec = dao.findGroupById(groupId);
+    public ObjectResource getObject(String objectId) {
+        ObjectResource rec = dao.findObjectById(objectId);
         if(rec != null) {
-            rec.readers = dao.findReadersById(groupId).toArray(new String[0]);
-            rec.writers = dao.findWritersById(groupId).toArray(new String[0]);
+            rec.readers = dao.findReadersById(objectId).toArray(new String[0]);
+            rec.writers = dao.findWritersById(objectId).toArray(new String[0]);
         }
         return rec;
     }
 
     @Override
-    public void updateGroup(GroupResource rec) {
-        assert(rec.groupId != null);
-
-        if(dao.findGroupById(rec.groupId) != null) {
-            dao.updateGroup(rec.groupId, rec.ownerId, rec.sizeEstimateBytes, rec.typeHint);
+    public void updateObject(String objectId, ObjectResource rec) {
+        if(dao.findObjectById(objectId) != null) {
+            dao.updateObject(objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes, rec.storagePlatform);
         } else {
-            dao.insertGroup(rec.groupId, rec.ownerId, rec.sizeEstimateBytes, rec.typeHint, rec.directory, rec.storagePlatform);
+
+            /*
+            Use the location passed in by the user if the Object is a 'filesystem'
+            type object, otherwise generate a new (fresh) location.
+             */
+            String loc = rec.storagePlatform.equals("filesystem") ?
+                    rec.directoryPath : location(rec);
+
+            dao.insertObject(objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes, loc, rec.storagePlatform);
         }
-        updateReaders(rec.groupId, rec.readers);
-        updateWriters(rec.groupId, rec.writers);
+        updateReaders(objectId, rec.readers);
+        updateWriters(objectId, rec.writers);
     }
 
     @Override
-    public ObjectResource getObject(String objectId, String groupId) {
-        ObjectResource rec = dao.findObjectById(objectId, groupId);
-        if(rec != null) {
-            rec.readers = dao.findReadersById(id(rec)).toArray(new String[0]);
-            rec.writers = dao.findWritersById(id(rec)).toArray(new String[0]);
+    public void deleteObject(ObjectResource rec) {
+        /* if this object resides in the object store, also delete from the object store.
+
+           BOSS rev3 spec says: If BOSS is unable to delete the underlying object from the object storage
+           (e.g. non-transient network failure, or other error from objectstore server), it will return an
+           appropriate 50x error, and the entry for this object will not be deleted from BOSS.
+
+           So, we delete from object store first, before deleting from the db. If the object store deletion fails,
+           we'll trigger the try/catch and won't delete from the db.
+        */
+        if (rec.isObjectStoreObject()) {
+            String location = dao.findObjectLocation(rec.objectId);
+            objectStore.deleteObject(location);
         }
-        return rec;
+        dao.deleteObject(rec.objectId);
     }
 
     @Override
-    public void updateObject(ObjectResource rec) {
-        if(dao.findObjectById(rec.objectId, rec.group) != null) {
-            dao.updateObject(rec.objectId, rec.group, rec.ownerId, rec.sizeEstimateBytes, rec.name);
-        } else {
-            dao.insertObject(rec.objectId, rec.group, rec.ownerId, rec.sizeEstimateBytes, rec.name, location(rec), rec.storagePlatform);
-        }
-        String id = id(rec);
-        updateReaders(id, rec.readers);
-        updateWriters(id, rec.writers);
-    }
-
-    @Override
-    public void deregisterObject(ObjectResource rec) {
-        dao.deleteObject(rec.objectId, rec.group);
-    }
-
-    @Override
-    public URI getPresignedURL(ObjectResource rec, HttpMethod method, long millis) {
-        String location = dao.findObjectLocation(rec.objectId, rec.group);
+    public URI getPresignedURL(String objectId, HttpMethod method, long millis) {
+        String location = dao.findObjectLocation(objectId);
         return objectStore.generatePresignedURL(location, method, millis);
     }
 }

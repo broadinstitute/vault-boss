@@ -19,6 +19,7 @@ package org.genomebridge.boss.http;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import io.dropwizard.testing.junit.DropwizardAppRule;
+import org.genomebridge.boss.http.models.ResolutionRequest;
 import org.genomebridge.boss.http.resources.*;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -34,6 +35,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
     public static int FORBIDDEN = Response.Status.FORBIDDEN.getStatusCode();
     public static int CREATED = Response.Status.CREATED.getStatusCode();
     public static int GONE = Response.Status.GONE.getStatusCode();
+    public static int NOT_FOUND = Response.Status.NOT_FOUND.getStatusCode();
     public static int OK = 200;
 
     @ClassRule
@@ -49,27 +51,20 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
     @Test
     public void registerObjectTest() {
-        /**
-         * "The user should be able to register new objects to a group."
-         */
-
-        String groupId = "objecttest1_group";
-        String objectId = "object1";
-
-        check200( createGroup(groupId, "tdanford", "test_hint", 1010L) );
-
         String name = "Test Object";
         String owner = "carlyeks";
         Long sizeEstimate = 1010L;
 
-        ClientResponse response = createObject(objectId, groupId, name, owner, sizeEstimate);
-
-        check200( response );
+        ClientResponse response = checkStatus( CREATED, createObject(name, owner, sizeEstimate) );
+        String objectPath = checkHeader(response, "Location");
 
         ObjectResource created = response.getEntity(ObjectResource.class);
 
-        assertThat(created.objectId).isEqualTo(objectId);
-        assertThat(created.name).isEqualTo(name);
+        assertThat(created).isNotNull();
+        assertThat(created.objectId).isNotNull();
+
+        assertThat(objectPath).endsWith(created.objectId);
+        assertThat(created.objectName).isEqualTo(name);
         assertThat(created.ownerId).isEqualTo(owner);
         assertThat(created.sizeEstimateBytes).isEqualTo(sizeEstimate);
         assertThat(created.readers).containsOnly("carlyeks", "testuser");
@@ -80,21 +75,40 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
     public void registerObjectAndDescribeTest() {
         Client client = new Client();
 
-        String groupId = "objecttest2_group";
-        String objectId = "object2";
+        ClientResponse response = checkStatus( CREATED, createObject("Test Name", "tdanford", 1010L) );
+        String objectPath = checkHeader(response, "Location");
 
-        check200( createGroup(groupId, "tdanford", "test_hint", 1020L) );
-        check200( createObject(objectId, groupId, "Test Name", "tdanford", 1010L) );
-
-        ClientResponse response = get(client, objectPath(objectId, groupId));
-
-        check200(response);
+        response = check200( get(client, objectPath) );
 
         ObjectResource created = response.getEntity(ObjectResource.class);
 
-        assertThat(created.objectId).describedAs("created object id").isEqualTo(objectId);
-        assertThat(created.name).describedAs("created object name").isEqualTo("Test Name");
+        assertThat(objectPath).endsWith(created.objectId);
+        assertThat(created.objectName).describedAs("created object name").isEqualTo("Test Name");
         assertThat(created.sizeEstimateBytes).isEqualTo(1010L);
+        assertThat(created.storagePlatform).isEqualTo("objectstore");
+        assertThat(created.directoryPath).isNull();
+        assertThat(created.writers).describedAs("created object writers").containsOnly("tdanford", "testuser");
+        assertThat(created.readers).describedAs("created object readers").containsOnly("tdanford", "testuser");
+    }
+
+    @Test
+    public void registerFilesystemObjectAndDescribeTest() {
+        Client client = new Client();
+
+        ClientResponse response = checkStatus( CREATED,
+                createObject("Test Name", "tdanford", "filesystem", "/my/path", 1010L) );
+        String objectPath = checkHeader(response, "Location");
+
+        response = check200( get(client, objectPath) );
+
+        ObjectResource created = response.getEntity(ObjectResource.class);
+
+        assertThat(objectPath).endsWith(created.objectId);
+        assertThat(created.objectName).describedAs("created object name").isEqualTo("Test Name");
+        assertThat(created.sizeEstimateBytes).isEqualTo(1010L);
+        assertThat(created.storagePlatform).isEqualTo("filesystem");
+        assertThat(created.directoryPath).isNotNull();
+        assertThat(created.directoryPath).isEqualTo("/my/path");
         assertThat(created.writers).describedAs("created object writers").containsOnly("tdanford", "testuser");
         assertThat(created.readers).describedAs("created object readers").containsOnly("tdanford", "testuser");
     }
@@ -103,42 +117,34 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
     public void registerDescribeAndDeleteTest() {
         Client client = new Client();
 
-        String groupId = randomID();
-        String objectId = randomID();
+        // until we have a mock object store, calling delete on an objectstore-object will fail, because
+        // the system will reach out to the real objectstore and attempt to delete it. We'll cover that test
+        // in the end-to-end integration tests.
+        ClientResponse response = checkStatus( CREATED, createObject("Test Name", "tdanford", "filesystem", "/foo/bar", 1010L) );
+        String objectPath = checkHeader(response, "Location");
 
-        checkStatus( OK, createGroup(groupId, "tdanford", "test_hint", 1020L) );
-        checkStatus( OK, createObject(objectId, groupId, "Test Name", "tdanford", 1010L) );
-        checkStatus( OK, get(client, objectPath(objectId, groupId)) );
-
-        checkStatus( OK, delete(client, objectPath(objectId, groupId)) );
-
-        checkStatus( GONE, get(client, objectPath(objectId, groupId)) );
+        checkStatus( OK, get(client, objectPath) );
+        checkStatus( OK, delete(client, objectPath));
+        checkStatus( NOT_FOUND, get(client, objectPath) );
     }
 
     @Test
     public void setIllegalDeleteOnObject() {
         Client client = new Client();
-        String groupId = randomID(), objectId = randomID();
 
-        // Create the group and the object...
-        check200( createGroup(groupId, "tdanford", "test_hint", 100L) );
-        check200( createObject(objectId, groupId, "Deletable", "tdanford", 100L ));
-
-        // trying a DELETE with a username 'fake_user' should fail
-        checkStatus( FORBIDDEN, delete(client, objectPath(objectId, groupId), "fake_user"));
-
-        // object should still be there
-        check200( get(client, objectPath(objectId, groupId)) );
+        String objectPath = checkHeader(
+                checkStatus( CREATED, createObject("Deletable", "tdanford", 100L )),
+                "Location" );
+        checkStatus( FORBIDDEN, delete(client, objectPath, "fake_user"));
+        check200( get(client, objectPath) );
     }
 
     @Test
     public void testSetPermissionsOnObject() {
         Client client = new Client();
-        String groupId = randomID(), objectId = randomID();
 
-        check200( createGroup(groupId, "tdanford", "test_hint", 100L));
-
-        ClientResponse response = check200( createObject(objectId, groupId, "changeable", "tdanford", 100L));
+        ClientResponse response = checkStatus( CREATED, createObject("changeable", "tdanford", 100L));
+        String objectPath = checkHeader(response, "Location");
 
         ObjectResource rec = response.getEntity(ObjectResource.class);
         assertThat(rec).isNotNull();
@@ -146,9 +152,9 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         rec.readers = arrayAppend( rec.readers, "new_reader" );
         rec.writers = arrayAppend( rec.writers, "new_writer" );
 
-        check200( post(client, objectPath(objectId, groupId), rec));
+        check200( post(client, objectPath, rec));
 
-        response = check200( get(client, objectPath(objectId, groupId)));
+        response = check200( get(client, objectPath));
 
         rec = response.getEntity(ObjectResource.class);
 
@@ -160,20 +166,18 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
     @Test
     public void setOwnerOnObject() {
         Client client = new Client();
-        String groupId = randomID(), objectId = randomID();
 
-        check200( createGroup(groupId, "tdanford", "test_hint", 100L));
-
-        ClientResponse response = check200( createObject(objectId, groupId, "changeable", "tdanford", 100L));
+        ClientResponse response = checkStatus( CREATED, createObject("changeable", "tdanford", 100L));
+        String objectPath = checkHeader(response, "Location");
 
         ObjectResource rec = response.getEntity(ObjectResource.class);
         assertThat(rec).isNotNull();
 
         rec.ownerId = "new_owner";
 
-        check200( post(client, objectPath(objectId, groupId), rec));
+        check200( post(client, objectPath, rec));
 
-        response = check200( get(client, objectPath(objectId, groupId)));
+        response = check200( get(client, objectPath));
 
         rec = response.getEntity(ObjectResource.class);
 
@@ -186,46 +190,42 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
          * "It's illegal for a user to set the Name field on an already-registered object."
          */
         Client client = new Client();
-        String groupId = randomID(), objectId = randomID();
 
-        check200( createGroup(groupId, "tdanford", "test_hint", 100L));
-
-        ClientResponse response = check200( createObject(objectId, groupId, "changeable", "tdanford", 100L));
+        ClientResponse response = checkStatus( CREATED, createObject("unchangeable", "tdanford", 100L));
+        String objectPath = checkHeader(response, "Location");
 
         ObjectResource rec = response.getEntity(ObjectResource.class);
         assertThat(rec).isNotNull();
 
-        rec.name = "New Name";
+        rec.objectName = "New Name";
 
         // It's illegal to change the name!
         checkStatus(ClientResponse.Status.BAD_REQUEST.getStatusCode(),
-                post(client, objectPath(objectId, groupId), rec));
+                post(client, objectPath, rec));
 
-        response = check200( get(client, objectPath(objectId, groupId)));
+        response = check200( get(client, objectPath));
 
         rec = response.getEntity(ObjectResource.class);
 
-        // The owner is unchanged.
-        assertThat(rec.ownerId).isEqualTo("tdanford");
+        // The name is unchanged.
+        assertThat(rec.objectName).isEqualTo("unchangeable");
     }
 
     @Test
     public void testIllegalSetPermissions() {
         Client client = new Client();
 
-        String groupId = randomID(), objectId = randomID();
-
-        check200( createGroup(groupId, "tdanford", "test_hint", 100L));
-        ClientResponse response = check200( createObject(objectId, groupId, "test object", "tdanford", 100L));
+        ClientResponse response = checkStatus( CREATED, createObject("test object", "tdanford", 100L));
+        String objectPath = checkHeader( response, "Location" );
 
         ObjectResource rec = response.getEntity(ObjectResource.class);
 
         rec.readers = arrayAppend(rec.readers, "new_reader");
 
         // It's illegal, as the user 'fake_user', to update the readers field of the ObjectResource
-        checkStatus(FORBIDDEN, post(client, objectPath(objectId, groupId), "fake_user", rec));
+        checkStatus(FORBIDDEN, post(client, objectPath, "fake_user", rec));
 
-        response = check200( get(client, objectPath(objectId, groupId)) );
+        response = check200( get(client, objectPath) );
 
         rec = response.getEntity(ObjectResource.class);
 
@@ -238,23 +238,41 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         Client client = new Client();
         Random rand = new Random();
 
-        String groupId = randomID(), objectId = randomID();
         int seconds = rand.nextInt(100) + 10;
 
-        check200( createGroup(groupId, "tdanford", "test_hint", 100L));
-        check200( createObject(objectId, groupId, "test object", "tdanford", 100L));
+        ClientResponse response = checkStatus( CREATED, createObject("test object", "tdanford", 100L));
+        String objectPath = checkHeader( response, "Location");
+        ObjectResource created = response.getEntity(ObjectResource.class);
 
         ResolutionRequest req = new ResolutionRequest("GET", seconds);
 
-        ClientResponse response = check200( post(client, resolveObjectPath(objectId, groupId), req) );
+        response = check200( post(client, objectPath + "/resolve", req) );
 
         ResolutionResource rec = response.getEntity(ResolutionResource.class);
 
         assertThat(rec).isNotNull();
-        assertThat(rec.url.toString()).startsWith(
-                String.format("https://genomebridge-variantstore-ci.s3.amazonaws.com/%s/%s-",
-                        groupId, objectId));
+        assertThat(rec.objectUrl.toString()).startsWith(
+                String.format("https://genomebridge-variantstore-ci.s3.amazonaws.com/%s-",
+                        created.objectId));
         assertThat(rec.validityPeriodSeconds).isEqualTo(seconds);
+    }
+
+    @Test
+    public void testFilesystemObjectResolve() {
+        Client client = new Client();
+        ClientResponse response = checkStatus( CREATED,
+                createObject("test fs object", "tdanford", "filesystem", "/path/to/file", 100L));
+        String objectPath = checkHeader( response, "Location" );
+
+        int seconds = 1000;
+        ResolutionRequest req = new ResolutionRequest("GET", seconds);
+
+        response = check200( post(client, objectPath + "/resolve", req) );
+
+        ResolutionResource rr = response.getEntity(ResolutionResource.class);
+
+        assertThat(rr).isNotNull();
+        assertThat(rr.objectUrl.toString()).isEqualTo("file:///path/to/file");
     }
 
     @Test
@@ -262,14 +280,13 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         Client client = new Client();
         Random rand = new Random();
 
-        String groupId = randomID(), objectId = randomID();
         int seconds = rand.nextInt(100) + 10;
 
-        check200( createGroup(groupId, "tdanford", "test_hint", 100L));
-        check200( createObject(objectId, groupId, "test object", "tdanford", 100L));
+        ClientResponse response = checkStatus( CREATED, createObject("test object", "tdanford", 100L));
+        String objectPath = checkHeader(response, "Location");
 
         ResolutionRequest req = new ResolutionRequest("GET", seconds);
 
-        checkStatus( FORBIDDEN, post(client, resolveObjectPath(objectId, groupId), "fake_user", req) );
+        checkStatus( FORBIDDEN, post(client, objectPath + "/resolve", "fake_user", req) );
     }
 }

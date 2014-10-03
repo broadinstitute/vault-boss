@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.genomebridge.boss.http.resources;
+package org.genomebridge.boss.http.models;
 
 public class ResolutionRequest {
 

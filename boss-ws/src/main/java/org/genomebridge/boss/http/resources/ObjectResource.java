@@ -13,13 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.genomebridge.boss.http.resources;
 
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.sun.jersey.api.NotFoundException;
 import org.apache.log4j.Logger;
-import org.genomebridge.boss.http.objectstore.HttpMethod;
+import org.genomebridge.boss.http.models.ResolutionRequest;
+import org.genomebridge.boss.http.models.StoragePlatform;
+import org.genomebridge.boss.http.objectstore.ObjectStoreException;
 import org.genomebridge.boss.http.service.BossAPI;
+import org.genomebridge.boss.http.service.BossAPIProvider;
 import org.genomebridge.boss.http.service.DeregisteredObjectException;
 
 import javax.ws.rs.*;
@@ -29,76 +35,71 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import java.net.URI;
 
-/**
- * 'Object' is the core, addressable unit in the BOSS API definition.
- */
-@JsonInclude(JsonInclude.Include.NON_NULL)
+import static com.fasterxml.jackson.annotation.JsonInclude.Include;
+
+@Path("objects/{objectId}")
+@JsonInclude(Include.NON_NULL)
 public class ObjectResource extends PermissionedResource {
 
     private BossAPI api;
 
     public String objectId;
-    public String group;
+    public String objectName;
+    public String storagePlatform;
+    public String directoryPath;
+    public Long sizeEstimateBytes;
     public String ownerId;
     public String[] readers, writers;
 
-    public Long sizeEstimateBytes;
-    public String name;
-    public String storagePlatform;
-
     public ObjectResource() {
+        this.api = BossAPIProvider.getInstance().getApi();
     }
 
-    public ObjectResource(BossAPI api, String groupId, String objectId) {
-        this.api = api;
-        this.group = groupId;
-        this.objectId = objectId;
+    @GET
+    @Produces("application/json")
+    public ObjectResource describe(@PathParam("objectId") String objectId,
+                                   @Context HttpHeaders headers,
+                                   @Context UriInfo uriInfo) {
+        if (!populateFromAPI(objectId)) {
+            throw new NotFoundException(String.format("Couldn't find object with id %s", objectId));
+        }
+
+        checkUserRead(headers);
+
+        return this;
     }
 
-    public Logger logger() { return Logger.getLogger(String.format("%s/%s", group, objectId)); }
+    @Override
+    protected Logger logger() {
+        return Logger.getLogger(objectId);
+    }
+
     public void checkUserRead( String user ) { checkUser(user, "READ", readers); }
     public void checkUserWrite( String user ) { checkUser(user, "WRITE", writers); }
 
-    @DELETE
-    public String delete(@Context HttpHeaders headers) {
-        try {
-            populateFromAPI();
-            checkUserWrite(headers);
-            deleteFromAPI();
-            return this.objectId;
+    @JsonIgnore
+    public boolean isObjectStoreObject() { return (StoragePlatform.OBJECTSTORE.getValue()).equals( this.storagePlatform ); }
+    @JsonIgnore
+    public boolean isFilesystemObject() { return (StoragePlatform.FILESYSTEM.getValue()).equals( this.storagePlatform ); }
 
-        } catch(DeregisteredObjectException e) {
-            throw new WebApplicationException(Response.Status.BAD_REQUEST);
-        }
-    }
+    private boolean populateFromAPI(String objectId) {
 
-    private void deleteFromAPI() {
-        api.deregisterObject(this);
-    }
+        ObjectResource rec = api.getObject(objectId);
 
-    @Produces("application/json")
-    @GET
-    public ObjectResource describe(@Context HttpHeaders headers) {
-        try {
-            if(!populateFromAPI()) { throw new WebApplicationException(Response.Status.NOT_FOUND); }
-            checkUserRead(headers);
-            return this;
+        if(rec != null) {
+            this.objectId = rec.objectId;
+            ownerId = rec.ownerId;
+            objectName = rec.objectName;
+            storagePlatform = rec.storagePlatform;
+            sizeEstimateBytes = rec.sizeEstimateBytes;
 
-        } catch(DeregisteredObjectException e) {
-            throw new WebApplicationException(Response.Status.GONE);
-        }
-    }
+            if(storagePlatform.equals("filesystem")) {
+                directoryPath = rec.directoryPath;
+            }
 
-    private boolean populateFromAPI() {
-        ObjectResource fromApi = api.getObject(objectId, group);
+            readers = rec.readers;
+            writers = rec.writers;
 
-        if(fromApi != null) {
-            sizeEstimateBytes = fromApi.sizeEstimateBytes;
-            name = fromApi.name;
-            ownerId = fromApi.ownerId;
-            readers = fromApi.readers;
-            writers = fromApi.writers;
-            storagePlatform = fromApi.storagePlatform;
             return true;
         }
 
@@ -109,90 +110,93 @@ public class ObjectResource extends PermissionedResource {
     @Produces("application/json")
     @POST
     public ResolutionResource resolve(
-            @Context UriInfo uriInfo, @Context HttpHeaders headers, ResolutionRequest request) {
+            @PathParam("objectId") String objectId,
+            @Context UriInfo uriInfo,
+            @Context HttpHeaders headers,
+            ResolutionRequest request) {
 
-        if(!populateFromAPI()) { throw new NotFoundException(String.format("%s/%s", group, objectId)); }
+        if(!populateFromAPI(objectId)) { throw new NotFoundException(objectId); }
         checkUserRead(headers);
-
-        /*
-        If we're looking at a filesystem object, then a RESOLVE request isn't a well-formed
-        request.
-         */
-        if(!storagePlatform.equals("objectstore")) {
-            String msg = String.format("Can't resolve a non-objectstore object %s", objectId);
-            throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST)
-                    .entity(msg).build());
-        }
 
         try {
             long timeoutMillis = 1000L * request.validityPeriodSeconds;
-            HttpMethod method = HttpMethod.valueOf(request.httpMethod);
+            org.genomebridge.boss.http.objectstore.HttpMethod method = org.genomebridge.boss.http.objectstore.HttpMethod.valueOf(request.httpMethod);
+
+            URI presignedURL =
+                    isObjectStoreObject() ?
+                            getPresignedURL(objectId, method, timeoutMillis) :
+                            URI.create(String.format("file://%s", directoryPath));
 
             return new ResolutionResource(
-                    getPresignedURL(method, timeoutMillis),
-                    uriInfo.getBaseUri(),
+                    presignedURL,
                     request.validityPeriodSeconds);
 
         } catch(IllegalArgumentException e) {
             String msg = String.format("Error in request, with message \"%s\"", e.getMessage());
             throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST)
-                .entity(msg).build());
+                    .entity(msg).build());
         }
     }
 
-    private URI getPresignedURL(HttpMethod method, long millis) {
-        return api.getPresignedURL(this, method, millis);
+    private URI getPresignedURL(String objId, org.genomebridge.boss.http.objectstore.HttpMethod method, long millis) {
+        return api.getPresignedURL(objId, method, millis);
     }
 
+    @POST
     @Consumes("application/json")
     @Produces("application/json")
-    @POST
-    public ObjectResource update(@Context UriInfo uriInfo,
-                                 @Context HttpHeaders headers,
-                                 ObjectResource newRec) {
+    public ObjectResource update(@PathParam("objectId") String objectId,
+                                 @Context HttpHeaders header,
+                                 @Context UriInfo info,
+                                 ObjectResource newrec) {
 
-        if(populateFromAPI()) {
+        if(populateFromAPI(objectId)) {
+            checkUserWrite(header);
 
-            checkUserWrite(headers);
+            this.objectId = errorIfSet(objectId, newrec.objectId, "objectId");
+            this.objectName = errorIfSet(objectName, newrec.objectName, "objectName");
+            this.ownerId = setFrom(ownerId, newrec.ownerId);
+            this.storagePlatform = errorIfSet(storagePlatform, newrec.storagePlatform, "storagePlatform");
+            this.sizeEstimateBytes = errorIfSet(
+                    sizeEstimateBytes, newrec.sizeEstimateBytes, "sizeEstimateBytes");
+            this.directoryPath = errorIfSet(
+                    directoryPath, newrec.directoryPath, "directoryPath");
+            this.readers = setFrom(readers, newrec.readers);
+            this.writers = setFrom(writers, newrec.writers);
 
-            if (newRec.objectId != null && !objectId.equals(newRec.objectId)) {
-                throw new IllegalArgumentException(String.format(
-                        "Can't update the objectId (from \"%s\" to \"%s\")", objectId, newRec.objectId));
-            }
+            updateInAPI(objectId);
 
-            readers = setFrom(readers, newRec.readers);
-            writers = setFrom(writers, newRec.writers);
-            group = errorIfSet(group, newRec.group, "group");
-            name = errorIfSet(name, newRec.name, "name");
-            ownerId = setFrom(ownerId, newRec.ownerId);
-            sizeEstimateBytes = errorIfSet(sizeEstimateBytes, newRec.sizeEstimateBytes, "sizeEstimateBytes");
-            storagePlatform = errorIfSet(storagePlatform, newRec.storagePlatform, "storagePlatform");
-
-            updateInAPI();
             return this;
-
         } else {
 
-            /**
-             * Registering a new object is a 'write' to the parent group, so we need to retrieve
-             * the parent group and check its write permissions.
-             */
-            GroupResource parentGroup = api.getGroup(group);
-            if(parentGroup == null) {
-                throw new WebApplicationException(Response.status(Response.Status.NOT_FOUND)
-                    .entity(String.format("Couldn't find group %s", group)).build());
-            }
-            parentGroup.checkUserWrite(headers);
-
-            newRec.objectId = objectId;
-            newRec.group = group;
-            api.updateObject(newRec);
-            return newRec;
+            api.updateObject(objectId, newrec);
+            return newrec;
         }
     }
 
-    private void updateInAPI() {
-        api.updateObject(this);
+    private void updateInAPI(String objectId) {
+        api.updateObject(objectId, this);
     }
 
+    @DELETE
+    public String delete(@PathParam("objectId") String objectId,
+                         @Context HttpHeaders headers) {
+        try {
+            populateFromAPI(objectId);
+            checkUserWrite(headers);
+            deleteFromAPI(this);
+
+            return this.objectId;
+
+        } catch(DeregisteredObjectException e) {
+            throw new WebApplicationException(Response.Status.BAD_REQUEST);
+        } catch (ObjectStoreException ose) {
+            logger().error("Error deleting object '" + objectId + "' from object store: " + ose.getLocalizedMessage(), ose);
+            throw new WebApplicationException(Response.Status.BAD_REQUEST);
+        }
+    }
+
+    private void deleteFromAPI(ObjectResource rec) {
+        api.deleteObject(rec);
+    }
 }

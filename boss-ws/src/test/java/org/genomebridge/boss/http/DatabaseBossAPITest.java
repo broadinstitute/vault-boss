@@ -23,7 +23,6 @@ import org.genomebridge.boss.http.db.BossDAO;
 import org.genomebridge.boss.http.objectstore.HttpMethod;
 import org.genomebridge.boss.http.objectstore.ObjectStore;
 import org.genomebridge.boss.http.objectstore.S3ObjectStore;
-import org.genomebridge.boss.http.resources.GroupResource;
 import org.genomebridge.boss.http.resources.ObjectResource;
 import org.genomebridge.boss.http.service.BossAPI;
 import org.genomebridge.boss.http.service.DatabaseBossAPI;
@@ -33,8 +32,6 @@ import org.junit.Test;
 import org.skife.jdbi.v2.DBI;
 
 import java.net.URI;
-import java.util.Arrays;
-import java.util.List;
 import java.util.UUID;
 
 import static org.fest.assertions.api.Assertions.assertThat;
@@ -75,82 +72,27 @@ public class DatabaseBossAPITest extends ResourcedTest {
     private String randomID() { return UUID.randomUUID().toString(); }
 
     @Test
-    public void testUpdateAndRetrieveGroup() {
-        GroupResource group = new GroupResource();
-        group.groupId = randomID();
-        group.ownerId = "tdanford";
-        group.sizeEstimateBytes = 1000L;
-        group.typeHint = "typeHint";
-        group.readers = new String[] { "tdanford", "testuser" };
-        group.writers = new String[] { "carlyeks", "tdanford", "testuser" };
-        group.storagePlatform = "platform";
-
-        api.updateGroup(group);
-
-        GroupResource retrieved = api.getGroup(group.groupId);
-
-        assertThat(retrieved.groupId).isEqualTo(group.groupId);
-        assertThat(retrieved.ownerId).isEqualTo(group.ownerId);
-        assertThat(retrieved.sizeEstimateBytes).isEqualTo(group.sizeEstimateBytes);
-        assertThat(retrieved.typeHint).isEqualTo(group.typeHint);
-        assertThat(retrieved.readers).containsOnly("tdanford", "testuser");
-        assertThat(retrieved.writers).containsOnly("tdanford", "carlyeks", "testuser");
-        assertThat(retrieved.storagePlatform).isEqualTo(group.storagePlatform);
-    }
-
-    @Test
-    public void testUpdateModifyAndRetrieveGroup() {
-        GroupResource group = new GroupResource();
-        group.groupId = randomID();
-        group.ownerId = "tdanford";
-        group.sizeEstimateBytes = 1000L;
-        group.typeHint = "typeHint";
-        group.readers = new String[] { "tdanford", "testuser" };
-        group.writers = new String[] { "carlyeks", "tdanford", "testuser" };
-        group.storagePlatform = "platform";
-
-        api.updateGroup(group);
-
-        group.readers = new String[] { "tdanford" };
-        group.writers = new String[] { "carlyeks", "foo" };
-
-        api.updateGroup(group);
-
-        GroupResource retrieved = api.getGroup(group.groupId);
-
-        assertThat(retrieved.groupId).isEqualTo(group.groupId);
-        assertThat(retrieved.ownerId).isEqualTo(group.ownerId);
-        assertThat(retrieved.sizeEstimateBytes).isEqualTo(group.sizeEstimateBytes);
-        assertThat(retrieved.typeHint).isEqualTo(group.typeHint);
-        assertThat(retrieved.readers).containsOnly("tdanford");
-        assertThat(retrieved.writers).containsOnly("carlyeks", "foo");
-        assertThat(retrieved.storagePlatform).isEqualTo(group.storagePlatform);
-    }
-
-    @Test
     public void testUpdateAndRetrieveObject() {
         ObjectResource obj = new ObjectResource();
         obj.objectId = randomID();
-        obj.group = randomID();
         obj.ownerId = "tdanford";
         obj.sizeEstimateBytes = 1000L;
-        obj.name = "Test Name";
+        obj.objectName = "Test Name";
         obj.readers = new String[] { "tdanford", "testuser" };
         obj.writers = new String[] { "carlyeks", "tdanford", "testuser" };
         obj.storagePlatform = "platform";
 
-        api.updateObject(obj);
+        api.updateObject(obj.objectId, obj);
 
-        ObjectResource retrieved = api.getObject(obj.objectId, obj.group);
+        ObjectResource retrieved = api.getObject(obj.objectId);
 
         assertThat(retrieved.objectId).isEqualTo(obj.objectId);
-        assertThat(retrieved.group).isEqualTo(obj.group);
         assertThat(retrieved.ownerId).isEqualTo(obj.ownerId);
+        assertThat(retrieved.objectName).isEqualTo(obj.objectName);
         assertThat(retrieved.sizeEstimateBytes).isEqualTo(obj.sizeEstimateBytes);
-        assertThat(retrieved.name).isEqualTo(obj.name);
+        assertThat(retrieved.storagePlatform).isEqualTo(obj.storagePlatform);
         assertThat(retrieved.readers).containsOnly("tdanford", "testuser");
         assertThat(retrieved.writers).containsOnly("tdanford", "carlyeks", "testuser");
-        assertThat(retrieved.storagePlatform).isEqualTo(obj.storagePlatform);
     }
 
 
@@ -159,23 +101,22 @@ public class DatabaseBossAPITest extends ResourcedTest {
 
         ObjectResource obj = new ObjectResource();
         obj.objectId = randomID();
-        obj.group = randomID();
         obj.ownerId = "tdanford";
         obj.sizeEstimateBytes = 1000L;
-        obj.name = "Test Name";
+        obj.objectName = "Test Name";
         obj.readers = new String[] { "tdanford", "testuser" };
         obj.writers = new String[] { "carlyeks", "tdanford", "testuser" };
         obj.storagePlatform = "objectstore";
 
-        api.updateObject(obj);
+        api.updateObject(obj.objectId, obj);
 
-        URI uri = api.getPresignedURL(obj, HttpMethod.GET, 10*1000);
+        URI uri = api.getPresignedURL(obj.objectId, HttpMethod.GET, 10*1000);
 
         assertThat(uri).isNotNull();
         assertThat(uri.getHost()).isEqualTo("genomebridge-variantstore-ci.s3.amazonaws.com");
         assertThat(uri.toString()).startsWith(
-                String.format("https://genomebridge-variantstore-ci.s3.amazonaws.com/%s/%s-",
-                        obj.group, obj.objectId));
+                String.format("https://genomebridge-variantstore-ci.s3.amazonaws.com/%s-",
+                        obj.objectId));
     }
 
 }

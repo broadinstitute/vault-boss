@@ -15,8 +15,8 @@
  */
 package org.genomebridge.boss.http.resources;
 
-import com.google.inject.Inject;
 import org.genomebridge.boss.http.service.BossAPI;
+import org.genomebridge.boss.http.service.BossAPIProvider;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
@@ -28,16 +28,13 @@ import javax.ws.rs.core.UriInfo;
 import java.net.URI;
 import java.util.UUID;
 
-@Path("/groups")
-public class AllGroupsResource {
+@Path("/objects")
+public class AllObjectsResource {
 
     private BossAPI api;
 
-    public AllGroupsResource() {}
-
-    @Inject
-    public AllGroupsResource(BossAPI api) {
-        this.api = api;
+    public AllObjectsResource() {
+        this.api = BossAPIProvider.getInstance().getApi();
     }
 
     public String randomID() { return UUID.randomUUID().toString(); }
@@ -45,11 +42,11 @@ public class AllGroupsResource {
     @POST
     @Consumes("application/json")
     @Produces("application/json")
-    public Response createNewGroup( @Context UriInfo info, GroupResource rec ) {
-        rec.groupId = randomID();
-        api.updateGroup(rec);
+    public Response createObject( @Context UriInfo info, ObjectResource rec ) {
+        rec.objectId = randomID();
+        api.updateObject(rec.objectId, rec);
 
-        URI uri = info.getBaseUriBuilder().path("/group/{groupId}").build(rec.groupId);
+        URI uri = info.getBaseUriBuilder().path("/objects/{objectId}").build(rec.objectId);
         return Response.status(Response.Status.CREATED)
                 .location(uri)
                 .type("application/json")
