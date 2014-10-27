@@ -41,6 +41,9 @@ objectStore:
   password: <AMPLIDATA_PASSWORD>
 ```
 
+Please note that the testGeneratePresignedURL test will fail unless you have ~/.aws/config specified correctly.  Ask a teammate for a copy.
+
+
 ## Database Schema
 
 Currently, the database consists of three tables: 
