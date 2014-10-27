@@ -34,6 +34,7 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import java.net.URI;
+import java.util.ArrayList;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include;
 
@@ -81,6 +82,31 @@ public class ObjectResource extends PermissionedResource {
     public boolean isObjectStoreObject() { return (StoragePlatform.OBJECTSTORE.getValue()).equals( this.storagePlatform ); }
     @JsonIgnore
     public boolean isFilesystemObject() { return (StoragePlatform.FILESYSTEM.getValue()).equals( this.storagePlatform ); }
+
+    @JsonIgnore
+    public String testValidity()
+    { ArrayList<String> errors = new ArrayList<String>();
+      if ( objectName == null ) errors.add("objectName cannot be null");
+      if ( ownerId == null ) errors.add("ownerId cannot be null");
+      if ( storagePlatform == null ) errors.add("storagePlatform cannot be null");
+      else if ( !storagePlatform.equals(StoragePlatform.OBJECTSTORE.getValue()) ) {
+          if ( !storagePlatform.equals(StoragePlatform.FILESYSTEM.getValue()) )
+              errors.add("storagePlatform must be either " + StoragePlatform.OBJECTSTORE.getValue() +
+                          " or " + StoragePlatform.FILESYSTEM.getValue());
+          else if ( directoryPath == null)
+              errors.add("directoryPath must be supplied for filesystem objects");
+      }
+      String errMsg = null;
+      if ( !errors.isEmpty() ) {
+          errMsg = "";
+          String sep = "";
+          for ( String err : errors ) {
+              errMsg += sep + err;
+              sep = "; ";
+          }
+      }
+      return errMsg;
+    }
 
     private boolean populateFromAPI(String objectId) {
 
@@ -150,28 +176,24 @@ public class ObjectResource extends PermissionedResource {
                                  @Context UriInfo info,
                                  ObjectResource newrec) {
 
-        if(populateFromAPI(objectId)) {
-            checkUserWrite(header);
+        if(!populateFromAPI(objectId)) { throw new NotFoundException(objectId); }
 
-            this.objectId = errorIfSet(objectId, newrec.objectId, "objectId");
-            this.objectName = errorIfSet(objectName, newrec.objectName, "objectName");
-            this.ownerId = setFrom(ownerId, newrec.ownerId);
-            this.storagePlatform = errorIfSet(storagePlatform, newrec.storagePlatform, "storagePlatform");
-            this.sizeEstimateBytes = errorIfSet(
-                    sizeEstimateBytes, newrec.sizeEstimateBytes, "sizeEstimateBytes");
-            this.directoryPath = errorIfSet(
-                    directoryPath, newrec.directoryPath, "directoryPath");
-            this.readers = setFrom(readers, newrec.readers);
-            this.writers = setFrom(writers, newrec.writers);
+        checkUserWrite(header);
 
-            updateInAPI(objectId);
+        this.objectId = errorIfSet(objectId, newrec.objectId, "objectId");
+        this.objectName = errorIfSet(objectName, newrec.objectName, "objectName");
+        this.ownerId = setFrom(ownerId, newrec.ownerId);
+        this.storagePlatform = errorIfSet(storagePlatform, newrec.storagePlatform, "storagePlatform");
+        this.sizeEstimateBytes = errorIfSet(
+                sizeEstimateBytes, newrec.sizeEstimateBytes, "sizeEstimateBytes");
+        this.directoryPath = errorIfSet(
+                directoryPath, newrec.directoryPath, "directoryPath");
+        this.readers = setFrom(readers, newrec.readers);
+        this.writers = setFrom(writers, newrec.writers);
 
-            return this;
-        } else {
+        updateInAPI(objectId);
 
-            api.updateObject(objectId, newrec);
-            return newrec;
-        }
+        return this;
     }
 
     private void updateInAPI(String objectId) {
