@@ -84,28 +84,28 @@ public class ObjectResource extends PermissionedResource {
     public boolean isFilesystemObject() { return (StoragePlatform.FILESYSTEM.getValue()).equals( this.storagePlatform ); }
 
     @JsonIgnore
-    public String testValidity()
-    { ArrayList<String> errors = new ArrayList<String>();
-      if ( objectName == null ) errors.add("objectName cannot be null");
-      if ( ownerId == null ) errors.add("ownerId cannot be null");
-      if ( storagePlatform == null ) errors.add("storagePlatform cannot be null");
-      else if ( !storagePlatform.equals(StoragePlatform.OBJECTSTORE.getValue()) ) {
-          if ( !storagePlatform.equals(StoragePlatform.FILESYSTEM.getValue()) )
-              errors.add("storagePlatform must be either " + StoragePlatform.OBJECTSTORE.getValue() +
-                          " or " + StoragePlatform.FILESYSTEM.getValue());
-          else if ( directoryPath == null)
-              errors.add("directoryPath must be supplied for filesystem objects");
-      }
-      String errMsg = null;
-      if ( !errors.isEmpty() ) {
-          errMsg = "";
-          String sep = "";
-          for ( String err : errors ) {
-              errMsg += sep + err;
-              sep = "; ";
-          }
-      }
-      return errMsg;
+    public String testValidity() {
+        ArrayList<String> errors = new ArrayList<String>();
+        if ( objectName == null ) errors.add("objectName cannot be null");
+        if ( ownerId == null ) errors.add("ownerId cannot be null");
+        if ( storagePlatform == null ) errors.add("storagePlatform cannot be null");
+        else if ( !storagePlatform.equals(StoragePlatform.OBJECTSTORE.getValue()) ) {
+            if ( !storagePlatform.equals(StoragePlatform.FILESYSTEM.getValue()) )
+                errors.add("storagePlatform must be either " + StoragePlatform.OBJECTSTORE.getValue() +
+                        " or " + StoragePlatform.FILESYSTEM.getValue());
+            else if ( directoryPath == null)
+                errors.add("directoryPath must be supplied for filesystem objects");
+        }
+        String errMsg = null;
+        if ( !errors.isEmpty() ) {
+            errMsg = "";
+            String sep = "";
+            for ( String err : errors ) {
+                errMsg += sep + err;
+                sep = "; ";
+            }
+        }
+        return errMsg;
     }
 
     private boolean populateFromAPI(String objectId) {
