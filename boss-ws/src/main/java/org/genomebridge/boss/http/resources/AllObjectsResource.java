@@ -22,6 +22,7 @@ import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
@@ -43,6 +44,11 @@ public class AllObjectsResource {
     @Consumes("application/json")
     @Produces("application/json")
     public Response createObject( @Context UriInfo info, ObjectResource rec ) {
+        String errMsg = rec.testValidity();
+        if ( errMsg != null )
+            throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST)
+                    .entity(errMsg).build());
+
         rec.objectId = randomID();
         api.updateObject(rec.objectId, rec);
 
