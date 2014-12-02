@@ -36,7 +36,9 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
     public static int CREATED = Response.Status.CREATED.getStatusCode();
     public static int GONE = Response.Status.GONE.getStatusCode();
     public static int NOT_FOUND = Response.Status.NOT_FOUND.getStatusCode();
-    public static int OK = 200;
+    public static int BAD_REQUEST = Response.Status.BAD_REQUEST.getStatusCode();
+    public static int INTERNAL_SERVER_ERROR = Response.Status.INTERNAL_SERVER_ERROR.getStatusCode();
+    public static int OK = Response.Status.OK.getStatusCode();
 
     @ClassRule
     public static final DropwizardAppRule<BossConfiguration> RULE =
@@ -200,8 +202,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         rec.objectName = "New Name";
 
         // It's illegal to change the name!
-        checkStatus(ClientResponse.Status.BAD_REQUEST.getStatusCode(),
-                post(client, objectPath, rec));
+        checkStatus(BAD_REQUEST, post(client, objectPath, rec));
 
         response = check200( get(client, objectPath));
 
