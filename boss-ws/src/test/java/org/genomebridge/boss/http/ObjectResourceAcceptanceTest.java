@@ -247,7 +247,11 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
         ResolutionRequest req = new ResolutionRequest("GET", seconds);
 
-        response = check200( post(client, objectPath + "/resolve", req) );
+        response = post(client, objectPath + "/resolve", req);
+        // If the user doesn't have a correct objectstore configuration, this is a typical symptom
+        assertThat(response.getStatus()).overridingErrorMessage("Unexpected server error: Is your environment correctly configured for the S3 objectstore?").isNotEqualTo(INTERNAL_SERVER_ERROR);
+
+        assertThat(response.getStatus()).isEqualTo(OK);
 
         ResolutionResource rec = response.getEntity(ResolutionResource.class);
 
