@@ -35,6 +35,7 @@ import java.net.URI;
 import java.util.UUID;
 
 import static org.fest.assertions.api.Assertions.assertThat;
+import static org.fest.assertions.api.Fail.fail;
 
 public class DatabaseBossAPITest extends ResourcedTest {
 
@@ -49,6 +50,7 @@ public class DatabaseBossAPITest extends ResourcedTest {
     @BeforeClass
     public static void setup() {
         dao = dao();
+
         ObjectStore objectStore = new S3ObjectStore(
                 RULE.getConfiguration().getObjectStoreConfiguration().createClient(),
                 RULE.getConfiguration().getObjectStoreConfiguration().getBucket());
@@ -110,13 +112,19 @@ public class DatabaseBossAPITest extends ResourcedTest {
 
         api.updateObject(obj.objectId, obj);
 
-        URI uri = api.getPresignedURL(obj.objectId, HttpMethod.GET, 10*1000);
+        try {
+            URI uri = api.getPresignedURL(obj.objectId, HttpMethod.GET, 10 * 1000);
 
-        assertThat(uri).isNotNull();
-        assertThat(uri.getHost()).isEqualTo("genomebridge-variantstore-ci.s3.amazonaws.com");
-        assertThat(uri.toString()).startsWith(
-                String.format("https://genomebridge-variantstore-ci.s3.amazonaws.com/%s-",
-                        obj.objectId));
+            assertThat(uri).isNotNull();
+            assertThat(uri.getHost()).isEqualTo("genomebridge-variantstore-ci.s3.amazonaws.com");
+            assertThat(uri.toString()).startsWith(
+                    String.format("https://genomebridge-variantstore-ci.s3.amazonaws.com/%s-",
+                            obj.objectId));
+        }
+        catch (NullPointerException e) {
+            // If the user doesn't have a correct objectstore configuration, this is a typical symptom
+            fail("Unexpected exception: Is your environment correctly configured for the S3 objectstore?", e);
+        }
     }
 
 }
