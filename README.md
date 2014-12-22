@@ -2,7 +2,6 @@
 
 A RESTful implementation of rev3 of the BOSS API spec.
 
-
 ## Resources 
 
 This implementation identifies one core resource: the Object.
