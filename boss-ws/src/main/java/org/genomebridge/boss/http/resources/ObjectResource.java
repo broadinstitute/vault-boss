@@ -33,6 +33,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
+import javax.xml.bind.DatatypeConverter;
 import java.net.URI;
 import java.util.ArrayList;
 
@@ -148,14 +149,27 @@ public class ObjectResource extends PermissionedResource {
             long timeoutMillis = 1000L * request.validityPeriodSeconds;
             org.genomebridge.boss.http.objectstore.HttpMethod method = org.genomebridge.boss.http.objectstore.HttpMethod.valueOf(request.httpMethod);
 
+            byte[] contentMD5 = null;
+            if (request.contentMD5Hex != null) {
+                if (request.contentMD5Hex.length() != 32) {
+                    throw new IllegalArgumentException("MD5 must be 32 hexadecimal characters long");
+                }
+                contentMD5 = DatatypeConverter.parseHexBinary(request.contentMD5Hex);
+                if (contentMD5.length != 16) {
+                    throw new IllegalArgumentException("MD5 must be 16 bytes long");
+                }
+            }
+
             URI presignedURL =
                     isObjectStoreObject() ?
-                            getPresignedURL(objectId, method, timeoutMillis) :
+                            getPresignedURL(objectId, method, timeoutMillis, request.contentType, contentMD5) :
                             URI.create(String.format("file://%s", directoryPath));
 
             return new ResolutionResource(
                     presignedURL,
-                    request.validityPeriodSeconds);
+                    request.validityPeriodSeconds,
+                    request.contentType,
+                    request.contentMD5Hex);
 
         } catch(IllegalArgumentException e) {
             String msg = String.format("Error in request, with message \"%s\"", e.getMessage());
@@ -164,8 +178,9 @@ public class ObjectResource extends PermissionedResource {
         }
     }
 
-    private URI getPresignedURL(String objId, org.genomebridge.boss.http.objectstore.HttpMethod method, long millis) {
-        return api.getPresignedURL(objId, method, millis);
+    private URI getPresignedURL(String objId, org.genomebridge.boss.http.objectstore.HttpMethod method, long millis,
+                                String contentType, byte[] contentMD5) {
+        return api.getPresignedURL(objId, method, millis, contentType, contentMD5);
     }
 
     @POST

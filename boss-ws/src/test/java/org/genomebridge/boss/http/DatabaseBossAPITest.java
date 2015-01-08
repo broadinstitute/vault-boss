@@ -90,10 +90,17 @@ public class DatabaseBossAPITest extends ResourcedTest {
         assertThat(retrieved.writers).containsOnly("tdanford", "carlyeks", "testuser");
     }
 
-
     @Test
     public void testGeneratePresignedURL() {
+        testGeneratePresignedURL(null, null);
+    }
 
+    @Test
+    public void testGeneratePresignedURLWithContent() {
+        testGeneratePresignedURL("application/octet-stream", new byte[16]);
+    }
+
+    private void testGeneratePresignedURL(String contentType, byte[] contentMD5) {
         ObjectResource obj = new ObjectResource();
         obj.objectId = randomID();
         obj.ownerId = "tdanford";
@@ -106,7 +113,7 @@ public class DatabaseBossAPITest extends ResourcedTest {
         api.updateObject(obj.objectId, obj);
 
         try {
-            URI uri = api.getPresignedURL(obj.objectId, HttpMethod.GET, 10 * 1000);
+            URI uri = api.getPresignedURL(obj.objectId, HttpMethod.GET, 10 * 1000, contentType, contentMD5);
 
             assertThat(uri).isNotNull();
             assertThat(uri.getHost()).isEqualTo("genomebridge-variantstore-ci.s3.amazonaws.com");

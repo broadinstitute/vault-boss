@@ -217,7 +217,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         Client client = new Client();
 
         ClientResponse response = checkStatus( CREATED, createObject("test object", "tdanford", 100L));
-        String objectPath = checkHeader( response, "Location" );
+        String objectPath = checkHeader(response, "Location");
 
         ObjectResource rec = response.getEntity(ObjectResource.class);
 
@@ -236,6 +236,15 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
     @Test
     public void testObjectResolve() {
+        testObjectResolve(null, null);
+    }
+
+    @Test
+    public void testObjectResolveWithContent() {
+        testObjectResolve("application/octet-stream", "00000000000000000000000000000000");
+    }
+
+    private void testObjectResolve(String contentType, String contentMD5Hex) {
         Client client = new Client();
         Random rand = new Random();
 
@@ -245,7 +254,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         String objectPath = checkHeader( response, "Location");
         ObjectResource created = response.getEntity(ObjectResource.class);
 
-        ResolutionRequest req = new ResolutionRequest("GET", seconds);
+        ResolutionRequest req = new ResolutionRequest("GET", seconds, contentType, contentMD5Hex);
 
         response = post(client, objectPath + "/resolve", req);
         // If the user doesn't have a correct objectstore configuration, this is a typical symptom
@@ -260,6 +269,47 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
                 String.format("https://genomebridge-variantstore-ci.s3.amazonaws.com/%s-",
                         created.objectId));
         assertThat(rec.validityPeriodSeconds).isEqualTo(seconds);
+        assertThat(rec.contentType).isEqualTo(contentType);
+        assertThat(rec.contentMD5Hex).isEqualTo(contentMD5Hex);
+    }
+
+    @Test
+    public void testObjectResolveWithBadCharMD5Hex() {
+        testObjectResolveBadRequest("application/octet-stream", "0000000000000000000000000000000g");
+    }
+
+    @Test
+    public void testObjectResolveWithTruncatedMD5Hex() {
+        testObjectResolveBadRequest("application/octet-stream", "000000000000000000000000000000  ");
+    }
+
+    @Test
+    public void testObjectResolveWithShortMD5Hex() {
+        testObjectResolveBadRequest("application/octet-stream", "000000000000000000000000000000");
+    }
+
+    @Test
+    public void testObjectResolveWithLongMD5Hex() {
+        testObjectResolveBadRequest("application/octet-stream", "0000000000000000000000000000000000");
+    }
+
+    private void testObjectResolveBadRequest(String contentType, String contentMD5Hex) {
+        Client client = new Client();
+        Random rand = new Random();
+
+        int seconds = rand.nextInt(100) + 10;
+
+        ClientResponse response = checkStatus( CREATED, createObject("test object", "tdanford", 100L));
+        String objectPath = checkHeader( response, "Location");
+        ObjectResource created = response.getEntity(ObjectResource.class);
+
+        ResolutionRequest req = new ResolutionRequest("GET", seconds, contentType, contentMD5Hex);
+
+        response = post(client, objectPath + "/resolve", req);
+        // If the user doesn't have a correct objectstore configuration, this is a typical symptom
+        assertThat(response.getStatus()).overridingErrorMessage("Unexpected server error: Is your environment correctly configured for the S3 objectstore?").isNotEqualTo(INTERNAL_SERVER_ERROR);
+
+        checkStatus(BAD_REQUEST, response);
     }
 
     @Test
@@ -278,6 +328,8 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
         assertThat(rr).isNotNull();
         assertThat(rr.objectUrl.toString()).isEqualTo("file:///path/to/file");
+        assertThat(rr.contentType).isNull();
+        assertThat(rr.contentMD5Hex).isNull();
     }
 
     @Test

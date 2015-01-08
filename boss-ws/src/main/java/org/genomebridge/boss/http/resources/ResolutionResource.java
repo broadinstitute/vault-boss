@@ -18,18 +18,21 @@ package org.genomebridge.boss.http.resources;
 import org.apache.log4j.Logger;
 
 import java.net.URI;
-import java.net.URL;
 
 public class ResolutionResource extends AbstractResource {
 
     public URI objectUrl;
     public Integer validityPeriodSeconds;
+    public String contentType;
+    public String contentMD5Hex;
 
     public ResolutionResource() {}
 
-    public ResolutionResource(URI objectUrl, Integer validityPeriodSeconds) {
+    public ResolutionResource(URI objectUrl, Integer validityPeriodSeconds, String contentType, String contentMD5Hex) {
         this.objectUrl = objectUrl;
         this.validityPeriodSeconds = validityPeriodSeconds;
+        this.contentType = contentType;
+        this.contentMD5Hex = contentMD5Hex;
     }
 
     public Logger logger() { return Logger.getLogger(ResolutionResource.class); }
