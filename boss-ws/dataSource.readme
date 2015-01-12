@@ -1,0 +1,3 @@
+Copy one of the src/test/resources/dataSource-*.properties files to src/test/filters/dataSource.properties to choose which DB to use.
+If you intend to use Oracle, you'll also need to install ojdbc6.jar as an extension to Java.
+It's proprietary and we can't distribute it with this project.

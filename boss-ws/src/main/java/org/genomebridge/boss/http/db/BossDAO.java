@@ -31,15 +31,15 @@ public interface BossDAO {
     Object API
      */
 
-    @SqlQuery("select * from objects where objectId = :objectId and active=true")
+    @SqlQuery("select * from objects where objectId = :objectId and active='Y'")
     public ObjectResource findObjectById(@Bind("objectId") String objectId);
 
-    @SqlQuery("select location from objects where objectId = :objectId and active=true")
+    @SqlQuery("select location from objects where objectId = :objectId and active='Y'")
     public String findObjectLocation(@Bind("objectId") String objectId);
 
     @SqlUpdate("insert into objects " +
             "(objectId, objectName, ownerId, sizeEstimateBytes, location, storagePlatform, active) values " +
-            "(:objectId, :objectName, :ownerId, :sizeEstimate, :location, :storagePlatform, true)")
+            "(:objectId, :objectName, :ownerId, :sizeEstimate, :location, :storagePlatform, 'Y')")
     public void insertObject(@Bind("objectId") String objectId,
                              @Bind("objectName") String objectName,
                              @Bind("ownerId") String ownerId,
@@ -49,14 +49,14 @@ public interface BossDAO {
 
     @SqlUpdate("update objects set ownerId = :ownerId, sizeEstimateBytes = :sizeEstimate, " +
             "objectName = :objectName, storagePlatform = :storagePlatform " +
-            "where objectId = :objectId and active=true")
+            "where objectId = :objectId and active='Y'")
     public void updateObject(@Bind("objectId") String objectId,
                              @Bind("objectName") String objectName,
                              @Bind("ownerId") String ownerId,
                              @Bind("sizeEstimate") Long sizeEstimate,
                              @Bind("storagePlatform") String storagePlatform);
 
-    @SqlUpdate("update objects set active=false where objectId = :objectId")
+    @SqlUpdate("update objects set active='N' where objectId = :objectId")
     public void deleteObject(@Bind("objectId") String objectId);
 
     /*
