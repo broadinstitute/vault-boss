@@ -16,9 +16,8 @@
 
 package org.genomebridge.boss.http;
 
-import io.dropwizard.jdbi.DBIFactory;
-import io.dropwizard.setup.Environment;
 import io.dropwizard.testing.junit.DropwizardAppRule;
+
 import org.genomebridge.boss.http.db.BossDAO;
 import org.genomebridge.boss.http.objectstore.HttpMethod;
 import org.genomebridge.boss.http.objectstore.ObjectStore;
@@ -29,7 +28,6 @@ import org.genomebridge.boss.http.service.DatabaseBossAPI;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
-import org.skife.jdbi.v2.DBI;
 
 import java.net.URI;
 import java.util.UUID;
@@ -58,13 +56,8 @@ public class DatabaseBossAPITest extends ResourcedTest {
     }
 
     private static BossDAO dao() {
-        BossConfiguration config = RULE.getConfiguration();
-        Environment env = RULE.getEnvironment();
-        final DBIFactory factory = new DBIFactory();
         try {
-            final DBI jdbi = factory.build(env, config.getDataSourceFactory(), "db");
-            return jdbi.onDemand(BossDAO.class);
-
+            return BossApplication.getDAO(RULE.getConfiguration(), RULE.getEnvironment());
         } catch (ClassNotFoundException e) {
             e.printStackTrace(System.err);
             return null;
