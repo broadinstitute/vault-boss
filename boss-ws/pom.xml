@@ -205,7 +205,7 @@
             We can't include the Oracle driver here for licensing reasons.
             Download the JAR from http://www.oracle.com/technology/software/tech/java/sqlj_jdbc/index.html
             Add it to your local Maven repository with the command:
-                mvn install:install-file -DgroupId=com.oracle -DartifactId=ojdbc14 -Dversion=10.2.0.4.0 -Dpackaging=jar -Dfile=/path/to.jar
+                mvn install:install-file -DgroupId=com.oracle -DartifactId=ojdbc6 -Dversion=12.1.0.2 -Dpackaging=jar -Dfile=/path/to.jar
         -->
 
         <dependency>
