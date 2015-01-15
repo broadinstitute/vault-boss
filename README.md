@@ -32,7 +32,7 @@ database:
       user: <Username>
       password: <Password>
       url: <Oracle Host DB>
-      validationQuery: SELECT * FROM TABS
+      validationQuery: select 1 from dual
 
 objectStore:
   endpoint: http://10.200.10.4:7070
