@@ -15,19 +15,27 @@
  */
 package org.genomebridge.boss.http.resources;
 
+import org.genomebridge.boss.http.models.StoragePlatform;
 import org.genomebridge.boss.http.service.BossAPI;
 import org.genomebridge.boss.http.service.BossAPIProvider;
 
+import com.sun.jersey.api.NotFoundException;
+
 import javax.ws.rs.Consumes;
+import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
+
 import java.net.URI;
 import java.util.UUID;
+import java.util.List;
 
 @Path("/objects")
 public class AllObjectsResource {
@@ -39,6 +47,20 @@ public class AllObjectsResource {
     }
 
     public String randomID() { return UUID.randomUUID().toString(); }
+
+    @GET
+    @Produces("application/json")
+    public Response findObjectsByName( @QueryParam("name") String objectName,
+                                       @Context HttpHeaders headers ) {
+        String username = headers.getRequestHeaders().getFirst("REMOTE_USER");
+        List<ObjectResource> recs = api.findObjectsByName(username, objectName);
+        if ( recs.size() == 0 )
+            throw new NotFoundException("There are no objects by the name: " + objectName);
+        for ( ObjectResource rec : recs )
+            if (rec.storagePlatform.equals(StoragePlatform.OBJECTSTORE.getValue()))
+                rec.directoryPath = null;
+        return Response.status(Response.Status.OK).type("application/json").entity(recs).build();
+    }
 
     @POST
     @Consumes("application/json")
