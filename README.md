@@ -28,11 +28,12 @@ server:
     - type: http
       port: 8180
 database:
-  driverClass: com.mysql.jdbc.Driver
-  user: <MYSQL_USERNAME>
-  password: <MYSQL_PASSWORD>
-  url: jdbc:mysql://<HOST>:<PORT>/<DBNAME>
-  validationQuery: SELECT 1 
+      driverClass: oracle.jdbc.OracleDriver
+      user: <Username>
+      password: <Password>
+      url: <Oracle Host DB>
+      validationQuery: select 1 from dual
+
 objectStore:
   endpoint: http://10.200.10.4:7070
   pathStyleAccess: true
