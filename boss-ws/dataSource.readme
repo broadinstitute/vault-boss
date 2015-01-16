@@ -1,0 +1,11 @@
+The dataSource-*.properties files that live in src/test/resources are for unit testing.
+They contain data source credentials that are used solely for unit testing and you
+should NEVER, EVER put production DB credentials into one of these files or you will
+run the risk of destroying a production database.  Scratch DBs only, please.
+
+To choose a database to use for unit test, copy one of the
+ src/test/resources/dataSource-*.properties files to
+ src/test/filters/dataSource.properties.
+
+If you intend to use an Oracle data source, you'll also need to install ojdbc6.jar
+as an extension to Java.  It's proprietary and we can't distribute it with this project.

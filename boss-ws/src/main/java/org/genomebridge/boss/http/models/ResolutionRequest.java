@@ -20,11 +20,20 @@ public class ResolutionRequest {
 
     public Integer validityPeriodSeconds;
     public String httpMethod;
+    public String contentType;
+    public String contentMD5Hex;
 
     public ResolutionRequest() {}
 
     public ResolutionRequest(String method, Integer seconds) {
         this.validityPeriodSeconds = seconds;
         this.httpMethod = method;
+    }
+
+    public ResolutionRequest(String method, Integer seconds, String contentType, String contentMD5Hex) {
+        this.validityPeriodSeconds = seconds;
+        this.httpMethod = method;
+        this.contentType = contentType;
+        this.contentMD5Hex = contentMD5Hex;
     }
 }

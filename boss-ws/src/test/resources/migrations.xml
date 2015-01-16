@@ -105,4 +105,17 @@
                       columnDataType="varchar(255)"/>
     </changeSet>
 
+    <changeSet author="tsharpe" id="active-flag-data-type-mod">
+        <renameColumn tableName="objects" oldColumnName="active" columnDataType="boolean" newColumnName="xxxActive"/>
+        <addColumn tableName="objects">
+            <column name="active" type="char(1)" value="N"/>
+        </addColumn>
+        <addNotNullConstraint tableName="objects" columnName="active"/>
+        <update tableName="objects">
+            <column name="active" value="Y"/>
+            <where>xxxActive=1</where>
+        </update>
+        <dropColumn tableName="objects" columnName="xxxActive"/>
+    </changeSet>
+
 </databaseChangeLog>

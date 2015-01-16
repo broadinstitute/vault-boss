@@ -128,8 +128,8 @@ public class DatabaseBossAPI implements BossAPI {
     }
 
     @Override
-    public URI getPresignedURL(String objectId, HttpMethod method, long millis) {
+    public URI getPresignedURL(String objectId, HttpMethod method, long millis, String contentType, byte[] contentMD5) {
         String location = dao.findObjectLocation(objectId);
-        return objectStore.generatePresignedURL(location, method, millis);
+        return objectStore.generatePresignedURL(location, method, millis, contentType, contentMD5);
     }
 }

@@ -17,6 +17,31 @@
         <dropwizard.version>0.7.0</dropwizard.version>
     </properties>
 
+	<profiles>
+		<profile>
+			<id>hyperSQL</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<properties>
+				<dataSource.driver>org.hsqldb.jdbc.JDBCDriver</dataSource.driver>
+				<dataSource.username>sa</dataSource.username>
+				<dataSource.password>=sa</dataSource.password>
+				<dataSource.url>jdbc:hsqldb:file:${project.build.testOutputDirectory}/testdb;shutdown=true</dataSource.url>
+				<dataSource.validationQuery>SELECT * FROM INFORMATION_SCHEMA.SYSTEM_TABLES</dataSource.validationQuery>
+			</properties>
+		</profile>
+		<profile>
+			<id>oracle</id>
+			<properties>
+				<dataSource.driver>oracle.jdbc.OracleDriver</dataSource.driver>
+				<dataSource.username>BOSS</dataSource.username>
+				<dataSource.password>ssoB1bg</dataSource.password>
+				<dataSource.url>jdbc:oracle:thin:@//biofortisdb:1521/biofort1</dataSource.url>
+				<dataSource.validationQuery>SELECT * FROM TABS</dataSource.validationQuery>
+			</properties>
+		</profile>
+	</profiles>
     <build>
         <testResources>
             <testResource>
@@ -46,11 +71,11 @@
                         <configuration>
                             <promptOnNonLocalDatabase>false</promptOnNonLocalDatabase>
                             <dropFirst>true</dropFirst>
-                            <changeLogFile>src/main/resources/migrations.xml</changeLogFile>
-                            <driver>org.hsqldb.jdbc.JDBCDriver</driver>
-                            <url>jdbc:hsqldb:file:${project.build.testOutputDirectory}/testdb;shutdown=true</url>
-                            <username>sa</username>
-                            <password>sa</password>
+                            <changeLogFile>src/test/resources/migrations.xml</changeLogFile>
+                            <driver>${dataSource.driver}</driver>
+                            <url>${dataSource.url}</url>
+                            <username>${dataSource.username}</username>
+                            <password>${dataSource.password}</password>
                         </configuration>
                         <goals>
                             <goal>update</goal>
@@ -176,5 +201,17 @@
             <artifactId>aws-java-sdk</artifactId>
         </dependency>
 
+        <!--
+            We can't include the Oracle driver here for licensing reasons.
+            Download the JAR from http://www.oracle.com/technology/software/tech/java/sqlj_jdbc/index.html
+            Add it to your local Maven repository with the command:
+                mvn install:install-file -DgroupId=com.oracle -DartifactId=ojdbc14 -Dversion=10.2.0.4.0 -Dpackaging=jar -Dfile=/path/to.jar
+        -->
+
+        <dependency>
+            <groupId>com.oracle</groupId>
+            <artifactId>ojdbc14</artifactId>
+            <version>10.2.0.4.0</version>
+        </dependency>
     </dependencies>
 </project>

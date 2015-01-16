@@ -15,6 +15,10 @@
  */
 package org.genomebridge.boss.http;
 
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Types;
+
 import io.dropwizard.Application;
 import io.dropwizard.assets.AssetsBundle;
 import io.dropwizard.db.DataSourceFactory;
@@ -22,6 +26,7 @@ import io.dropwizard.jdbi.DBIFactory;
 import io.dropwizard.migrations.MigrationsBundle;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
+
 import org.genomebridge.boss.http.db.BossDAO;
 import org.genomebridge.boss.http.objectstore.ObjectStore;
 import org.genomebridge.boss.http.objectstore.S3ObjectStore;
@@ -31,6 +36,9 @@ import org.genomebridge.boss.http.service.BossAPI;
 import org.genomebridge.boss.http.service.BossAPIProvider;
 import org.genomebridge.boss.http.service.DatabaseBossAPI;
 import org.skife.jdbi.v2.DBI;
+import org.skife.jdbi.v2.StatementContext;
+import org.skife.jdbi.v2.tweak.Argument;
+import org.skife.jdbi.v2.tweak.ArgumentFactory;
 
 /**
  * Top-level entry point to the entire application.
@@ -43,6 +51,33 @@ public class BossApplication extends Application<BossConfiguration> {
 
     public static void main(String[] args) throws Exception {
         new BossApplication().run(args);
+    }
+
+    public static class NullArgumentFactory implements ArgumentFactory<Object> {
+
+        @Override
+        public boolean accepts(Class<?> expectedType, Object value, StatementContext ctx) {
+            return value == null;
+        }
+
+        @Override
+        public Argument build(Class<?> expectedType, Object value, StatementContext ctx) {
+            return new NullArgument();
+        }
+
+        private class NullArgument implements Argument {
+            @Override
+            public void apply(int position, PreparedStatement statement, StatementContext ctx) throws SQLException {
+                statement.setNull(position, Types.NULL);
+            }
+        }
+    }
+
+    public static BossDAO getDAO(BossConfiguration config, Environment env) throws ClassNotFoundException {
+        final DBIFactory factory = new DBIFactory();
+        final DBI jdbi = factory.build(env, config.getDataSourceFactory(), "db");
+        jdbi.registerArgumentFactory(new NullArgumentFactory());
+        return jdbi.onDemand(BossDAO.class);
     }
 
     public void run(BossConfiguration config, Environment env) {
@@ -59,9 +94,7 @@ public class BossApplication extends Application<BossConfiguration> {
          */
         try {
             // JDBI
-            final DBIFactory factory = new DBIFactory();
-            final DBI jdbi = factory.build(env, config.getDataSourceFactory(), "db");
-            final BossDAO dao = jdbi.onDemand(BossDAO.class);
+            final BossDAO dao = getDAO(config,env);
 
             // Object store
             ObjectStoreConfiguration osConfig = config.getObjectStoreConfiguration();

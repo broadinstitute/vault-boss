@@ -18,6 +18,7 @@ package org.genomebridge.boss.http.objectstore;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
+import com.amazonaws.util.Base64;
 
 import java.net.URI;
 import java.net.URL;
@@ -45,9 +46,17 @@ public class S3ObjectStore implements ObjectStore {
     }
 
     @Override
-    public URI generatePresignedURL(String key, HttpMethod method, long timeoutInMillis) {
-        URL url = client.generatePresignedUrl(new GeneratePresignedUrlRequest(bucket, key, awsMethod(method))
-                .withExpiration(new Date(System.currentTimeMillis() + timeoutInMillis)));
+    public URI generatePresignedURL(String key, HttpMethod method, long timeoutInMillis,
+                                    String contentType, byte[] contentMD5) {
+        GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(bucket, key, awsMethod(method));
+        request.setExpiration(new Date(System.currentTimeMillis() + timeoutInMillis));
+        if (contentType != null) {
+            request.setContentType(contentType);
+        }
+        if (contentMD5 != null) {
+            request.setContentMd5(Base64.encodeAsString(contentMD5));
+        }
+        URL url = client.generatePresignedUrl(request);
         return URI.create(url.toString());
     }
 
