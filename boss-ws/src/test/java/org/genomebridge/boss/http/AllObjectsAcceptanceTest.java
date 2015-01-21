@@ -77,7 +77,8 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
          */
         ObjectResource rec = fixture();
         rec.objectName = null;
-        checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
+        ClientResponse response = checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
+        assertThat(response.getEntity(String.class)).isEqualTo("objectName cannot be null");
     }
 
     @Test
@@ -87,7 +88,8 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
          */
         ObjectResource rec = fixture();
         rec.storagePlatform = null;
-        checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
+        ClientResponse response = checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
+        assertThat(response.getEntity(String.class)).isEqualTo("storagePlatform cannot be null");
     }
 
     @Test
@@ -97,7 +99,8 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
          */
         ObjectResource rec = fixture();
         rec.storagePlatform = "xyzzy";
-        checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
+        ClientResponse response = checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
+        assertThat(response.getEntity(String.class)).isEqualTo("storagePlatform must be either objectstore or filesystem");
     }
 
     @Test
@@ -107,7 +110,8 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
          */
         ObjectResource rec = fixture();
         rec.directoryPath = null;
-        checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
+        ClientResponse response = checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
+        assertThat(response.getEntity(String.class)).isEqualTo("directoryPath must be supplied for filesystem objects");
     }
 
     @Test
@@ -117,7 +121,8 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
          */
         ObjectResource rec = fixture();
         rec.ownerId = null;
-        checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
+        ClientResponse response = checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
+        assertThat(response.getEntity(String.class)).isEqualTo("ownerId cannot be null");
     }
 
     @Test
@@ -126,7 +131,8 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
          * "The user should not be able to create an object via an update"
          */
         ObjectResource rec = fixture();
-        checkStatus(NOT_FOUND, post(new Client(), objectsPath()+"/xyzzy", rec));
+        ClientResponse response = checkStatus(NOT_FOUND, post(new Client(), objectsPath()+"/xyzzy", rec));
+        // TODO: update current response text assertThat(response.getEntity(String.class)).isEqualTo("xyzzy");
     }
 
     @Test
