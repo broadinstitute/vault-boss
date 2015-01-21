@@ -16,14 +16,15 @@
 package org.genomebridge.boss.http.service;
 
 import org.genomebridge.boss.http.objectstore.HttpMethod;
-import org.genomebridge.boss.http.objectstore.ObjectStore;
 import org.genomebridge.boss.http.resources.ObjectResource;
 
 import java.net.URI;
+import java.util.List;
 
 public interface BossAPI {
 
     public ObjectResource getObject(String objectId);
+    public List<ObjectResource> findObjectsByName(String username, String objectName);
     public void updateObject(String objectId, ObjectResource rec);
     public void deleteObject(ObjectResource rec);
 

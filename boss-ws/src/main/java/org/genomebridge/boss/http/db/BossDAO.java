@@ -34,6 +34,10 @@ public interface BossDAO {
     @SqlQuery("select * from objects where objectId = :objectId and active='Y'")
     public ObjectResource findObjectById(@Bind("objectId") String objectId);
 
+    @SqlQuery("select o.* from objects o inner join readers r on o.objectId = r.id " +
+              "where o.objectName = :objectName and o.active='Y' and r.username = :username")
+    public List<ObjectResource> findObjectsByName(@Bind("username") String username, @Bind("objectName") String objectName);
+
     @SqlQuery("select location from objects where objectId = :objectId and active='Y'")
     public String findObjectLocation(@Bind("objectId") String objectId);
 
@@ -76,10 +80,10 @@ public interface BossDAO {
     public List<String> findWritersById(@Bind("id") String id);
 
     @SqlBatch("insert into writers (id, username) values (:id, :username)")
-    public void insertWriters( @Bind("id") String id, @Bind("username") List<String> readers );
+    public void insertWriters( @Bind("id") String id, @Bind("username") List<String> writers );
 
     @SqlBatch("delete from writers where id = :id and username = :username")
-    public void deleteWriters( @Bind("id") String id, @Bind("username") List<String> readers );
+    public void deleteWriters( @Bind("id") String id, @Bind("username") List<String> writers );
 
 
 }

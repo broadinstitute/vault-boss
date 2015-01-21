@@ -91,6 +91,17 @@ public class DatabaseBossAPI implements BossAPI {
     }
 
     @Override
+    public List<ObjectResource> findObjectsByName(String username, String objectName) {
+        List<ObjectResource> recs = dao.findObjectsByName(username, objectName);
+        String[] emptyArr = new String[0];
+        for ( ObjectResource rec : recs ) {
+            rec.readers = dao.findReadersById(rec.objectId).toArray(emptyArr);
+            rec.writers = dao.findWritersById(rec.objectId).toArray(emptyArr);
+        }
+        return recs;
+    }
+
+    @Override
     public void updateObject(String objectId, ObjectResource rec) {
         if(dao.findObjectById(objectId) != null) {
             dao.updateObject(objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes, rec.storagePlatform);

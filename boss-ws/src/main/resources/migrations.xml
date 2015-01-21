@@ -118,4 +118,9 @@
         <dropColumn tableName="objects" columnName="xxxActive"/>
     </changeSet>
 
+    <changeSet author="tsharpe" id="add-objects-name-index">
+        <createIndex indexName="objects_name_idx" tableName="objects" unique="false">
+            <column name="objectName"/>
+        </createIndex>
+    </changeSet>
 </databaseChangeLog>

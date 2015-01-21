@@ -15,9 +15,15 @@
  */
 package org.genomebridge.boss.http;
 
+import java.util.UUID;
+import java.util.List;
+
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.GenericType;
+
 import io.dropwizard.testing.junit.DropwizardAppRule;
+
 import org.genomebridge.boss.http.models.StoragePlatform;
 import org.genomebridge.boss.http.resources.ObjectResource;
 import org.junit.ClassRule;
@@ -27,6 +33,7 @@ import static org.fest.assertions.api.Assertions.assertThat;
 
 public class AllObjectsAcceptanceTest extends AbstractTest {
 
+    public static int OK = ClientResponse.Status.OK.getStatusCode();
     public static int CREATED = ClientResponse.Status.CREATED.getStatusCode();
     public static int BAD_REQUEST = ClientResponse.Status.BAD_REQUEST.getStatusCode();
     public static int NOT_FOUND = ClientResponse.Status.NOT_FOUND.getStatusCode();
@@ -121,6 +128,48 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
          */
         ObjectResource rec = fixture();
         checkStatus(NOT_FOUND, post(new Client(), objectsPath()+"/xyzzy", rec));
+    }
+
+    @Test
+    public void testFindByName() {
+        Client client = new Client();
+        ObjectResource rec = fixture();
+        rec.objectName = UUID.randomUUID().toString();
+        String queryURL = objectsPath()+"?name="+rec.objectName;
+
+        // shouldn't be any objects with our unique name yet
+        checkStatus(NOT_FOUND,get(client,queryURL,"me"));
+
+        // make an object with our name, and see if we can find it
+        checkStatus(CREATED,post(client,objectsPath(),"me",rec));
+        ClientResponse response = checkStatus(OK,get(client,queryURL,"me"));
+        GenericType<List<ObjectResource>> genTyp = new GenericType<List<ObjectResource>>() {};
+        List<ObjectResource> recs = response.getEntity(genTyp);
+        assertThat(recs.size()).isEqualTo(1);
+        assertThat(recs.get(0).objectName).isEqualTo(rec.objectName);
+
+        // make another one, and see that we find both
+        checkStatus(CREATED,post(client,objectsPath(),"me",rec));
+        response = checkStatus(OK,get(client,queryURL,"me"));
+        recs = response.getEntity(genTyp);
+        assertThat(recs.size()).isEqualTo(2);
+        assertThat(recs.get(0).objectName).isEqualTo(rec.objectName);
+        assertThat(recs.get(1).objectName).isEqualTo(rec.objectName);
+
+        // make one we can't see due to permissions, and make sure we still find just two
+        rec.readers = arraySet("him","her");
+        checkStatus(CREATED,post(client,objectsPath(),"me",rec));
+        response = checkStatus(OK,get(client,queryURL,"me"));
+        recs = response.getEntity(genTyp);
+        assertThat(recs.size()).isEqualTo(2);
+
+        // delete one of them and make sure we find just one
+        checkStatus(OK,delete(client,objectsPath()+"/"+recs.get(0).objectId,"me"));
+        String expectedId = recs.get(1).objectId;
+        response = checkStatus(OK,get(client,queryURL,"me"));
+        recs = response.getEntity(genTyp);
+        assertThat(recs.size()).isEqualTo(1);
+        assertThat(recs.get(0).objectId).isEqualTo(expectedId);
     }
 
     private static ObjectResource fixture()
