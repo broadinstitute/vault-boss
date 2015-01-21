@@ -131,8 +131,9 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
          * "The user should not be able to create an object via an update"
          */
         ObjectResource rec = fixture();
-        ClientResponse response = checkStatus(NOT_FOUND, post(new Client(), objectsPath()+"/xyzzy", rec));
-        // TODO: update current response text assertThat(response.getEntity(String.class)).isEqualTo("xyzzy");
+        final String fakeObjectId = "xyzzy";
+        ClientResponse response = checkStatus(NOT_FOUND, post(new Client(), String.format("%s/%s", objectsPath(), fakeObjectId), rec));
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Couldn't find object with id %s", fakeObjectId));
     }
 
     @Test

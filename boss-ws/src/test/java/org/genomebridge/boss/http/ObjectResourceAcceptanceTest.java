@@ -131,6 +131,21 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
     }
 
     @Test
+    public void testInvalidObjectDescribe() {
+        Client client = new Client();
+
+        ClientResponse response = checkStatus(CREATED, createObject("test object", "tdanford", 100L));
+        ObjectResource created = response.getEntity(ObjectResource.class);
+        String objectPath = checkHeader(response, "Location");
+        String truncatedObjectPath = objectPath.substring(0, objectPath.length() - 1);
+        String truncatedObjectId = created.objectId.substring(0, created.objectId.length() - 1);
+
+        response = checkStatus( NOT_FOUND, get(client, truncatedObjectPath));
+
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Couldn't find object with id %s", truncatedObjectId));
+    }
+
+    @Test
     public void setIllegalDeleteOnObject() {
         Client client = new Client();
         final String fakeUser = "fake_user";
@@ -359,5 +374,24 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         response = checkStatus(FORBIDDEN, post(client, objectPath + "/resolve", fakeUser, req));
         assertThat(response.getEntity(String.class))
                 .isEqualTo(String.format("User \"%s\" is not allowed READ access to resource with ACL [tdanford, testuser]", fakeUser));
+    }
+
+    @Test
+    public void testInvalidObjectResolve() {
+        Client client = new Client();
+        Random rand = new Random();
+
+        int seconds = rand.nextInt(100) + 10;
+
+        ClientResponse response = checkStatus(CREATED, createObject("test object", "tdanford", 100L));
+        ObjectResource created = response.getEntity(ObjectResource.class);
+        String objectPath = checkHeader(response, "Location");
+        String truncatedObjectPath = objectPath.substring(0, objectPath.length() - 1);
+        String truncatedObjectId = created.objectId.substring(0, created.objectId.length() - 1);
+
+        ResolutionRequest req = new ResolutionRequest("GET", seconds);
+        response = checkStatus( NOT_FOUND, post(client, truncatedObjectPath + "/resolve", req));
+
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Couldn't find object with id %s", truncatedObjectId));
     }
 }
