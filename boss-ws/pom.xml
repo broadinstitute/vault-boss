@@ -71,7 +71,7 @@
                         <phase>process-test-resources</phase>
                         <configuration>
                             <promptOnNonLocalDatabase>false</promptOnNonLocalDatabase>
-                            <changeLogFile>src/test/resources/migrations.xml</changeLogFile>
+                            <changeLogFile>src/main/resources/migrations.xml</changeLogFile>
                             <driver>${dataSource.driver}</driver>
                             <url>${dataSource.url}</url>
                             <username>${dataSource.username}</username>
