@@ -16,12 +16,14 @@
 package org.genomebridge.boss.http.service;
 
 import com.google.inject.Inject;
+
 import org.genomebridge.boss.http.db.BossDAO;
 import org.genomebridge.boss.http.objectstore.HttpMethod;
 import org.genomebridge.boss.http.objectstore.ObjectStore;
 import org.genomebridge.boss.http.resources.ObjectResource;
 
 import java.net.URI;
+import java.sql.Timestamp;
 import java.util.*;
 
 /**
@@ -33,6 +35,7 @@ public class DatabaseBossAPI implements BossAPI {
     private BossDAO dao;
 
     private ObjectStore objectStore;
+    static private Long gDefaultEstSize = new Long(-1);
 
     @Inject
     public DatabaseBossAPI( BossDAO dao, ObjectStore store ) {
@@ -47,43 +50,12 @@ public class DatabaseBossAPI implements BossAPI {
         return String.format("%s-%s", rec.objectId, last);
     }
 
-    private void updateReaders(String id, String[] target) {
-        updateReaders(id, target != null ? Arrays.asList(target) : new ArrayList<String>());
-    }
-
-    private void updateWriters(String id, String[] target) {
-        updateWriters(id, target != null ? Arrays.asList(target) : new ArrayList<String>());
-    }
-
-    private void updateReaders(String id, Collection<String> target) {
-        Set<String> current = new TreeSet<>(dao.findReadersById(id));
-        Set<String> toDelete = new TreeSet<>(current);
-        Set<String> toAdd = new TreeSet<>();
-        for(String user : target) {
-            toDelete.remove(user);
-            if(!current.contains(user)) { toAdd.add(user); }
-        }
-
-        dao.deleteReaders(id, new ArrayList<>(toDelete));
-        dao.insertReaders(id, new ArrayList<>(toAdd));
-    }
-    private void updateWriters(String id, Collection<String> target) {
-        Set<String> current = new TreeSet<>(dao.findWritersById(id));
-        Set<String> toDelete = new TreeSet<>(current);
-        Set<String> toAdd = new TreeSet<>();
-        for(String user : target) {
-            toDelete.remove(user);
-            if(!current.contains(user)) { toAdd.add(user); }
-        }
-
-        dao.deleteWriters(id, new ArrayList<>(toDelete));
-        dao.insertWriters(id, new ArrayList<>(toAdd));
-    }
-
     @Override
     public ObjectResource getObject(String objectId) {
         ObjectResource rec = dao.findObjectById(objectId);
-        if(rec != null) {
+        if ( rec != null ) {
+            if ( !rec.active.equals("Y") )
+                return null;
             rec.readers = dao.findReadersById(objectId).toArray(new String[0]);
             rec.writers = dao.findWritersById(objectId).toArray(new String[0]);
         }
@@ -101,23 +73,60 @@ public class DatabaseBossAPI implements BossAPI {
         return recs;
     }
 
+    private List<String> uniqueUsers( String[] users ) {
+        Set<String> userSet = new TreeSet<>(Arrays.asList(users));
+        return new ArrayList<String>(userSet);
+    }
+
     @Override
-    public void updateObject(String objectId, ObjectResource rec) {
-        if(dao.findObjectById(objectId) != null) {
-            dao.updateObject(objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes, rec.storagePlatform);
-        } else {
+    public void insertObject(ObjectResource rec, String user) {
+        /*
+        Use the location passed in by the user if the Object is a 'filesystem'
+        type object, otherwise generate a new (fresh) location.
+         */
+        String loc = rec.storagePlatform.equals("filesystem") ?
+                rec.directoryPath : location(rec);
 
-            /*
-            Use the location passed in by the user if the Object is a 'filesystem'
-            type object, otherwise generate a new (fresh) location.
-             */
-            String loc = rec.storagePlatform.equals("filesystem") ?
-                    rec.directoryPath : location(rec);
+        Long estBytes = rec.sizeEstimateBytes;
+        if ( estBytes == null )
+            estBytes = gDefaultEstSize;
 
-            dao.insertObject(objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes, loc, rec.storagePlatform);
-        }
-        updateReaders(objectId, rec.readers);
-        updateWriters(objectId, rec.writers);
+        List<String> readers = uniqueUsers(rec.readers);
+        List<String> writers = uniqueUsers(rec.writers);
+
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        // these next 3 lines need to be in a transaction
+        dao.insertObject(rec.objectId, rec.objectName, rec.ownerId, estBytes, loc, rec.storagePlatform, user, now);
+        dao.insertReaders(rec.objectId, readers);
+        dao.insertWriters(rec.objectId, writers);
+    }
+
+    private List<String> diff( List<String> minuend, List<String> subtrahend ) {
+        Set<String> strSet = new TreeSet<>(minuend);
+        strSet.removeAll(subtrahend);
+        return new ArrayList<>(strSet);
+    }
+
+    @Override
+    public void updateObject(ObjectResource rec) {
+        List<String> newUsers = Arrays.asList(rec.readers);
+        List<String> curUsers = dao.findReadersById(rec.objectId);
+        List<String> readersToInsert = diff(newUsers,curUsers);
+        List<String> readersToDelete = diff(curUsers,newUsers);
+        newUsers = Arrays.asList(rec.writers);
+        curUsers = dao.findWritersById(rec.objectId);
+        List<String> writersToInsert = diff(newUsers,curUsers);
+        List<String> writersToDelete = diff(curUsers,newUsers);
+        newUsers = null;
+        curUsers = null;
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+
+        // these next 5 lines need to be in a transaction
+        dao.updateObject(rec.objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes, now);
+        dao.insertReaders(rec.objectId, readersToInsert);
+        dao.deleteReaders(rec.objectId, readersToDelete);
+        dao.insertWriters(rec.objectId, writersToInsert);
+        dao.deleteWriters(rec.objectId, writersToDelete);
     }
 
     @Override
@@ -135,12 +144,17 @@ public class DatabaseBossAPI implements BossAPI {
             String location = dao.findObjectLocation(rec.objectId);
             objectStore.deleteObject(location);
         }
-        dao.deleteObject(rec.objectId);
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        dao.deleteObject(rec.objectId,now);
     }
 
     @Override
     public URI getPresignedURL(String objectId, HttpMethod method, long millis, String contentType, byte[] contentMD5) {
         String location = dao.findObjectLocation(objectId);
+        if ( location != null ) {
+            Timestamp now = new Timestamp(System.currentTimeMillis());
+            dao.updateResolveDate(objectId,now);
+        }
         return objectStore.generatePresignedURL(location, method, millis, contentType, contentMD5);
     }
 }

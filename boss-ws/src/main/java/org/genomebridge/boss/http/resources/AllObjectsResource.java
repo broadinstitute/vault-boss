@@ -65,14 +65,14 @@ public class AllObjectsResource {
     @POST
     @Consumes("application/json")
     @Produces("application/json")
-    public Response createObject( @Context UriInfo info, ObjectResource rec ) {
+    public Response createObject( @Context UriInfo info, @Context HttpHeaders headers, ObjectResource rec ) {
         String errMsg = rec.testValidity();
         if ( errMsg != null )
             throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST)
                     .entity(errMsg).build());
 
         rec.objectId = randomID();
-        api.updateObject(rec.objectId, rec);
+        api.insertObject(rec,headers.getRequestHeaders().getFirst("REMOTE_USER"));
 
         URI uri = info.getBaseUriBuilder().path("/objects/{objectId}").build(rec.objectId);
         return Response.status(Response.Status.CREATED)
