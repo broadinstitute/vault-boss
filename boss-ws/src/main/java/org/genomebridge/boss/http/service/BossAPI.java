@@ -24,6 +24,7 @@ import java.util.List;
 public interface BossAPI {
 
     public ObjectResource getObject(String objectId);
+    public boolean wasObjectDeleted(String objectId);
     public List<ObjectResource> findObjectsByName(String username, String objectName);
     public void insertObject(ObjectResource rec, String user);
     public void updateObject(ObjectResource rec);

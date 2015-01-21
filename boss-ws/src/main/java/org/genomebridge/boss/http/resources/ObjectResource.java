@@ -27,7 +27,7 @@ import org.genomebridge.boss.http.models.StoragePlatform;
 import org.genomebridge.boss.http.objectstore.ObjectStoreException;
 import org.genomebridge.boss.http.service.BossAPI;
 import org.genomebridge.boss.http.service.BossAPIProvider;
-import org.genomebridge.boss.http.service.DeregisteredObjectException;
+import org.genomebridge.boss.http.service.DeletedObjectException;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
@@ -78,8 +78,13 @@ public class ObjectResource extends PermissionedResource {
     public ObjectResource describe(@PathParam("objectId") String objectId,
                                    @Context HttpHeaders headers,
                                    @Context UriInfo uriInfo) {
-        populateFromAPI(objectId);
-        checkUserRead(headers);
+        try {
+            populateFromAPI(objectId);
+            checkUserRead(headers);
+        } catch(DeletedObjectException e) {
+            throw new WebApplicationException(Response.status(Response.Status.GONE)
+                    .entity(e.getMessage()).build());
+        }
 
         return this;
     }
@@ -122,7 +127,10 @@ public class ObjectResource extends PermissionedResource {
         return errMsg;
     }
 
-    private void populateFromAPI(String objectId) throws NotFoundException {
+    private void populateFromAPI(String objectId) throws NotFoundException, DeletedObjectException {
+
+        if (api.wasObjectDeleted(objectId))
+            throw new DeletedObjectException(String.format("Object with id %s has been deleted", objectId));
 
         ObjectResource rec = api.getObject(objectId);
         if (rec == null)
@@ -151,10 +159,10 @@ public class ObjectResource extends PermissionedResource {
             @Context HttpHeaders headers,
             ResolutionRequest request) {
 
-        populateFromAPI(objectId);
-        checkUserRead(headers);
-
         try {
+            populateFromAPI(objectId);
+            checkUserRead(headers);
+
             long timeoutMillis = 1000L * request.validityPeriodSeconds;
             org.genomebridge.boss.http.objectstore.HttpMethod method = org.genomebridge.boss.http.objectstore.HttpMethod.valueOf(request.httpMethod);
 
@@ -180,6 +188,9 @@ public class ObjectResource extends PermissionedResource {
                     request.contentType,
                     request.contentMD5Hex);
 
+        } catch(DeletedObjectException e) {
+            throw new WebApplicationException(Response.status(Response.Status.GONE)
+                    .entity(e.getMessage()).build());
         } catch(IllegalArgumentException e) {
             String msg = String.format("Error in request, with message \"%s\"", e.getMessage());
             throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST)
@@ -199,8 +210,13 @@ public class ObjectResource extends PermissionedResource {
                                  @Context HttpHeaders header,
                                  @Context UriInfo info,
                                  ObjectResource newrec) {
+        try {
+            populateFromAPI(objectId);
+        } catch(DeletedObjectException e) {
+            throw new WebApplicationException(Response.status(Response.Status.GONE)
+                    .entity(e.getMessage()).build());
+        }
 
-        populateFromAPI(objectId);
         checkUserWrite(header);
 
         this.objectId = errorIfSet(objectId, newrec.objectId, "objectId");
@@ -229,7 +245,7 @@ public class ObjectResource extends PermissionedResource {
 
             return this.objectId;
 
-        } catch(DeregisteredObjectException e) {
+        } catch(DeletedObjectException e) {
             throw new WebApplicationException(Response.Status.BAD_REQUEST);
         } catch (ObjectStoreException ose) {
             logger().error("Error deleting object '" + objectId + "' from object store: " + ose.getLocalizedMessage(), ose);

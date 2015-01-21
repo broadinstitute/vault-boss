@@ -64,6 +64,12 @@ public class DatabaseBossAPI implements BossAPI {
     }
 
     @Override
+    public boolean wasObjectDeleted(String objectId) {
+        ObjectResource rec = dao.findObjectById(objectId);
+        return ( rec != null && rec.active.equals("N") );
+    }
+
+    @Override
     public List<ObjectResource> findObjectsByName(String username, String objectName) {
         List<ObjectResource> recs = dao.findObjectsByName(username, objectName);
         String[] emptyArr = new String[0];
