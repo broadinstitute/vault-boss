@@ -47,39 +47,6 @@ public class DatabaseBossAPI implements BossAPI {
         return String.format("%s-%s", rec.objectId, last);
     }
 
-    private void updateReaders(String id, String[] target) {
-        updateReaders(id, target != null ? Arrays.asList(target) : new ArrayList<String>());
-    }
-
-    private void updateWriters(String id, String[] target) {
-        updateWriters(id, target != null ? Arrays.asList(target) : new ArrayList<String>());
-    }
-
-    private void updateReaders(String id, Collection<String> target) {
-        Set<String> current = new TreeSet<>(dao.findReadersById(id));
-        Set<String> toDelete = new TreeSet<>(current);
-        Set<String> toAdd = new TreeSet<>();
-        for(String user : target) {
-            toDelete.remove(user);
-            if(!current.contains(user)) { toAdd.add(user); }
-        }
-
-        dao.deleteReaders(id, new ArrayList<>(toDelete));
-        dao.insertReaders(id, new ArrayList<>(toAdd));
-    }
-    private void updateWriters(String id, Collection<String> target) {
-        Set<String> current = new TreeSet<>(dao.findWritersById(id));
-        Set<String> toDelete = new TreeSet<>(current);
-        Set<String> toAdd = new TreeSet<>();
-        for(String user : target) {
-            toDelete.remove(user);
-            if(!current.contains(user)) { toAdd.add(user); }
-        }
-
-        dao.deleteWriters(id, new ArrayList<>(toDelete));
-        dao.insertWriters(id, new ArrayList<>(toAdd));
-    }
-
     @Override
     public ObjectResource getObject(String objectId) {
         ObjectResource rec = dao.findObjectById(objectId);
@@ -92,6 +59,7 @@ public class DatabaseBossAPI implements BossAPI {
 
     @Override
     public void updateObject(String objectId, ObjectResource rec) {
+        dao.begin();
         if(dao.findObjectById(objectId) != null) {
             dao.updateObject(objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes, rec.storagePlatform);
         } else {
@@ -102,11 +70,34 @@ public class DatabaseBossAPI implements BossAPI {
              */
             String loc = rec.storagePlatform.equals("filesystem") ?
                     rec.directoryPath : location(rec);
-
             dao.insertObject(objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes, loc, rec.storagePlatform);
         }
-        updateReaders(objectId, rec.readers);
-        updateWriters(objectId, rec.writers);
+
+        // update readers
+        Set<String> currentReaders = new TreeSet<>(dao.findReadersById(objectId));
+        Set<String> toDelete = new TreeSet<>(currentReaders);
+        Set<String> toAdd = new TreeSet<>();
+        for(String user : rec.readers) {
+            toDelete.remove(user);
+            if(!currentReaders.contains(user)) { toAdd.add(user); }
+        }
+
+        dao.deleteReaders(objectId, new ArrayList<>(toDelete));
+        dao.insertReaders(objectId, new ArrayList<>(toAdd));
+
+        // update writers
+        Set<String> currentWriters = new TreeSet<>(dao.findWritersById(objectId));
+        toDelete = new TreeSet<>(currentWriters);
+        toAdd = new TreeSet<>();
+        for(String user : rec.writers) {
+            toDelete.remove(user);
+            if(!currentWriters.contains(user)) { toAdd.add(user); }
+        }
+
+        dao.deleteWriters(objectId, new ArrayList<>(toDelete));
+        dao.insertWriters(objectId, new ArrayList<>(toAdd));
+
+        dao.commit();
     }
 
     @Override
@@ -124,7 +115,9 @@ public class DatabaseBossAPI implements BossAPI {
             String location = dao.findObjectLocation(rec.objectId);
             objectStore.deleteObject(location);
         }
+        dao.begin();
         dao.deleteObject(rec.objectId);
+        dao.commit();
     }
 
     @Override
