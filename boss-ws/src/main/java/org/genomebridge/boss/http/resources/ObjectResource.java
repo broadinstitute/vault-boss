@@ -20,6 +20,7 @@ package org.genomebridge.boss.http.resources;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.sun.jersey.api.NotFoundException;
+
 import org.apache.log4j.Logger;
 import org.genomebridge.boss.http.models.ResolutionRequest;
 import org.genomebridge.boss.http.models.StoragePlatform;
@@ -34,7 +35,9 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import javax.xml.bind.DatatypeConverter;
+
 import java.net.URI;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -53,6 +56,19 @@ public class ObjectResource extends PermissionedResource {
     public String ownerId;
     public String[] readers, writers;
 
+    @JsonIgnore
+    public String active;
+    @JsonIgnore
+    public String createdBy;
+    @JsonIgnore
+    public Timestamp createDate;
+    @JsonIgnore
+    public Timestamp modifyDate;
+    @JsonIgnore
+    public Timestamp resolveDate;
+    @JsonIgnore
+    public Timestamp deleteDate;
+
     public ObjectResource() {
         this.api = BossAPIProvider.getInstance().getApi();
     }
@@ -62,10 +78,7 @@ public class ObjectResource extends PermissionedResource {
     public ObjectResource describe(@PathParam("objectId") String objectId,
                                    @Context HttpHeaders headers,
                                    @Context UriInfo uriInfo) {
-        if (!populateFromAPI(objectId)) {
-            throw new NotFoundException(String.format("Couldn't find object with id %s", objectId));
-        }
-
+        populateFromAPI(objectId);
         checkUserRead(headers);
 
         return this;
@@ -109,28 +122,24 @@ public class ObjectResource extends PermissionedResource {
         return errMsg;
     }
 
-    private boolean populateFromAPI(String objectId) {
+    private void populateFromAPI(String objectId) throws NotFoundException {
 
         ObjectResource rec = api.getObject(objectId);
+        if (rec == null)
+            throw new NotFoundException(String.format("Couldn't find object with id %s", objectId));
 
-        if(rec != null) {
-            this.objectId = rec.objectId;
-            ownerId = rec.ownerId;
-            objectName = rec.objectName;
-            storagePlatform = rec.storagePlatform;
-            sizeEstimateBytes = rec.sizeEstimateBytes;
+        this.objectId = rec.objectId;
+        ownerId = rec.ownerId;
+        objectName = rec.objectName;
+        storagePlatform = rec.storagePlatform;
+        sizeEstimateBytes = rec.sizeEstimateBytes;
 
-            if(storagePlatform.equals("filesystem")) {
-                directoryPath = rec.directoryPath;
-            }
-
-            readers = rec.readers;
-            writers = rec.writers;
-
-            return true;
+        if (storagePlatform.equals("filesystem")) {
+            directoryPath = rec.directoryPath;
         }
 
-        return false;
+        readers = rec.readers;
+        writers = rec.writers;
     }
 
     @Path("resolve")
@@ -142,7 +151,7 @@ public class ObjectResource extends PermissionedResource {
             @Context HttpHeaders headers,
             ResolutionRequest request) {
 
-        if(!populateFromAPI(objectId)) { throw new NotFoundException(objectId); }
+        populateFromAPI(objectId);
         checkUserRead(headers);
 
         try {
@@ -191,8 +200,7 @@ public class ObjectResource extends PermissionedResource {
                                  @Context UriInfo info,
                                  ObjectResource newrec) {
 
-        if(!populateFromAPI(objectId)) { throw new NotFoundException(objectId); }
-
+        populateFromAPI(objectId);
         checkUserWrite(header);
 
         this.objectId = errorIfSet(objectId, newrec.objectId, "objectId");
@@ -206,13 +214,9 @@ public class ObjectResource extends PermissionedResource {
         this.readers = setFrom(readers, newrec.readers);
         this.writers = setFrom(writers, newrec.writers);
 
-        updateInAPI(objectId);
+        api.updateObject(this);
 
         return this;
-    }
-
-    private void updateInAPI(String objectId) {
-        api.updateObject(objectId, this);
     }
 
     @DELETE

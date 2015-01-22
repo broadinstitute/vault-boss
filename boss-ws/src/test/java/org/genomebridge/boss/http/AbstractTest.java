@@ -107,10 +107,6 @@ abstract public class AbstractTest extends ResourcedTest {
         return String.format("%s/resolve", objectPath(objectId));
     }
 
-    public static String[] arraySet( String... vals ) {
-        return new TreeSet<>(Arrays.asList(vals)).toArray(new String[0]);
-    }
-
     public static String[] arrayAppend( String[] array, String newValue ) {
         TreeSet<String> set = new TreeSet<>(Arrays.asList(array));
         set.add(newValue);
