@@ -11,10 +11,12 @@ package org.genomebridge.boss.http;
 
 import io.dropwizard.testing.junit.DropwizardAppRule;
 import org.genomebridge.boss.http.db.BossDAO;
+import org.genomebridge.boss.http.resources.ObjectResource;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import java.sql.Timestamp;
 import java.util.Collections;
 import java.util.UUID;
 import java.util.concurrent.*;
@@ -51,9 +53,16 @@ public class BossDAOTransactionTest extends ResourcedTest {
      */
     @Test
     public void testTransactional() {
+
+        // Set up a resource
         String user = "testUser";
         String id = UUID.randomUUID().toString();
+        ObjectResource rec = fixture();
+        rec.objectId = id;
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        dao1.insertObject(rec.objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes, rec.directoryPath, rec.storagePlatform, user, now);
 
+        // Begin transactional testing
         dao1.begin();
         dao1.insertReaders(id, Collections.singletonList(user));
         assertThat(dao1.findReadersById(id).contains(user));

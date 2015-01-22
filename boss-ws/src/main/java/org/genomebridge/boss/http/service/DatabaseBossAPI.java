@@ -64,22 +64,44 @@ public class DatabaseBossAPI implements BossAPI {
     }
 
     @Override
-    public void updateObject(String objectId, ObjectResource rec) {
-        if(dao.findObjectById(objectId) != null) {
-            dao.updateObject(objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes, rec.storagePlatform);
-        } else {
-
-            /*
-            Use the location passed in by the user if the Object is a 'filesystem'
-            type object, otherwise generate a new (fresh) location.
-             */
-            String loc = rec.storagePlatform.equals("filesystem") ?
-                    rec.directoryPath : location(rec);
-
-            dao.insertObject(objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes, loc, rec.storagePlatform);
+    public List<ObjectResource> findObjectsByName(String username, String objectName) {
+        List<ObjectResource> recs = dao.findObjectsByName(username, objectName);
+        String[] emptyArr = new String[0];
+        for ( ObjectResource rec : recs ) {
+            rec.readers = dao.findReadersById(rec.objectId).toArray(emptyArr);
+            rec.writers = dao.findWritersById(rec.objectId).toArray(emptyArr);
         }
-        updateReaders(objectId, rec.readers);
-        updateWriters(objectId, rec.writers);
+        return recs;
+    }
+
+    private List<String> uniqueUsers( String[] users ) {
+        Set<String> userSet = new TreeSet<>(Arrays.asList(users));
+        return new ArrayList<String>(userSet);
+    }
+
+    @Override
+    public void insertObject(ObjectResource rec, String user) {
+        /*
+        Use the location passed in by the user if the Object is a 'filesystem'
+        type object, otherwise generate a new (fresh) location.
+         */
+        String loc = rec.storagePlatform.equals("filesystem") ?
+                rec.directoryPath : location(rec);
+
+        Long estBytes = rec.sizeEstimateBytes;
+        if ( estBytes == null )
+            estBytes = gDefaultEstSize;
+
+        List<String> readers = uniqueUsers(rec.readers);
+        List<String> writers = uniqueUsers(rec.writers);
+
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        // these next 3 lines need to be in a transaction
+        dao.begin();
+        dao.insertObject(rec.objectId, rec.objectName, rec.ownerId, estBytes, loc, rec.storagePlatform, user, now);
+        dao.insertReaders(rec.objectId, readers);
+        dao.insertWriters(rec.objectId, writers);
+        dao.commit();
     }
 
     private List<String> diff( List<String> minuend, List<String> subtrahend ) {
