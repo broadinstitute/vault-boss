@@ -75,7 +75,7 @@
         </createTable>
 
         <createTable tableName="writers">
-            <column name="objectId" type="varchar(36)">
+            <column name="objectId" type="char(36)">
                 <constraints primaryKey="true" foreignKeyName="writers_objects_fk" references="objects(objectId)" nullable="false"/>
             </column>
             <column name="username" type="varchar(255)">
