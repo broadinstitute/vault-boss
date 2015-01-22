@@ -78,10 +78,7 @@ public class ObjectResource extends PermissionedResource {
     public ObjectResource describe(@PathParam("objectId") String objectId,
                                    @Context HttpHeaders headers,
                                    @Context UriInfo uriInfo) {
-        if (!populateFromAPI(objectId)) {
-            throw new NotFoundException(String.format("Couldn't find object with id %s", objectId));
-        }
-
+        populateFromAPI(objectId);
         checkUserRead(headers);
 
         return this;
@@ -125,28 +122,24 @@ public class ObjectResource extends PermissionedResource {
         return errMsg;
     }
 
-    private boolean populateFromAPI(String objectId) {
+    private void populateFromAPI(String objectId) throws NotFoundException {
 
         ObjectResource rec = api.getObject(objectId);
+        if (rec == null)
+            throw new NotFoundException(String.format("Couldn't find object with id %s", objectId));
 
-        if (rec != null) {
-            this.objectId = rec.objectId;
-            ownerId = rec.ownerId;
-            objectName = rec.objectName;
-            storagePlatform = rec.storagePlatform;
-            sizeEstimateBytes = rec.sizeEstimateBytes;
+        this.objectId = rec.objectId;
+        ownerId = rec.ownerId;
+        objectName = rec.objectName;
+        storagePlatform = rec.storagePlatform;
+        sizeEstimateBytes = rec.sizeEstimateBytes;
 
-            if(storagePlatform.equals("filesystem")) {
-                directoryPath = rec.directoryPath;
-            }
-
-            readers = rec.readers;
-            writers = rec.writers;
-
-            return true;
+        if (storagePlatform.equals("filesystem")) {
+            directoryPath = rec.directoryPath;
         }
 
-        return false;
+        readers = rec.readers;
+        writers = rec.writers;
     }
 
     @Path("resolve")
@@ -158,7 +151,7 @@ public class ObjectResource extends PermissionedResource {
             @Context HttpHeaders headers,
             ResolutionRequest request) {
 
-        if(!populateFromAPI(objectId)) { throw new NotFoundException(objectId); }
+        populateFromAPI(objectId);
         checkUserRead(headers);
 
         try {
@@ -207,8 +200,7 @@ public class ObjectResource extends PermissionedResource {
                                  @Context UriInfo info,
                                  ObjectResource newrec) {
 
-        if(!populateFromAPI(objectId)) { throw new NotFoundException(objectId); }
-
+        populateFromAPI(objectId);
         checkUserWrite(header);
 
         this.objectId = errorIfSet(objectId, newrec.objectId, "objectId");

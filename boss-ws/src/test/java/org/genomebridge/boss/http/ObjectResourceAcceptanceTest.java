@@ -131,13 +131,32 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
     }
 
     @Test
+    public void testInvalidObjectDescribe() {
+        Client client = new Client();
+
+        ClientResponse response = checkStatus(CREATED, createObject("test object", "tdanford", 100L));
+        ObjectResource created = response.getEntity(ObjectResource.class);
+        String objectPath = checkHeader(response, "Location");
+        String truncatedObjectPath = objectPath.substring(0, objectPath.length() - 1);
+        String truncatedObjectId = created.objectId.substring(0, created.objectId.length() - 1);
+
+        response = checkStatus( NOT_FOUND, get(client, truncatedObjectPath));
+
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Couldn't find object with id %s", truncatedObjectId));
+    }
+
+    @Test
     public void setIllegalDeleteOnObject() {
         Client client = new Client();
+        final String fakeUser = "fake_user";
 
         String objectPath = checkHeader(
                 checkStatus( CREATED, createObject("Deletable", "tdanford", 100L )),
                 "Location" );
-        checkStatus( FORBIDDEN, delete(client, objectPath, "fake_user"));
+        ClientResponse response = checkStatus(FORBIDDEN, delete(client, objectPath, fakeUser));
+        assertThat(response.getEntity(String.class))
+                .isEqualTo(String.format("User \"%s\" is not allowed WRITE access to resource with ACL [tdanford, testuser]", fakeUser));
+
         check200( get(client, objectPath) );
     }
 
@@ -192,29 +211,34 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
          * "It's illegal for a user to set the Name field on an already-registered object."
          */
         Client client = new Client();
+        final String unchangeableName = "unchangeable";
+        final String newName = "New Name";
 
-        ClientResponse response = checkStatus( CREATED, createObject("unchangeable", "tdanford", 100L));
+        ClientResponse response = checkStatus(CREATED, createObject(unchangeableName, "tdanford", 100L));
         String objectPath = checkHeader(response, "Location");
 
         ObjectResource rec = response.getEntity(ObjectResource.class);
         assertThat(rec).isNotNull();
 
-        rec.objectName = "New Name";
+        rec.objectName = newName;
 
         // It's illegal to change the name!
-        checkStatus(BAD_REQUEST, post(client, objectPath, rec));
+        response = checkStatus(BAD_REQUEST, post(client, objectPath, rec));
+        assertThat(response.getEntity(String.class))
+                .isEqualTo(String.format("objectName was different than previously set. Expected: %s; given: %s", unchangeableName, newName));
 
         response = check200( get(client, objectPath));
 
         rec = response.getEntity(ObjectResource.class);
 
         // The name is unchanged.
-        assertThat(rec.objectName).isEqualTo("unchangeable");
+        assertThat(rec.objectName).isEqualTo(unchangeableName);
     }
 
     @Test
     public void testIllegalSetPermissions() {
         Client client = new Client();
+        final String fakeUser = "fake_user";
 
         ClientResponse response = checkStatus( CREATED, createObject("test object", "tdanford", 100L));
         String objectPath = checkHeader(response, "Location");
@@ -224,7 +248,9 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         rec.readers = arrayAppend(rec.readers, "new_reader");
 
         // It's illegal, as the user 'fake_user', to update the readers field of the ObjectResource
-        checkStatus(FORBIDDEN, post(client, objectPath, "fake_user", rec));
+        response = checkStatus(FORBIDDEN, post(client, objectPath, fakeUser, rec));
+        assertThat(response.getEntity(String.class))
+                .isEqualTo(String.format("User \"%s\" is not allowed WRITE access to resource with ACL [tdanford, testuser]", fakeUser));
 
         response = check200( get(client, objectPath) );
 
@@ -336,14 +362,36 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
     public void testIllegalObjectResolve() {
         Client client = new Client();
         Random rand = new Random();
+        final String fakeUser = "fake_user";
 
         int seconds = rand.nextInt(100) + 10;
 
-        ClientResponse response = checkStatus( CREATED, createObject("test object", "tdanford", 100L));
+        ClientResponse response = checkStatus(CREATED, createObject("test object", "tdanford", 100L));
         String objectPath = checkHeader(response, "Location");
 
         ResolutionRequest req = new ResolutionRequest("GET", seconds);
 
-        checkStatus( FORBIDDEN, post(client, objectPath + "/resolve", "fake_user", req) );
+        response = checkStatus(FORBIDDEN, post(client, objectPath + "/resolve", fakeUser, req));
+        assertThat(response.getEntity(String.class))
+                .isEqualTo(String.format("User \"%s\" is not allowed READ access to resource with ACL [tdanford, testuser]", fakeUser));
+    }
+
+    @Test
+    public void testInvalidObjectResolve() {
+        Client client = new Client();
+        Random rand = new Random();
+
+        int seconds = rand.nextInt(100) + 10;
+
+        ClientResponse response = checkStatus(CREATED, createObject("test object", "tdanford", 100L));
+        ObjectResource created = response.getEntity(ObjectResource.class);
+        String objectPath = checkHeader(response, "Location");
+        String truncatedObjectPath = objectPath.substring(0, objectPath.length() - 1);
+        String truncatedObjectId = created.objectId.substring(0, created.objectId.length() - 1);
+
+        ResolutionRequest req = new ResolutionRequest("GET", seconds);
+        response = checkStatus( NOT_FOUND, post(client, truncatedObjectPath + "/resolve", req));
+
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Couldn't find object with id %s", truncatedObjectId));
     }
 }
