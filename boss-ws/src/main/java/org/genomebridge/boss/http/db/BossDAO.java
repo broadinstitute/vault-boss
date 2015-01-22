@@ -15,18 +15,19 @@
  */
 package org.genomebridge.boss.http.db;
 
-import org.genomebridge.boss.http.resources.*;
+import org.genomebridge.boss.http.resources.ObjectResource;
 import org.skife.jdbi.v2.sqlobject.Bind;
 import org.skife.jdbi.v2.sqlobject.SqlBatch;
 import org.skife.jdbi.v2.sqlobject.SqlQuery;
 import org.skife.jdbi.v2.sqlobject.SqlUpdate;
 import org.skife.jdbi.v2.sqlobject.customizers.RegisterMapper;
+import org.skife.jdbi.v2.sqlobject.mixins.Transactional;
 
 import java.sql.Timestamp;
 import java.util.List;
 
 @RegisterMapper({ ObjectResourceMapper.class })
-public interface BossDAO {
+public interface BossDAO extends Transactional<BossDAO> {
 
     /*
     Object API

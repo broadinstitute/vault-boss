@@ -20,6 +20,7 @@ import com.google.inject.Inject;
 import org.genomebridge.boss.http.db.BossDAO;
 import org.genomebridge.boss.http.objectstore.HttpMethod;
 import org.genomebridge.boss.http.objectstore.ObjectStore;
+import org.genomebridge.boss.http.objectstore.ObjectStoreException;
 import org.genomebridge.boss.http.resources.ObjectResource;
 
 import java.net.URI;
@@ -96,9 +97,11 @@ public class DatabaseBossAPI implements BossAPI {
 
         Timestamp now = new Timestamp(System.currentTimeMillis());
         // these next 3 lines need to be in a transaction
+        dao.begin();
         dao.insertObject(rec.objectId, rec.objectName, rec.ownerId, estBytes, loc, rec.storagePlatform, user, now);
         dao.insertReaders(rec.objectId, readers);
         dao.insertWriters(rec.objectId, writers);
+        dao.commit();
     }
 
     private List<String> diff( List<String> minuend, List<String> subtrahend ) {
@@ -122,30 +125,50 @@ public class DatabaseBossAPI implements BossAPI {
         Timestamp now = new Timestamp(System.currentTimeMillis());
 
         // these next 5 lines need to be in a transaction
+        dao.begin();
         dao.updateObject(rec.objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes, now);
         dao.insertReaders(rec.objectId, readersToInsert);
         dao.deleteReaders(rec.objectId, readersToDelete);
         dao.insertWriters(rec.objectId, writersToInsert);
         dao.deleteWriters(rec.objectId, writersToDelete);
+        dao.commit();
     }
 
     @Override
     public void deleteObject(ObjectResource rec) {
-        /* if this object resides in the object store, also delete from the object store.
+       /* if this object resides in the object store, also delete from the object store.
 
            BOSS rev3 spec says: If BOSS is unable to delete the underlying object from the object storage
-           (e.g. non-transient network failure, or other error from objectstore server), it will return an
+           (e.g. non-transient network failure, or other error from object store server), it will return an
            appropriate 50x error, and the entry for this object will not be deleted from BOSS.
 
-           So, we delete from object store first, before deleting from the db. If the object store deletion fails,
-           we'll trigger the try/catch and won't delete from the db.
+           So, we delete from the db first, then the object store. If object store deletion fails,
+           we'll trigger the try/catch and rollback the db deletion.
         */
-        if (rec.isObjectStoreObject()) {
-            String location = dao.findObjectLocation(rec.objectId);
-            objectStore.deleteObject(location);
+        Boolean isObjectStore = rec.isObjectStoreObject();
+        String location = dao.findObjectLocation(rec.objectId);
+
+        dao.begin();
+
+        // Try to remove object resource first so we don't end up with orphaned records.
+        try {
+            Timestamp now = new Timestamp(System.currentTimeMillis());
+            dao.deleteObject(rec.objectId, now);
+        } catch (Exception e) {
+            dao.rollback();
+            throw new ObjectStoreException("Unable to delete object resource.", e);
         }
-        Timestamp now = new Timestamp(System.currentTimeMillis());
-        dao.deleteObject(rec.objectId,now);
+
+        // Only commit the ObjectResource delete after checking for ObjectStore deletion.
+        try {
+            if (isObjectStore && location != null) {
+                objectStore.deleteObject(location);
+            }
+            dao.commit();
+        } catch (Exception e) {
+            dao.rollback();
+            throw new ObjectStoreException("Unable to delete object from object store.", e);
+        }
     }
 
     @Override
