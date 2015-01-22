@@ -24,7 +24,6 @@ import com.sun.jersey.api.client.GenericType;
 
 import io.dropwizard.testing.junit.DropwizardAppRule;
 
-import org.genomebridge.boss.http.models.StoragePlatform;
 import org.genomebridge.boss.http.resources.ObjectResource;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -170,18 +169,5 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
         recs = response.getEntity(genTyp);
         assertThat(recs.size()).isEqualTo(1);
         assertThat(recs.get(0).objectId).isEqualTo(expectedId);
-    }
-
-    private static ObjectResource fixture()
-    {
-        ObjectResource rec = new ObjectResource();
-        rec.objectName = "newObj";
-        rec.storagePlatform = StoragePlatform.FILESYSTEM.getValue();
-        rec.directoryPath = "/path/to/newObj";
-        rec.sizeEstimateBytes = 1234L;
-        rec.ownerId = "me";
-        rec.readers = arraySet("me","him","her");
-        rec.writers = arraySet("me","him","her");
-        return rec;
     }
 }

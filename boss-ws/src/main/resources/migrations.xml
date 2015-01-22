@@ -21,106 +21,67 @@
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
          http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
 
-    <changeSet id="1" author="tdanford">
-        <createTable tableName="groups">
-            <column name="groupId" type="varchar(255)">
+    <changeSet id="0" author="tsharpe">
+        <createTable tableName="objects">
+            <column name="objectId" type="char(36)">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
             <column name="ownerId" type="varchar(255)">
                 <constraints nullable="false"/>
             </column>
-            <column name="sizeEstimateBytes" type="bigint" defaultValue="-1">
-            </column>
-            <column name="typeHint" type="varchar(255)">
-            </column>
-            <column name="active" type="boolean" defaultValue="true">
+            <column name="sizeEstimateBytes" type="bigint">
                 <constraints nullable="false"/>
             </column>
-            <column name="location" type="varchar(1024)">
+            <column name="objectName" type="varchar(255)">
+                <constraints nullable="false" />
+            </column>
+            <column name="active" type="char(1)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="location" type="varchar(2048)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="storagePlatform" type="varchar(11)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="createdBy" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="createDate" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modifyDate" type="datetime">
+                <constraints nullable="true"/>
+            </column>
+            <column name="resolveDate" type="datetime">
+                <constraints nullable="true"/>
+            </column>
+            <column name="deleteDate" type="datetime">
+                <constraints nullable="true"/>
             </column>
         </createTable>
 
-        <createTable tableName="objects">
-            <column name="objectId" type="varchar(255)">
-                <constraints primaryKey="true" nullable="false"/>
-            </column>
-            <column name="groupId" type="varchar(255)">
-                <constraints primaryKey="true" nullable="false"/>
-            </column>
-            <column name="ownerId" type="varchar(255)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="sizeEstimateBytes" type="bigint" defaultValue="-1">
-            </column>
-            <column name="name" type="varchar(255)">
-                <constraints nullable="false" />
-            </column>
-            <column name="active" type="boolean" defaultValue="true">
-                <constraints nullable="false"/>
-            </column>
-            <column name="location" type="varchar(1024)">
-            </column>
-        </createTable>
+        <createIndex indexName="objects_name_idx" tableName="objects" unique="false">
+            <column name="objectName"/>
+        </createIndex>
 
         <createTable tableName="readers">
-            <column name="id" type="varchar(255)">
-                <constraints nullable="false" />
+            <column name="objectId" type="char(36)">
+                <constraints primaryKey="true" foreignKeyName="readers_objects_fk" references="objects(objectId)" nullable="false"/>
             </column>
             <column name="username" type="varchar(255)">
-                <constraints nullable="false" />
+                <constraints primaryKey="true" nullable="false"/>
             </column>
         </createTable>
 
         <createTable tableName="writers">
-            <column name="id" type="varchar(255)">
-                <constraints nullable="false" />
+            <column name="objectId" type="varchar(36)">
+                <constraints primaryKey="true" foreignKeyName="writers_objects_fk" references="objects(objectId)" nullable="false"/>
             </column>
             <column name="username" type="varchar(255)">
-                <constraints nullable="false" />
+                <constraints primaryKey="true" nullable="false"/>
             </column>
         </createTable>
     </changeSet>
 
-    <changeSet author="tdanford" id="addColumn-storagePlatform">
-        <addColumn tableName="objects">
-            <column name="storagePlatform" type="varchar(255)" defaultValue="objectstore">
-                <constraints nullable="false"/>
-            </column>
-        </addColumn>
-        <addColumn tableName="groups">
-            <column name="storagePlatform" type="varchar(255)" defaultValue="objectstore">
-                <constraints nullable="false"/>
-            </column>
-        </addColumn>
-    </changeSet>
-
-    <changeSet author="tdanford" id="rev3-schema-changes">
-        <dropPrimaryKey tableName="objects"/>
-        <dropColumn tableName="objects" columnName="groupId"/>
-        <dropTable tableName="groups" />
-        <addPrimaryKey tableName="objects" columnNames="objectId"/>
-        <renameColumn tableName="objects"
-                      oldColumnName="name"
-                      newColumnName="objectName"
-                      columnDataType="varchar(255)"/>
-    </changeSet>
-
-    <changeSet author="tsharpe" id="active-flag-data-type-mod">
-        <renameColumn tableName="objects" oldColumnName="active" columnDataType="boolean" newColumnName="xxxActive"/>
-        <addColumn tableName="objects">
-            <column name="active" type="char(1)" value="N"/>
-        </addColumn>
-        <addNotNullConstraint tableName="objects" columnName="active"/>
-        <update tableName="objects">
-            <column name="active" value="Y"/>
-            <where>xxxActive=1</where>
-        </update>
-        <dropColumn tableName="objects" columnName="xxxActive"/>
-    </changeSet>
-
-    <changeSet author="tsharpe" id="add-objects-name-index">
-        <createIndex indexName="objects_name_idx" tableName="objects" unique="false">
-            <column name="objectName"/>
-        </createIndex>
-    </changeSet>
 </databaseChangeLog>

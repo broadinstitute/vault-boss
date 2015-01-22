@@ -301,7 +301,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
         ClientResponse response = checkStatus( CREATED, createObject("test object", "tdanford", 100L));
         String objectPath = checkHeader( response, "Location");
-        ObjectResource created = response.getEntity(ObjectResource.class);
+        response.getEntity(ObjectResource.class);
 
         ResolutionRequest req = new ResolutionRequest("GET", seconds, contentType, contentMD5Hex);
 

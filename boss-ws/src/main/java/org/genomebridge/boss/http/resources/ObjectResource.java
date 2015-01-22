@@ -20,6 +20,7 @@ package org.genomebridge.boss.http.resources;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.sun.jersey.api.NotFoundException;
+
 import org.apache.log4j.Logger;
 import org.genomebridge.boss.http.models.ResolutionRequest;
 import org.genomebridge.boss.http.models.StoragePlatform;
@@ -34,7 +35,9 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import javax.xml.bind.DatatypeConverter;
+
 import java.net.URI;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -52,6 +55,19 @@ public class ObjectResource extends PermissionedResource {
     public Long sizeEstimateBytes;
     public String ownerId;
     public String[] readers, writers;
+
+    @JsonIgnore
+    public String active;
+    @JsonIgnore
+    public String createdBy;
+    @JsonIgnore
+    public Timestamp createDate;
+    @JsonIgnore
+    public Timestamp modifyDate;
+    @JsonIgnore
+    public Timestamp resolveDate;
+    @JsonIgnore
+    public Timestamp deleteDate;
 
     public ObjectResource() {
         this.api = BossAPIProvider.getInstance().getApi();
@@ -113,7 +129,7 @@ public class ObjectResource extends PermissionedResource {
 
         ObjectResource rec = api.getObject(objectId);
 
-        if(rec != null) {
+        if (rec != null) {
             this.objectId = rec.objectId;
             ownerId = rec.ownerId;
             objectName = rec.objectName;
@@ -206,13 +222,9 @@ public class ObjectResource extends PermissionedResource {
         this.readers = setFrom(readers, newrec.readers);
         this.writers = setFrom(writers, newrec.writers);
 
-        updateInAPI(objectId);
+        api.updateObject(this);
 
         return this;
-    }
-
-    private void updateInAPI(String objectId) {
-        api.updateObject(objectId, this);
     }
 
     @DELETE
