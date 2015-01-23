@@ -166,16 +166,6 @@
             <artifactId>hsqldb</artifactId>
         </dependency>
 
-        <!--
-        Normally, this would be included as part of the dropwizard-core.  However,
-        see the notes in the parent pom: in order to resolve some class conflicts in
-        assembling the uber-jar, we've pulled it out and are including it separately.
-        -->
-        <dependency>
-            <groupId>javax.servlet</groupId>
-            <artifactId>javax.servlet-api</artifactId>
-        </dependency>
-
         <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
