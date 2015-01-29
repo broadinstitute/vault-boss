@@ -36,6 +36,7 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
     public static int CREATED = ClientResponse.Status.CREATED.getStatusCode();
     public static int BAD_REQUEST = ClientResponse.Status.BAD_REQUEST.getStatusCode();
     public static int NOT_FOUND = ClientResponse.Status.NOT_FOUND.getStatusCode();
+    public static int GONE = ClientResponse.Status.GONE.getStatusCode();
 
     @ClassRule
     public static final DropwizardAppRule<BossConfiguration> RULE =
@@ -131,9 +132,27 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
          * "The user should not be able to create an object via an update"
          */
         ObjectResource rec = fixture();
+        Client client = new Client();
         final String fakeObjectId = "xyzzy";
-        ClientResponse response = checkStatus(NOT_FOUND, post(new Client(), String.format("%s/%s", objectsPath(), fakeObjectId), rec));
+
+        ClientResponse response = checkStatus(NOT_FOUND, post(client, String.format("%s/%s", objectsPath(), fakeObjectId), rec));
         assertThat(response.getEntity(String.class)).isEqualTo(String.format("Couldn't find object with id %s", fakeObjectId));
+
+        // check that this is also true for deleted objects
+
+        // until we have a mock object store, calling delete on an objectstore-object will fail, because
+        // the system will reach out to the real objectstore and attempt to delete it. We'll cover that test
+        // in the end-to-end integration tests.
+        response = checkStatus(CREATED, createObject("Name", "tdanford", "filesystem", "/path/to/file", 500L));
+        ObjectResource created = response.getEntity(ObjectResource.class);
+        String objectPath = checkHeader(response, "Location");
+
+        checkStatus(OK, get(client, objectPath));
+        checkStatus(OK, delete(client, objectPath));
+        response = checkStatus( GONE, post(client, String.format("%s/%s", objectsPath(), created.objectId), rec));
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Object with id %s has been deleted", created.objectId));
+        response = checkStatus( GONE, get(client, objectPath));
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Object with id %s has been deleted", created.objectId));
     }
 
     @Test

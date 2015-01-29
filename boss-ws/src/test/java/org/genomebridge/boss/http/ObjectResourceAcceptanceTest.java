@@ -123,11 +123,13 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         // the system will reach out to the real objectstore and attempt to delete it. We'll cover that test
         // in the end-to-end integration tests.
         ClientResponse response = checkStatus( CREATED, createObject("Test Name", "tdanford", "filesystem", "/foo/bar", 1010L) );
+        ObjectResource created = response.getEntity(ObjectResource.class);
         String objectPath = checkHeader(response, "Location");
 
         checkStatus( OK, get(client, objectPath) );
         checkStatus( OK, delete(client, objectPath));
-        checkStatus( NOT_FOUND, get(client, objectPath) );
+        response = checkStatus( GONE, get(client, objectPath) );
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Object with id %s has been deleted", created.objectId));
     }
 
     @Test
@@ -377,7 +379,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
     }
 
     @Test
-    public void testInvalidObjectResolve() {
+    public void testInvalidObjectResolveAndDelete() {
         Client client = new Client();
         Random rand = new Random();
 
@@ -391,7 +393,34 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
         ResolutionRequest req = new ResolutionRequest("GET", seconds);
         response = checkStatus( NOT_FOUND, post(client, truncatedObjectPath + "/resolve", req));
-
         assertThat(response.getEntity(String.class)).isEqualTo(String.format("Couldn't find object with id %s", truncatedObjectId));
+
+        // confirm that we also can't delete it
+        response = checkStatus(NOT_FOUND, delete(client, truncatedObjectPath));
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Couldn't find object with id %s", truncatedObjectId));
+    }
+
+    @Test
+    public void testDeletedObjectResolveAndDelete() {
+        Client client = new Client();
+        Random rand = new Random();
+
+        int seconds = rand.nextInt(100) + 10;
+
+        // until we have a mock object store, calling delete on an objectstore-object will fail, because
+        // the system will reach out to the real objectstore and attempt to delete it. We'll cover that test
+        // in the end-to-end integration tests.
+        ClientResponse response = checkStatus(CREATED, createObject("Test Name", "tdanford", "filesystem", "/foo/bar", 1010L));
+        ObjectResource created = response.getEntity(ObjectResource.class);
+        String objectPath = checkHeader(response, "Location");
+
+        checkStatus( OK, get(client, objectPath) );
+        checkStatus( OK, delete(client, objectPath));
+        ResolutionRequest req = new ResolutionRequest("GET", seconds);
+        response = checkStatus( GONE, post(client, objectPath + "/resolve", req));
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Object with id %s has been deleted", created.objectId));
+
+        // confirm that we can't re-delete it
+        checkStatus(BAD_REQUEST, delete(client, objectPath));
     }
 }
