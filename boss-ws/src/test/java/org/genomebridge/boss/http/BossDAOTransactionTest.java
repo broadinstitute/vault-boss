@@ -41,8 +41,8 @@ public class BossDAOTransactionTest extends ResourcedTest {
 
     @BeforeClass
     public static void setup() throws Exception {
-        dao1 = BossApplication.getDAO(RULE.getConfiguration(), RULE.getEnvironment());
-        dao2 = BossApplication.getDAO(RULE.getConfiguration(), RULE.getEnvironment());
+        dao1 = BossApplication.getDAO();
+        dao2 = BossApplication.getDAO();
     }
 
     /**

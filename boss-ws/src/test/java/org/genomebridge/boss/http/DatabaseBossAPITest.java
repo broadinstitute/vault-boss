@@ -17,8 +17,6 @@
 package org.genomebridge.boss.http;
 
 import io.dropwizard.testing.junit.DropwizardAppRule;
-
-import org.genomebridge.boss.http.db.BossDAO;
 import org.genomebridge.boss.http.models.StoragePlatform;
 import org.genomebridge.boss.http.objectstore.HttpMethod;
 import org.genomebridge.boss.http.objectstore.ObjectStore;
@@ -43,26 +41,14 @@ public class DatabaseBossAPITest extends ResourcedTest {
             new DropwizardAppRule<>(BossApplication.class,
                     resourceFilePath("boss-config.yml"));
 
-    private static BossDAO dao = null;
     private static BossAPI api = null;
 
     @BeforeClass
     public static void setup() {
-        dao = dao();
-
         ObjectStore objectStore = new S3ObjectStore(
                 RULE.getConfiguration().getObjectStoreConfiguration().createClient(),
                 RULE.getConfiguration().getObjectStoreConfiguration().getBucket());
-        api = new DatabaseBossAPI(dao, objectStore);
-    }
-
-    private static BossDAO dao() {
-        try {
-            return BossApplication.getDAO(RULE.getConfiguration(), RULE.getEnvironment());
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace(System.err);
-            return null;
-        }
+        api = new DatabaseBossAPI(objectStore);
     }
 
     private String randomID() { return UUID.randomUUID().toString(); }
