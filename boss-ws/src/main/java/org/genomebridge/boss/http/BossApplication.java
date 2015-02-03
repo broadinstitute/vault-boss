@@ -73,11 +73,18 @@ public class BossApplication extends Application<BossConfiguration> {
         }
     }
 
-    public static BossDAO getDAO(BossConfiguration config, Environment env) throws ClassNotFoundException {
-        final DBIFactory factory = new DBIFactory();
-        final DBI jdbi = factory.build(env, config.getDataSourceFactory(), "db");
-        jdbi.registerArgumentFactory(new NullArgumentFactory());
-        return jdbi.onDemand(BossDAO.class);
+    private static DBI DBI;
+    private static void initDBI(BossConfiguration config, Environment env) throws ClassNotFoundException {
+        DBIFactory factory = new DBIFactory();
+        DBI = factory.build(env, config.getDataSourceFactory(), "db");
+        DBI.registerArgumentFactory(new NullArgumentFactory());
+    }
+
+    public static BossDAO getDAO() {
+        if (null == DBI) {
+            throw new RuntimeException("DBI has not been set up correctly.");
+        }
+        return DBI.onDemand(BossDAO.class);
     }
 
     public void run(BossConfiguration config, Environment env) {
@@ -88,20 +95,20 @@ public class BossApplication extends Application<BossConfiguration> {
         with Dropwizard + Guice lifecycle. See https://github.com/HubSpot/dropwizard-guice/issues/19 for discussion
         of those lifecycle problems.
 
-        Furthermore, creating the JDBI objects in the run() method properly registers health checks and metrics
-        for the JDBI connection pool. When we tried creating the JDBI objects elsewhere, the db pool metrics
+        Furthermore, creating the DBI objects in the run() method properly registers health checks and metrics
+        for the DBI connection pool. When we tried creating the DBI objects elsewhere, the db pool metrics
         did not work correctly; we did not investigate workarounds for this.
          */
         try {
-            // JDBI
-            final BossDAO dao = getDAO(config,env);
+            // DBI
+            initDBI(config, env);
 
             // Object store
             ObjectStoreConfiguration osConfig = config.getObjectStoreConfiguration();
             ObjectStore store = new S3ObjectStore(osConfig.createClient(), osConfig.getBucket());
 
             // BOSS API
-            BossAPI api = new DatabaseBossAPI(dao, store);
+            BossAPI api = new DatabaseBossAPI(store);
 
             // stash in singleton
             BossAPIProvider.getInstance().setApi(api);

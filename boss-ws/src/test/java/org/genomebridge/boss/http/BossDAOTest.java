@@ -46,12 +46,7 @@ public class BossDAOTest extends ResourcedTest {
     }
 
     private static BossDAO dao() {
-        try {
-            return BossApplication.getDAO(RULE.getConfiguration(), RULE.getEnvironment());
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace(System.err);
-            return null;
-        }
+        return BossApplication.getDAO();
     }
 
     private String createObject()

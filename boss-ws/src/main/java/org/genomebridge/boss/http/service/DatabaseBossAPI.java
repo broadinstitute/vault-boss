@@ -17,6 +17,7 @@ package org.genomebridge.boss.http.service;
 
 import com.google.inject.Inject;
 
+import org.genomebridge.boss.http.BossApplication;
 import org.genomebridge.boss.http.db.BossDAO;
 import org.genomebridge.boss.http.objectstore.HttpMethod;
 import org.genomebridge.boss.http.objectstore.ObjectStore;
@@ -33,14 +34,15 @@ import java.util.*;
  */
 public class DatabaseBossAPI implements BossAPI {
 
-    private BossDAO dao;
+    private BossDAO getDao() {
+        return BossApplication.getDAO();
+    }
 
     private ObjectStore objectStore;
     static private Long gDefaultEstSize = new Long(-1);
 
     @Inject
-    public DatabaseBossAPI( BossDAO dao, ObjectStore store ) {
-        this.dao = dao;
+    public DatabaseBossAPI( ObjectStore store ) {
         this.objectStore = store;
     }
 
@@ -53,6 +55,7 @@ public class DatabaseBossAPI implements BossAPI {
 
     @Override
     public ObjectResource getObject(String objectId) {
+        BossDAO dao = getDao();
         ObjectResource rec = dao.findObjectById(objectId);
         if ( rec != null ) {
             if ( !rec.active.equals("Y") )
@@ -65,12 +68,13 @@ public class DatabaseBossAPI implements BossAPI {
 
     @Override
     public boolean wasObjectDeleted(String objectId) {
-        ObjectResource rec = dao.findObjectById(objectId);
+        ObjectResource rec = getDao().findObjectById(objectId);
         return ( rec != null && rec.active.equals("N") );
     }
 
     @Override
     public List<ObjectResource> findObjectsByName(String username, String objectName) {
+        BossDAO dao = getDao();
         List<ObjectResource> recs = dao.findObjectsByName(username, objectName);
         String[] emptyArr = new String[0];
         for ( ObjectResource rec : recs ) {
@@ -103,6 +107,7 @@ public class DatabaseBossAPI implements BossAPI {
 
         Timestamp now = new Timestamp(System.currentTimeMillis());
         // these next 3 lines need to be in a transaction
+        BossDAO dao = getDao();
         dao.begin();
         dao.insertObject(rec.objectId, rec.objectName, rec.ownerId, estBytes, loc, rec.storagePlatform, user, now);
         dao.insertReaders(rec.objectId, readers);
@@ -118,6 +123,7 @@ public class DatabaseBossAPI implements BossAPI {
 
     @Override
     public void updateObject(ObjectResource rec) {
+        BossDAO dao = getDao();
         List<String> newUsers = Arrays.asList(rec.readers);
         List<String> curUsers = dao.findReadersById(rec.objectId);
         List<String> readersToInsert = diff(newUsers,curUsers);
@@ -152,6 +158,7 @@ public class DatabaseBossAPI implements BossAPI {
            we'll trigger the try/catch and rollback the db deletion.
         */
         Boolean isObjectStore = rec.isObjectStoreObject();
+        BossDAO dao = getDao();
         String location = dao.findObjectLocation(rec.objectId);
 
         dao.begin();
@@ -179,6 +186,7 @@ public class DatabaseBossAPI implements BossAPI {
 
     @Override
     public URI getPresignedURL(String objectId, HttpMethod method, long millis, String contentType, byte[] contentMD5) {
+        BossDAO dao = getDao();
         String location = dao.findObjectLocation(objectId);
         if ( location != null ) {
             Timestamp now = new Timestamp(System.currentTimeMillis());
