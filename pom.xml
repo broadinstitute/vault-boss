@@ -9,6 +9,7 @@
 
     <modules>
         <module>boss-ws</module>
+        <module>firehose-migration</module>
     </modules>
 
     <properties>
