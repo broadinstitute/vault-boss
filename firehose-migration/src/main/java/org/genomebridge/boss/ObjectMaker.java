@@ -124,8 +124,10 @@ public class ObjectMaker implements Runnable {
                 catch ( Exception e ) {
                     mErrMsg += "  Object could not be removed: " + e.getMessage();
                 }
+                mObjectURL = null;
             }
             System.out.println(mJobDir+": "+mErrMsg);
+            mErrMsg = null;
         }
     }
 
@@ -196,11 +198,7 @@ public class ObjectMaker implements Runnable {
             if ( mErrMsg != null )
                 return;
         } catch ( IOException e ) {
-            mErrMsg = "Unable to create tar process 1--"+e.getMessage(); return;
-        }
-
-        if ( tarLen >= (1L<<32) ) {
-            mErrMsg = "Jobdir too large to handle via this program.  Size="+tarLen; return;
+            mErrMsg = "Unable to calculate tar length--"+e.getMessage(); return;
         }
 
         // create tar process and stream that process's output to the upload URL
@@ -209,10 +207,10 @@ public class ObjectMaker implements Runnable {
         try {
             mTarProc = procBldr.start();
         } catch ( IOException e ) {
-            mErrMsg = "Unable to create tar process 2--"+e.getMessage(); return;
+            mErrMsg = "Unable to stream tar--"+e.getMessage(); return;
         }
         DigestInputStream dis = new DigestInputStream(mTarProc.getInputStream(),createMD5Digester());
-        uploadTar((int)tarLen,uploadURI,dis);
+        uploadTar(tarLen,uploadURI,dis);
     }
 
     private void cleanUpProcess() {
@@ -232,8 +230,9 @@ public class ObjectMaker implements Runnable {
         mTarProc = null;
     }
 
-    private void uploadTar( int contentLength, URI uploadURI, DigestInputStream is ) {
+    private void uploadTar( long contentLength, URI uploadURI, DigestInputStream is ) {
         HttpURLConnection conn = null;
+        long totLen = 0L;
         try {
             conn = (HttpURLConnection)uploadURI.toURL().openConnection();
             conn.setFixedLengthStreamingMode(contentLength);
@@ -246,8 +245,10 @@ public class ObjectMaker implements Runnable {
             OutputStream os = conn.getOutputStream();
             byte[] buf = new byte[CHUNK_SIZE];
             int len;
-            while ( (len = is.read(buf)) != -1 )
+            while ( (len = is.read(buf)) != -1 ) {
                 os.write(buf, 0, len);
+                totLen += len;
+            }
             os.close();
             if ( conn.getResponseCode() != ClientResponse.Status.OK.getStatusCode() )
                 mErrMsg = "Unable to upload object content: status="+conn.getResponseCode();
@@ -265,7 +266,8 @@ public class ObjectMaker implements Runnable {
                 }
             }
         } catch ( IOException e ) {
-            mErrMsg = "IOException while uploading object content: " + e.getMessage();
+            mErrMsg = "IOException while uploading object content after writing " + totLen +
+                        " of " + contentLength + " bytes: " + e.getMessage();
         } finally {
             if ( conn != null )
                 conn.disconnect();
