@@ -27,4 +27,10 @@ public interface ObjectStore {
                                     String contentType, byte[] contentMD5);
 
     public void deleteObject(String key) throws ObjectStoreException;
+
+    public String initiateMultipartUpload(String key);
+    public URI getMultipartUploadURL(String key, String uploadId, int partNumber, long timeoutInMillis,
+                                        String contentType, String contentMD5);
+    public String commitMultipartUpload(String key, String uploadId, String[] eTags);
+    public void abortMultipartUpload(String key, String uploadId);
 }

@@ -17,11 +17,16 @@ package org.genomebridge.boss.http.objectstore;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
+import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
 import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
+import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
+import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.util.Base64;
 
 import java.net.URI;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Date;
 
 public class S3ObjectStore implements ObjectStore {
@@ -67,5 +72,42 @@ public class S3ObjectStore implements ObjectStore {
         } catch (AmazonClientException ace) {
             throw new ObjectStoreException(ace);
         }
+    }
+
+    @Override
+    public String initiateMultipartUpload(String key) {
+        return client.initiateMultipartUpload(new InitiateMultipartUploadRequest(bucket,key)).getUploadId();
+    }
+
+    @Override
+    public URI getMultipartUploadURL(String key, String uploadId, int partNumber, long timeoutInMillis,
+                                        String contentType, String contentMD5) {
+        GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(bucket, key, com.amazonaws.HttpMethod.PUT);
+        request.addRequestParameter("PartNumber", Integer.toString(partNumber));
+        request.addRequestParameter("UploadId", uploadId);
+        request.setExpiration(new Date(System.currentTimeMillis() + timeoutInMillis));
+        if (contentType != null) {
+            request.setContentType(contentType);
+        }
+        if (contentMD5 != null) {
+            request.setContentMd5(contentMD5);
+        }
+        URL url = client.generatePresignedUrl(request);
+        return URI.create(url.toString());
+    }
+
+    @Override
+    public String commitMultipartUpload(String key, String uploadId, String[] eTags) {
+        ArrayList<PartETag> partETags = new ArrayList<>(eTags.length);
+        for ( String eTag : eTags )
+            partETags.add(new PartETag(partETags.size(),eTag));
+        CompleteMultipartUploadRequest req = new CompleteMultipartUploadRequest(bucket,key,uploadId,partETags);
+        return client.completeMultipartUpload(req).getETag();
+    }
+
+    @Override
+    public void abortMultipartUpload(String key, String uploadId) {
+        AbortMultipartUploadRequest req = new AbortMultipartUploadRequest(bucket,key,uploadId);
+        client.abortMultipartUpload(req);
     }
 }

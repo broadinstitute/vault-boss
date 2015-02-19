@@ -32,6 +32,7 @@ import org.genomebridge.boss.http.service.DeletedObjectException;
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import javax.xml.bind.DatatypeConverter;
@@ -74,7 +75,7 @@ public class ObjectResource extends PermissionedResource {
     }
 
     @GET
-    @Produces("application/json")
+    @Produces(MediaType.APPLICATION_JSON)
     public ObjectResource describe(@PathParam("objectId") String objectId,
                                    @Context HttpHeaders headers,
                                    @Context UriInfo uriInfo) {
@@ -151,7 +152,7 @@ public class ObjectResource extends PermissionedResource {
     }
 
     @Path("resolve")
-    @Produces("application/json")
+    @Produces(MediaType.APPLICATION_JSON)
     @POST
     public ResolutionResource resolve(
             @PathParam("objectId") String objectId,
@@ -162,6 +163,7 @@ public class ObjectResource extends PermissionedResource {
         try {
             populateFromAPI(objectId);
             checkUserRead(headers);
+            //TODO:  There's a bug here.  We should be checking for write permission unless the httpMethod is GET.
 
             long timeoutMillis = 1000L * request.validityPeriodSeconds;
             org.genomebridge.boss.http.objectstore.HttpMethod method = org.genomebridge.boss.http.objectstore.HttpMethod.valueOf(request.httpMethod);
@@ -204,8 +206,8 @@ public class ObjectResource extends PermissionedResource {
     }
 
     @POST
-    @Consumes("application/json")
-    @Produces("application/json")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
     public ObjectResource update(@PathParam("objectId") String objectId,
                                  @Context HttpHeaders header,
                                  @Context UriInfo info,
@@ -256,4 +258,87 @@ public class ObjectResource extends PermissionedResource {
     private void deleteFromAPI(ObjectResource rec) {
         api.deleteObject(rec);
     }
+
+    @Path("multi")
+    @Produces(MediaType.APPLICATION_JSON)
+    @GET
+    public InitiateMultipartUploadResponse initiateMultipartUpload(
+            @PathParam("objectId") String objectId,
+            @Context HttpHeaders headers) {
+        populateFromAPI(objectId);
+        checkUserWrite(headers);
+        if ( !isObjectStoreObject() ) {
+            throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST)
+                        .entity("Multipart uploads are only allowed for object-store objects.").build());
+        }
+        return new InitiateMultipartUploadResponse(api.initiateMultipartUpload(objectId));
+    }
+
+    private static class InitiateMultipartUploadResponse {
+        public InitiateMultipartUploadResponse( String id ) {
+            transferId = id;
+        }
+
+        @SuppressWarnings("unused")
+        public String transferId;
+    }
+
+    @Path("multi")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @POST
+    public MultipartUploadResponse multipartUpload(
+            @PathParam("objectId") String objectId,
+            @QueryParam("transferId") String transferId,
+            MultipartUploadRequest request) {
+        URI uri = api.getMultipartUploadURL(objectId, transferId, request.partNumber,
+                1000L*request.validityPeriodSeconds, request.contentType, request.contentMD5);
+        if ( uri == null )
+            throw new WebApplicationException(Response.status(Response.Status.NOT_FOUND)
+                    .entity("Object "+objectId+" not found.").build());
+        return new MultipartUploadResponse(uri);
+    }
+
+    private static class MultipartUploadRequest {
+        public int partNumber;
+        public int validityPeriodSeconds;
+        public String contentType;
+        public String contentMD5;
+    }
+
+    private static class MultipartUploadResponse {
+        MultipartUploadResponse( URI aURI ) {
+            uri = aURI;
+        }
+
+        @SuppressWarnings("unused")
+        public URI uri;
+    }
+
+    @Path("multi")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @PUT
+    public Response commitMultipartUpload(
+            @PathParam("objectId") String objectId,
+            @QueryParam("transferId") String transferId,
+            CommitMultipartUploadRequest request) {
+        String eTag = api.commitMultipartUpload(objectId, transferId, request.eTags);
+        if ( eTag == null )
+            throw new WebApplicationException(Response.status(Response.Status.NOT_FOUND)
+                    .entity("Object "+objectId+" not found.").build());
+        return Response.ok().header(HttpHeaders.ETAG, eTag).build();
+    }
+
+    private static class CommitMultipartUploadRequest {
+        String[] eTags;
+    }
+
+    @Path("multi")
+    @DELETE
+    public void abortMultipartUpload(
+            @PathParam("objectId") String objectId,
+            @QueryParam("transferId") String transferId) {
+        api.abortMultipartUpload(objectId, transferId);
+    }
+
 }

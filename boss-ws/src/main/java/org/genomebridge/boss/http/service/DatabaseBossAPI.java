@@ -16,6 +16,7 @@
 package org.genomebridge.boss.http.service;
 
 import com.google.inject.Inject;
+import com.sun.jersey.api.NotFoundException;
 
 import org.genomebridge.boss.http.BossApplication;
 import org.genomebridge.boss.http.db.BossDAO;
@@ -27,6 +28,7 @@ import org.genomebridge.boss.http.resources.ObjectResource;
 import java.net.URI;
 import java.sql.Timestamp;
 import java.util.*;
+
 
 /**
  * Basically, a shim between the BossAPI and the BossDAO (which is defined as a JDBI-style annotated
@@ -193,5 +195,41 @@ public class DatabaseBossAPI implements BossAPI {
             dao.updateResolveDate(objectId,now);
         }
         return objectStore.generatePresignedURL(location, method, millis, contentType, contentMD5);
+    }
+
+    @Override
+    public String initiateMultipartUpload(String objectId) {
+        BossDAO dao = getDao();
+        String location = dao.findObjectLocation(objectId);
+        if ( location == null )
+            throw new NotFoundException("Object "+objectId+" not found.");
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        dao.updateResolveDate(objectId,now);
+        return objectStore.initiateMultipartUpload(location);
+    }
+
+    @Override
+    public URI getMultipartUploadURL(String objectId, String uploadId, int partNumber, long timeoutInMillis,
+                                        String contentType, String contentMD5) {
+        String location = getDao().findObjectLocation(objectId);
+        if ( location == null )
+            throw new NotFoundException("Object "+objectId+" not found.");
+        return objectStore.getMultipartUploadURL(location, uploadId, partNumber, timeoutInMillis, contentType, contentMD5);
+    }
+
+    @Override
+    public String commitMultipartUpload(String objectId, String uploadId, String[] eTags) {
+        String location = getDao().findObjectLocation(objectId);
+        if ( location == null )
+            throw new NotFoundException("Object "+objectId+" not found.");
+        return objectStore.commitMultipartUpload(location, uploadId, eTags);
+    }
+
+    @Override
+    public void abortMultipartUpload(String objectId, String uploadId) {
+        String location = getDao().findObjectLocation(objectId);
+        if ( location == null )
+            throw new NotFoundException("Object "+objectId+" not found.");
+        objectStore.abortMultipartUpload(location, uploadId);
     }
 }

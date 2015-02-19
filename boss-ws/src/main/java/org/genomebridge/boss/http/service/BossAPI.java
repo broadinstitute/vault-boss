@@ -32,4 +32,9 @@ public interface BossAPI {
 
     public URI getPresignedURL(String objectId, HttpMethod method, long millis,
                                String contentType, byte[] contentMD5);
+    public String initiateMultipartUpload(String key);
+    public URI getMultipartUploadURL(String key, String uploadId, int partNumber, long timeoutInMillis,
+                                        String contentType, String contentMD5);
+    public String commitMultipartUpload(String key, String uploadId, String[] eTags);
+    public void abortMultipartUpload(String key, String uploadId);
 }
