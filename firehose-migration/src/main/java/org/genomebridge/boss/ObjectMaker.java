@@ -214,10 +214,34 @@ public class ObjectMaker implements Runnable {
     }
 
     private void cleanUpProcess() {
-        int tarRC;
+        // ugly, ugly, ugly.  in Java 8 we'd just call Process.waitFor with a timeout.
+        // give the process up to 31 seconds to exit
+        int tarRC = -1;
+        boolean ok = false;
+        long timeout = 1000L;
+        for ( int attempt = 0; !ok && attempt != 5; ++attempt ) {
+            try {
+                tarRC = mTarProc.exitValue();
+                ok = true;
+            }
+            catch ( IllegalThreadStateException e ) {
+                try {
+                    Thread.sleep(timeout);
+                }
+                catch ( InterruptedException e1 ) {
+                    // shouldn't happen, but doesn't much matter if it does
+                }
+                timeout = 2*timeout;
+            }
+        }
         try {
             tarRC = mTarProc.exitValue();
-        } catch ( IllegalThreadStateException e ) {
+            ok = true;
+        }
+        catch ( IllegalThreadStateException e ) {
+            // nothing to do
+        }
+        if ( !ok ) {
             mTarProc.destroy();
             mErrMsg = (mErrMsg==null?"":mErrMsg) + "  Tar process failed to terminate.";
             while ( true )
