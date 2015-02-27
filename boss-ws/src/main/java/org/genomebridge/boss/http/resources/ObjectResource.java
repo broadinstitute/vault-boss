@@ -20,13 +20,14 @@ package org.genomebridge.boss.http.resources;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.sun.jersey.api.NotFoundException;
+
 import org.apache.log4j.Logger;
 import org.genomebridge.boss.http.models.ResolutionRequest;
 import org.genomebridge.boss.http.models.StoragePlatform;
 import org.genomebridge.boss.http.objectstore.ObjectStoreException;
 import org.genomebridge.boss.http.service.BossAPI;
 import org.genomebridge.boss.http.service.BossAPIProvider;
-import org.genomebridge.boss.http.service.DeregisteredObjectException;
+import org.genomebridge.boss.http.service.DeletedObjectException;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
@@ -34,7 +35,9 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import javax.xml.bind.DatatypeConverter;
+
 import java.net.URI;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -53,6 +56,19 @@ public class ObjectResource extends PermissionedResource {
     public String ownerId;
     public String[] readers, writers;
 
+    @JsonIgnore
+    public String active;
+    @JsonIgnore
+    public String createdBy;
+    @JsonIgnore
+    public Timestamp createDate;
+    @JsonIgnore
+    public Timestamp modifyDate;
+    @JsonIgnore
+    public Timestamp resolveDate;
+    @JsonIgnore
+    public Timestamp deleteDate;
+
     public ObjectResource() {
         this.api = BossAPIProvider.getInstance().getApi();
     }
@@ -62,11 +78,13 @@ public class ObjectResource extends PermissionedResource {
     public ObjectResource describe(@PathParam("objectId") String objectId,
                                    @Context HttpHeaders headers,
                                    @Context UriInfo uriInfo) {
-        if (!populateFromAPI(objectId)) {
-            throw new NotFoundException(String.format("Couldn't find object with id %s", objectId));
+        try {
+            populateFromAPI(objectId);
+            checkUserRead(headers);
+        } catch(DeletedObjectException e) {
+            throw new WebApplicationException(Response.status(Response.Status.GONE)
+                    .entity(e.getMessage()).build());
         }
-
-        checkUserRead(headers);
 
         return this;
     }
@@ -109,28 +127,27 @@ public class ObjectResource extends PermissionedResource {
         return errMsg;
     }
 
-    private boolean populateFromAPI(String objectId) {
+    private void populateFromAPI(String objectId) throws NotFoundException, DeletedObjectException {
+
+        if (api.wasObjectDeleted(objectId))
+            throw new DeletedObjectException(String.format("Object with id %s has been deleted", objectId));
 
         ObjectResource rec = api.getObject(objectId);
+        if (rec == null)
+            throw new NotFoundException(String.format("Couldn't find object with id %s", objectId));
 
-        if(rec != null) {
-            this.objectId = rec.objectId;
-            ownerId = rec.ownerId;
-            objectName = rec.objectName;
-            storagePlatform = rec.storagePlatform;
-            sizeEstimateBytes = rec.sizeEstimateBytes;
+        this.objectId = rec.objectId;
+        ownerId = rec.ownerId;
+        objectName = rec.objectName;
+        storagePlatform = rec.storagePlatform;
+        sizeEstimateBytes = rec.sizeEstimateBytes;
 
-            if(storagePlatform.equals("filesystem")) {
-                directoryPath = rec.directoryPath;
-            }
-
-            readers = rec.readers;
-            writers = rec.writers;
-
-            return true;
+        if (storagePlatform.equals("filesystem")) {
+            directoryPath = rec.directoryPath;
         }
 
-        return false;
+        readers = rec.readers;
+        writers = rec.writers;
     }
 
     @Path("resolve")
@@ -142,10 +159,10 @@ public class ObjectResource extends PermissionedResource {
             @Context HttpHeaders headers,
             ResolutionRequest request) {
 
-        if(!populateFromAPI(objectId)) { throw new NotFoundException(objectId); }
-        checkUserRead(headers);
-
         try {
+            populateFromAPI(objectId);
+            checkUserRead(headers);
+
             long timeoutMillis = 1000L * request.validityPeriodSeconds;
             org.genomebridge.boss.http.objectstore.HttpMethod method = org.genomebridge.boss.http.objectstore.HttpMethod.valueOf(request.httpMethod);
 
@@ -171,6 +188,9 @@ public class ObjectResource extends PermissionedResource {
                     request.contentType,
                     request.contentMD5Hex);
 
+        } catch(DeletedObjectException e) {
+            throw new WebApplicationException(Response.status(Response.Status.GONE)
+                    .entity(e.getMessage()).build());
         } catch(IllegalArgumentException e) {
             String msg = String.format("Error in request, with message \"%s\"", e.getMessage());
             throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST)
@@ -190,8 +210,12 @@ public class ObjectResource extends PermissionedResource {
                                  @Context HttpHeaders header,
                                  @Context UriInfo info,
                                  ObjectResource newrec) {
-
-        if(!populateFromAPI(objectId)) { throw new NotFoundException(objectId); }
+        try {
+            populateFromAPI(objectId);
+        } catch(DeletedObjectException e) {
+            throw new WebApplicationException(Response.status(Response.Status.GONE)
+                    .entity(e.getMessage()).build());
+        }
 
         checkUserWrite(header);
 
@@ -206,13 +230,9 @@ public class ObjectResource extends PermissionedResource {
         this.readers = setFrom(readers, newrec.readers);
         this.writers = setFrom(writers, newrec.writers);
 
-        updateInAPI(objectId);
+        api.updateObject(this);
 
         return this;
-    }
-
-    private void updateInAPI(String objectId) {
-        api.updateObject(objectId, this);
     }
 
     @DELETE
@@ -225,7 +245,7 @@ public class ObjectResource extends PermissionedResource {
 
             return this.objectId;
 
-        } catch(DeregisteredObjectException e) {
+        } catch(DeletedObjectException e) {
             throw new WebApplicationException(Response.Status.BAD_REQUEST);
         } catch (ObjectStoreException ose) {
             logger().error("Error deleting object '" + objectId + "' from object store: " + ose.getLocalizedMessage(), ose);

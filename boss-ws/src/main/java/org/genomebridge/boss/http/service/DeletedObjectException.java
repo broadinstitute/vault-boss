@@ -15,9 +15,10 @@
  */
 package org.genomebridge.boss.http.service;
 
-public class DeregisteredObjectException extends RuntimeException {
+public class DeletedObjectException extends RuntimeException {
 
-    public DeregisteredObjectException(String objectId) {
-        super(objectId);
+    // using message here instead of objectId for consistency with NotFoundException
+    public DeletedObjectException(String message) {
+        super(message);
     }
 }

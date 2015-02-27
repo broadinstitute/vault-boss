@@ -16,12 +16,16 @@
 package org.genomebridge.boss.http.service;
 
 import com.google.inject.Inject;
+
+import org.genomebridge.boss.http.BossApplication;
 import org.genomebridge.boss.http.db.BossDAO;
 import org.genomebridge.boss.http.objectstore.HttpMethod;
 import org.genomebridge.boss.http.objectstore.ObjectStore;
+import org.genomebridge.boss.http.objectstore.ObjectStoreException;
 import org.genomebridge.boss.http.resources.ObjectResource;
 
 import java.net.URI;
+import java.sql.Timestamp;
 import java.util.*;
 
 /**
@@ -30,13 +34,15 @@ import java.util.*;
  */
 public class DatabaseBossAPI implements BossAPI {
 
-    private BossDAO dao;
+    private BossDAO getDao() {
+        return BossApplication.getDAO();
+    }
 
     private ObjectStore objectStore;
+    static private Long gDefaultEstSize = new Long(-1);
 
     @Inject
-    public DatabaseBossAPI( BossDAO dao, ObjectStore store ) {
-        this.dao = dao;
+    public DatabaseBossAPI( ObjectStore store ) {
         this.objectStore = store;
     }
 
@@ -47,43 +53,13 @@ public class DatabaseBossAPI implements BossAPI {
         return String.format("%s-%s", rec.objectId, last);
     }
 
-    private void updateReaders(String id, String[] target) {
-        updateReaders(id, target != null ? Arrays.asList(target) : new ArrayList<String>());
-    }
-
-    private void updateWriters(String id, String[] target) {
-        updateWriters(id, target != null ? Arrays.asList(target) : new ArrayList<String>());
-    }
-
-    private void updateReaders(String id, Collection<String> target) {
-        Set<String> current = new TreeSet<>(dao.findReadersById(id));
-        Set<String> toDelete = new TreeSet<>(current);
-        Set<String> toAdd = new TreeSet<>();
-        for(String user : target) {
-            toDelete.remove(user);
-            if(!current.contains(user)) { toAdd.add(user); }
-        }
-
-        dao.deleteReaders(id, new ArrayList<>(toDelete));
-        dao.insertReaders(id, new ArrayList<>(toAdd));
-    }
-    private void updateWriters(String id, Collection<String> target) {
-        Set<String> current = new TreeSet<>(dao.findWritersById(id));
-        Set<String> toDelete = new TreeSet<>(current);
-        Set<String> toAdd = new TreeSet<>();
-        for(String user : target) {
-            toDelete.remove(user);
-            if(!current.contains(user)) { toAdd.add(user); }
-        }
-
-        dao.deleteWriters(id, new ArrayList<>(toDelete));
-        dao.insertWriters(id, new ArrayList<>(toAdd));
-    }
-
     @Override
     public ObjectResource getObject(String objectId) {
+        BossDAO dao = getDao();
         ObjectResource rec = dao.findObjectById(objectId);
-        if(rec != null) {
+        if ( rec != null ) {
+            if ( !rec.active.equals("Y") )
+                return null;
             rec.readers = dao.findReadersById(objectId).toArray(new String[0]);
             rec.writers = dao.findWritersById(objectId).toArray(new String[0]);
         }
@@ -91,45 +67,131 @@ public class DatabaseBossAPI implements BossAPI {
     }
 
     @Override
-    public void updateObject(String objectId, ObjectResource rec) {
-        if(dao.findObjectById(objectId) != null) {
-            dao.updateObject(objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes, rec.storagePlatform);
-        } else {
+    public boolean wasObjectDeleted(String objectId) {
+        ObjectResource rec = getDao().findObjectById(objectId);
+        return ( rec != null && rec.active.equals("N") );
+    }
 
-            /*
-            Use the location passed in by the user if the Object is a 'filesystem'
-            type object, otherwise generate a new (fresh) location.
-             */
-            String loc = rec.storagePlatform.equals("filesystem") ?
-                    rec.directoryPath : location(rec);
-
-            dao.insertObject(objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes, loc, rec.storagePlatform);
+    @Override
+    public List<ObjectResource> findObjectsByName(String username, String objectName) {
+        BossDAO dao = getDao();
+        List<ObjectResource> recs = dao.findObjectsByName(username, objectName);
+        String[] emptyArr = new String[0];
+        for ( ObjectResource rec : recs ) {
+            rec.readers = dao.findReadersById(rec.objectId).toArray(emptyArr);
+            rec.writers = dao.findWritersById(rec.objectId).toArray(emptyArr);
         }
-        updateReaders(objectId, rec.readers);
-        updateWriters(objectId, rec.writers);
+        return recs;
+    }
+
+    private List<String> uniqueUsers( String[] users ) {
+        Set<String> userSet = new TreeSet<>(Arrays.asList(users));
+        return new ArrayList<String>(userSet);
+    }
+
+    @Override
+    public void insertObject(ObjectResource rec, String user) {
+        /*
+        Use the location passed in by the user if the Object is a 'filesystem'
+        type object, otherwise generate a new (fresh) location.
+         */
+        String loc = rec.storagePlatform.equals("filesystem") ?
+                rec.directoryPath : location(rec);
+
+        Long estBytes = rec.sizeEstimateBytes;
+        if ( estBytes == null )
+            estBytes = gDefaultEstSize;
+
+        List<String> readers = uniqueUsers(rec.readers);
+        List<String> writers = uniqueUsers(rec.writers);
+
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        // these next 3 lines need to be in a transaction
+        BossDAO dao = getDao();
+        dao.begin();
+        dao.insertObject(rec.objectId, rec.objectName, rec.ownerId, estBytes, loc, rec.storagePlatform, user, now);
+        dao.insertReaders(rec.objectId, readers);
+        dao.insertWriters(rec.objectId, writers);
+        dao.commit();
+    }
+
+    private List<String> diff( List<String> minuend, List<String> subtrahend ) {
+        Set<String> strSet = new TreeSet<>(minuend);
+        strSet.removeAll(subtrahend);
+        return new ArrayList<>(strSet);
+    }
+
+    @Override
+    public void updateObject(ObjectResource rec) {
+        BossDAO dao = getDao();
+        List<String> newUsers = Arrays.asList(rec.readers);
+        List<String> curUsers = dao.findReadersById(rec.objectId);
+        List<String> readersToInsert = diff(newUsers,curUsers);
+        List<String> readersToDelete = diff(curUsers,newUsers);
+        newUsers = Arrays.asList(rec.writers);
+        curUsers = dao.findWritersById(rec.objectId);
+        List<String> writersToInsert = diff(newUsers,curUsers);
+        List<String> writersToDelete = diff(curUsers,newUsers);
+        newUsers = null;
+        curUsers = null;
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+
+        // these next 5 lines need to be in a transaction
+        dao.begin();
+        dao.updateObject(rec.objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes, now);
+        dao.insertReaders(rec.objectId, readersToInsert);
+        dao.deleteReaders(rec.objectId, readersToDelete);
+        dao.insertWriters(rec.objectId, writersToInsert);
+        dao.deleteWriters(rec.objectId, writersToDelete);
+        dao.commit();
     }
 
     @Override
     public void deleteObject(ObjectResource rec) {
-        /* if this object resides in the object store, also delete from the object store.
+       /* if this object resides in the object store, also delete from the object store.
 
            BOSS rev3 spec says: If BOSS is unable to delete the underlying object from the object storage
-           (e.g. non-transient network failure, or other error from objectstore server), it will return an
+           (e.g. non-transient network failure, or other error from object store server), it will return an
            appropriate 50x error, and the entry for this object will not be deleted from BOSS.
 
-           So, we delete from object store first, before deleting from the db. If the object store deletion fails,
-           we'll trigger the try/catch and won't delete from the db.
+           So, we delete from the db first, then the object store. If object store deletion fails,
+           we'll trigger the try/catch and rollback the db deletion.
         */
-        if (rec.isObjectStoreObject()) {
-            String location = dao.findObjectLocation(rec.objectId);
-            objectStore.deleteObject(location);
+        Boolean isObjectStore = rec.isObjectStoreObject();
+        BossDAO dao = getDao();
+        String location = dao.findObjectLocation(rec.objectId);
+
+        dao.begin();
+
+        // Try to remove object resource first so we don't end up with orphaned records.
+        try {
+            Timestamp now = new Timestamp(System.currentTimeMillis());
+            dao.deleteObject(rec.objectId, now);
+        } catch (Exception e) {
+            dao.rollback();
+            throw new ObjectStoreException("Unable to delete object resource.", e);
         }
-        dao.deleteObject(rec.objectId);
+
+        // Only commit the ObjectResource delete after checking for ObjectStore deletion.
+        try {
+            if (isObjectStore && location != null) {
+                objectStore.deleteObject(location);
+            }
+            dao.commit();
+        } catch (Exception e) {
+            dao.rollback();
+            throw new ObjectStoreException("Unable to delete object from object store.", e);
+        }
     }
 
     @Override
     public URI getPresignedURL(String objectId, HttpMethod method, long millis, String contentType, byte[] contentMD5) {
+        BossDAO dao = getDao();
         String location = dao.findObjectLocation(objectId);
+        if ( location != null ) {
+            Timestamp now = new Timestamp(System.currentTimeMillis());
+            dao.updateResolveDate(objectId,now);
+        }
         return objectStore.generatePresignedURL(location, method, millis, contentType, contentMD5);
     }
 }

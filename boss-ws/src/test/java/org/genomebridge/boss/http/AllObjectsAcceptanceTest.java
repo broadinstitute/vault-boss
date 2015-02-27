@@ -15,10 +15,15 @@
  */
 package org.genomebridge.boss.http;
 
+import java.util.UUID;
+import java.util.List;
+
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.GenericType;
+
 import io.dropwizard.testing.junit.DropwizardAppRule;
-import org.genomebridge.boss.http.models.StoragePlatform;
+
 import org.genomebridge.boss.http.resources.ObjectResource;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -27,9 +32,11 @@ import static org.fest.assertions.api.Assertions.assertThat;
 
 public class AllObjectsAcceptanceTest extends AbstractTest {
 
+    public static int OK = ClientResponse.Status.OK.getStatusCode();
     public static int CREATED = ClientResponse.Status.CREATED.getStatusCode();
     public static int BAD_REQUEST = ClientResponse.Status.BAD_REQUEST.getStatusCode();
     public static int NOT_FOUND = ClientResponse.Status.NOT_FOUND.getStatusCode();
+    public static int GONE = ClientResponse.Status.GONE.getStatusCode();
 
     @ClassRule
     public static final DropwizardAppRule<BossConfiguration> RULE =
@@ -71,7 +78,8 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
          */
         ObjectResource rec = fixture();
         rec.objectName = null;
-        checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
+        ClientResponse response = checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
+        assertThat(response.getEntity(String.class)).isEqualTo("objectName cannot be null");
     }
 
     @Test
@@ -81,7 +89,8 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
          */
         ObjectResource rec = fixture();
         rec.storagePlatform = null;
-        checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
+        ClientResponse response = checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
+        assertThat(response.getEntity(String.class)).isEqualTo("storagePlatform cannot be null");
     }
 
     @Test
@@ -91,7 +100,8 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
          */
         ObjectResource rec = fixture();
         rec.storagePlatform = "xyzzy";
-        checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
+        ClientResponse response = checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
+        assertThat(response.getEntity(String.class)).isEqualTo("storagePlatform must be either objectstore or filesystem");
     }
 
     @Test
@@ -101,7 +111,8 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
          */
         ObjectResource rec = fixture();
         rec.directoryPath = null;
-        checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
+        ClientResponse response = checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
+        assertThat(response.getEntity(String.class)).isEqualTo("directoryPath must be supplied for filesystem objects");
     }
 
     @Test
@@ -111,7 +122,8 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
          */
         ObjectResource rec = fixture();
         rec.ownerId = null;
-        checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
+        ClientResponse response = checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
+        assertThat(response.getEntity(String.class)).isEqualTo("ownerId cannot be null");
     }
 
     @Test
@@ -120,19 +132,68 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
          * "The user should not be able to create an object via an update"
          */
         ObjectResource rec = fixture();
-        checkStatus(NOT_FOUND, post(new Client(), objectsPath()+"/xyzzy", rec));
+        Client client = new Client();
+        final String fakeObjectId = "xyzzy";
+
+        ClientResponse response = checkStatus(NOT_FOUND, post(client, String.format("%s/%s", objectsPath(), fakeObjectId), rec));
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Couldn't find object with id %s", fakeObjectId));
+
+        // check that this is also true for deleted objects
+
+        // until we have a mock object store, calling delete on an objectstore-object will fail, because
+        // the system will reach out to the real objectstore and attempt to delete it. We'll cover that test
+        // in the end-to-end integration tests.
+        response = checkStatus(CREATED, createObject("Name", "tdanford", "filesystem", "/path/to/file", 500L));
+        ObjectResource created = response.getEntity(ObjectResource.class);
+        String objectPath = checkHeader(response, "Location");
+
+        checkStatus(OK, get(client, objectPath));
+        checkStatus(OK, delete(client, objectPath));
+        response = checkStatus( GONE, post(client, String.format("%s/%s", objectsPath(), created.objectId), rec));
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Object with id %s has been deleted", created.objectId));
+        response = checkStatus( GONE, get(client, objectPath));
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Object with id %s has been deleted", created.objectId));
     }
 
-    private static ObjectResource fixture()
-    {
-        ObjectResource rec = new ObjectResource();
-        rec.objectName = "newObj";
-        rec.storagePlatform = StoragePlatform.FILESYSTEM.getValue();
-        rec.directoryPath = "/path/to/newObj";
-        rec.sizeEstimateBytes = 1234L;
-        rec.ownerId = "me";
-        rec.readers = arraySet("me","him","her");
-        rec.writers = arraySet("me","him","her");
-        return rec;
+    @Test
+    public void testFindByName() {
+        Client client = new Client();
+        ObjectResource rec = fixture();
+        rec.objectName = UUID.randomUUID().toString();
+        String queryURL = objectsPath()+"?name="+rec.objectName;
+
+        // shouldn't be any objects with our unique name yet
+        checkStatus(NOT_FOUND,get(client,queryURL,"me"));
+
+        // make an object with our name, and see if we can find it
+        checkStatus(CREATED,post(client,objectsPath(),"me",rec));
+        ClientResponse response = checkStatus(OK,get(client,queryURL,"me"));
+        GenericType<List<ObjectResource>> genTyp = new GenericType<List<ObjectResource>>() {};
+        List<ObjectResource> recs = response.getEntity(genTyp);
+        assertThat(recs.size()).isEqualTo(1);
+        assertThat(recs.get(0).objectName).isEqualTo(rec.objectName);
+
+        // make another one, and see that we find both
+        checkStatus(CREATED,post(client,objectsPath(),"me",rec));
+        response = checkStatus(OK,get(client,queryURL,"me"));
+        recs = response.getEntity(genTyp);
+        assertThat(recs.size()).isEqualTo(2);
+        assertThat(recs.get(0).objectName).isEqualTo(rec.objectName);
+        assertThat(recs.get(1).objectName).isEqualTo(rec.objectName);
+
+        // make one we can't see due to permissions, and make sure we still find just two
+        rec.readers = arraySet("him","her");
+        checkStatus(CREATED,post(client,objectsPath(),"me",rec));
+        response = checkStatus(OK,get(client,queryURL,"me"));
+        recs = response.getEntity(genTyp);
+        assertThat(recs.size()).isEqualTo(2);
+
+        // delete one of them and make sure we find just one
+        checkStatus(OK,delete(client,objectsPath()+"/"+recs.get(0).objectId,"me"));
+        String expectedId = recs.get(1).objectId;
+        response = checkStatus(OK,get(client,queryURL,"me"));
+        recs = response.getEntity(genTyp);
+        assertThat(recs.size()).isEqualTo(1);
+        assertThat(recs.get(0).objectId).isEqualTo(expectedId);
     }
 }

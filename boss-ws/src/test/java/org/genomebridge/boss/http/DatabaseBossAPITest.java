@@ -17,8 +17,7 @@
 package org.genomebridge.boss.http;
 
 import io.dropwizard.testing.junit.DropwizardAppRule;
-
-import org.genomebridge.boss.http.db.BossDAO;
+import org.genomebridge.boss.http.models.StoragePlatform;
 import org.genomebridge.boss.http.objectstore.HttpMethod;
 import org.genomebridge.boss.http.objectstore.ObjectStore;
 import org.genomebridge.boss.http.objectstore.S3ObjectStore;
@@ -42,26 +41,14 @@ public class DatabaseBossAPITest extends ResourcedTest {
             new DropwizardAppRule<>(BossApplication.class,
                     resourceFilePath("boss-config.yml"));
 
-    private static BossDAO dao = null;
     private static BossAPI api = null;
 
     @BeforeClass
     public static void setup() {
-        dao = dao();
-
         ObjectStore objectStore = new S3ObjectStore(
                 RULE.getConfiguration().getObjectStoreConfiguration().createClient(),
                 RULE.getConfiguration().getObjectStoreConfiguration().getBucket());
-        api = new DatabaseBossAPI(dao, objectStore);
-    }
-
-    private static BossDAO dao() {
-        try {
-            return BossApplication.getDAO(RULE.getConfiguration(), RULE.getEnvironment());
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace(System.err);
-            return null;
-        }
+        api = new DatabaseBossAPI(objectStore);
     }
 
     private String randomID() { return UUID.randomUUID().toString(); }
@@ -73,14 +60,15 @@ public class DatabaseBossAPITest extends ResourcedTest {
         obj.ownerId = "tdanford";
         obj.sizeEstimateBytes = 1000L;
         obj.objectName = "Test Name";
-        obj.readers = new String[] { "tdanford", "testuser" };
-        obj.writers = new String[] { "carlyeks", "tdanford", "testuser" };
-        obj.storagePlatform = "platform";
+        obj.readers = new String[] { "tdanford", "testuser", "tdanford" };
+        obj.writers = new String[] { "carlyeks", "tdanford", "testuser", "carlyeks" };
+        obj.storagePlatform = StoragePlatform.OBJECTSTORE.getValue();
 
-        api.updateObject(obj.objectId, obj);
+        api.insertObject(obj,"remoteUser");
 
         ObjectResource retrieved = api.getObject(obj.objectId);
 
+        assertThat(retrieved.active).isEqualTo("Y");
         assertThat(retrieved.objectId).isEqualTo(obj.objectId);
         assertThat(retrieved.ownerId).isEqualTo(obj.ownerId);
         assertThat(retrieved.objectName).isEqualTo(obj.objectName);
@@ -108,9 +96,9 @@ public class DatabaseBossAPITest extends ResourcedTest {
         obj.objectName = "Test Name";
         obj.readers = new String[] { "tdanford", "testuser" };
         obj.writers = new String[] { "carlyeks", "tdanford", "testuser" };
-        obj.storagePlatform = "objectstore";
+        obj.storagePlatform = StoragePlatform.OBJECTSTORE.getValue();
 
-        api.updateObject(obj.objectId, obj);
+        api.insertObject(obj,"remoteUser");
 
         try {
             URI uri = api.getPresignedURL(obj.objectId, HttpMethod.GET, 10 * 1000, contentType, contentMD5);

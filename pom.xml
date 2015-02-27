@@ -9,6 +9,7 @@
 
     <modules>
         <module>boss-ws</module>
+        <module>firehose-migration</module>
     </modules>
 
     <properties>
@@ -51,13 +52,6 @@
                 <groupId>io.dropwizard</groupId>
                 <artifactId>dropwizard-core</artifactId>
                 <version>${dropwizard.version}</version>
-                <exclusions>
-                    <!-- See the note to javax.servlet-api below. -->
-                    <exclusion>
-                        <groupId>org.eclipse.jetty.orbit</groupId>
-                        <artifactId>javax.servlet</artifactId>
-                    </exclusion>
-                </exclusions>
             </dependency>
 
             <dependency>
@@ -70,34 +64,12 @@
                 <groupId>io.dropwizard</groupId>
                 <artifactId>dropwizard-testing</artifactId>
                 <version>${dropwizard.version}</version>
-                <exclusions>
-                    <!-- See the note to javax.servlet-api below. -->
-                    <exclusion>
-                        <groupId>javax.servlet</groupId>
-                        <artifactId>javax.servlet-api</artifactId>
-                    </exclusion>
-                </exclusions>
             </dependency>
 
             <dependency>
                 <groupId>io.dropwizard</groupId>
                 <artifactId>dropwizard-logging</artifactId>
                 <version>${dropwizard.version}</version>
-            </dependency>
-
-            <!--
-            Uggh: normally, this'd be pulled in as part of dropwizard-core and we
-            wouldn't have to worry about this dependency explicitly.  HOWEVER, dropwizard-core
-            and dropwizard-testing (above) appear to pull in different versions of the
-            javax servlet-api, with classes that conflict inside the uber-jar.  So
-            we've excluded them manually from both of the dropwizard packages, and we're
-            pulling it in explicitly here.
-            (We also need to explicitly include it in boss-ws/pom.xml, while we're at it.)
-            -->
-            <dependency>
-                <groupId>javax.servlet</groupId>
-                <artifactId>javax.servlet-api</artifactId>
-                <version>3.0.1</version>
             </dependency>
 
             <dependency>

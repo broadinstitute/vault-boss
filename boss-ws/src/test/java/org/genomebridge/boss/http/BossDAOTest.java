@@ -16,12 +16,15 @@
 package org.genomebridge.boss.http;
 
 import io.dropwizard.testing.junit.DropwizardAppRule;
+
 import org.genomebridge.boss.http.db.BossDAO;
+import org.genomebridge.boss.http.models.StoragePlatform;
 import org.genomebridge.boss.http.resources.ObjectResource;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -43,19 +46,21 @@ public class BossDAOTest extends ResourcedTest {
     }
 
     private static BossDAO dao() {
-        try {
-            return BossApplication.getDAO(RULE.getConfiguration(), RULE.getEnvironment());
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace(System.err);
-            return null;
-        }
+        return BossApplication.getDAO();
     }
 
-    private String randomID() { return UUID.randomUUID().toString(); }
+    private String createObject()
+    {
+        ObjectResource rec = fixture();
+        rec.objectId = UUID.randomUUID().toString();
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        dao.insertObject(rec.objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes, rec.directoryPath, rec.storagePlatform, "me", now);
+        return rec.objectId;
+    }
 
     @Test
     public void testInsertAndListReaders() {
-        String id = randomID();
+        String id = createObject();
         dao.insertReaders(id, Arrays.asList("tdanford", "carlyeks"));
         List<String> readers = dao.findReadersById(id);
         assertThat(readers).containsOnly("tdanford", "carlyeks");
@@ -63,7 +68,7 @@ public class BossDAOTest extends ResourcedTest {
 
     @Test
     public void testInsertAndDeleteReaders() {
-        String id = randomID();
+        String id = createObject();
 
         dao.insertReaders(id, Arrays.asList("tdanford", "carlyeks"));
 
@@ -78,7 +83,7 @@ public class BossDAOTest extends ResourcedTest {
 
     @Test
     public void testInsertAndListWriters() {
-        String id = randomID();
+        String id = createObject();
         dao.insertWriters(id, Arrays.asList("tdanford", "carlyeks"));
         List<String> writers = dao.findWritersById(id);
         assertThat(writers).containsOnly("tdanford", "carlyeks");
@@ -86,7 +91,7 @@ public class BossDAOTest extends ResourcedTest {
 
     @Test
     public void testInsertAndDeleteWriters() {
-        String id = randomID();
+        String id = createObject();
 
         dao.insertWriters(id, Arrays.asList("tdanford", "carlyeks"));
 
@@ -102,16 +107,20 @@ public class BossDAOTest extends ResourcedTest {
     @Test
     public void testInsertAndGetObject() {
         ObjectResource rec = new ObjectResource();
-        rec.objectId = randomID();
+        rec.objectId = UUID.randomUUID().toString();
         rec.ownerId = "tdanford";
         rec.sizeEstimateBytes = 1000L;
         rec.objectName = "Name";
-        rec.storagePlatform = "platform";
+        rec.storagePlatform = StoragePlatform.FILESYSTEM.getValue();
+        rec.directoryPath = "/some/path";
 
-        dao.insertObject(rec.objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes, null, rec.storagePlatform);
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        dao.insertObject(rec.objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes,
+                            rec.directoryPath, rec.storagePlatform, "remoteUser", now);
 
         ObjectResource fetched = dao.findObjectById(rec.objectId);
 
+        assertThat(fetched.active).isEqualTo("Y");
         assertThat(fetched.objectId).isEqualTo(rec.objectId);
         assertThat(fetched.ownerId).isEqualTo(rec.ownerId);
         assertThat(fetched.sizeEstimateBytes).isEqualTo(rec.sizeEstimateBytes);
@@ -122,29 +131,35 @@ public class BossDAOTest extends ResourcedTest {
     @Test
     public void testInsertAndUpdateObject() {
         ObjectResource rec = new ObjectResource();
-        rec.objectId = randomID();
+        rec.objectId = UUID.randomUUID().toString();
         rec.ownerId = "tdanford";
         rec.sizeEstimateBytes = 1000L;
         rec.objectName = "Name";
-        rec.storagePlatform = "platform";
+        rec.storagePlatform = StoragePlatform.FILESYSTEM.getValue();
+        rec.directoryPath = "/some/path";
 
-        dao.insertObject(rec.objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes, null, rec.storagePlatform);
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        dao.insertObject(rec.objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes,
+                            rec.directoryPath, rec.storagePlatform, "remoteUser", now);
 
         ObjectResource fetched = dao.findObjectById(rec.objectId);
 
+        assertThat(fetched.active).isEqualTo("Y");
         assertThat(fetched.objectId).isEqualTo(rec.objectId);
         assertThat(fetched.ownerId).isEqualTo(rec.ownerId);
         assertThat(fetched.sizeEstimateBytes).isEqualTo(rec.sizeEstimateBytes);
         assertThat(fetched.objectName).isEqualTo(rec.objectName);
         assertThat(fetched.storagePlatform).isEqualTo(rec.storagePlatform);
 
-        rec.objectName = rec.objectName + randomID();
+        rec.objectName = rec.objectName + "xyzzy";
         rec.ownerId = "carlyeks";
 
-        dao.updateObject(rec.objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes, rec.storagePlatform);
+        now = new Timestamp(System.currentTimeMillis());
+        dao.updateObject(rec.objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes, now);
 
         fetched = dao.findObjectById(rec.objectId);
 
+        assertThat(fetched.active).isEqualTo("Y");
         assertThat(fetched.objectId).isEqualTo(rec.objectId);
         assertThat(fetched.ownerId).isEqualTo(rec.ownerId);
         assertThat(fetched.sizeEstimateBytes).isEqualTo(rec.sizeEstimateBytes);
@@ -152,4 +167,55 @@ public class BossDAOTest extends ResourcedTest {
         assertThat(fetched.storagePlatform).isEqualTo(rec.storagePlatform);
     }
 
+    @Test
+    public void testTimestamps() {
+        ObjectResource rec = new ObjectResource();
+        rec.objectId = UUID.randomUUID().toString();
+        rec.ownerId = "tdanford";
+        rec.sizeEstimateBytes = 1000L;
+        rec.objectName = "Name";
+        rec.storagePlatform = StoragePlatform.FILESYSTEM.getValue();
+        rec.directoryPath = "/some/path";
+
+        Timestamp cDate = new Timestamp(System.currentTimeMillis());
+        dao.insertObject(rec.objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes,
+                            rec.directoryPath, rec.storagePlatform, "remoteUser", cDate);
+        ObjectResource fetched = dao.findObjectById(rec.objectId);
+        assertThat(fetched.active).isEqualTo("Y");
+        assertThat(fetched.createdBy).isEqualTo("remoteUser");
+        assertThat(fetched.createDate).isEqualTo(cDate);
+        assertThat(fetched.modifyDate).isNull();
+        assertThat(fetched.resolveDate).isNull();
+        assertThat(fetched.deleteDate).isNull();
+
+        Timestamp mDate = new Timestamp(System.currentTimeMillis());
+        dao.updateObject(rec.objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes, mDate);
+        fetched = dao.findObjectById(rec.objectId);
+        assertThat(fetched.active).isEqualTo("Y");
+        assertThat(fetched.createdBy).isEqualTo("remoteUser");
+        assertThat(fetched.createDate).isEqualTo(cDate);
+        assertThat(fetched.modifyDate).isEqualTo(mDate);
+        assertThat(fetched.resolveDate).isNull();
+        assertThat(fetched.deleteDate).isNull();
+
+        Timestamp rDate = new Timestamp(System.currentTimeMillis());
+        dao.updateResolveDate(rec.objectId, rDate);
+        fetched = dao.findObjectById(rec.objectId);
+        assertThat(fetched.active).isEqualTo("Y");
+        assertThat(fetched.createdBy).isEqualTo("remoteUser");
+        assertThat(fetched.createDate).isEqualTo(cDate);
+        assertThat(fetched.modifyDate).isEqualTo(mDate);
+        assertThat(fetched.resolveDate).isEqualTo(rDate);
+        assertThat(fetched.deleteDate).isNull();
+
+        Timestamp dDate = new Timestamp(System.currentTimeMillis());
+        dao.deleteObject(rec.objectId, dDate);
+        fetched = dao.findObjectById(rec.objectId);
+        assertThat(fetched.active).isEqualTo("N");
+        assertThat(fetched.createdBy).isEqualTo("remoteUser");
+        assertThat(fetched.createDate).isEqualTo(cDate);
+        assertThat(fetched.modifyDate).isEqualTo(mDate);
+        assertThat(fetched.resolveDate).isEqualTo(rDate);
+        assertThat(fetched.deleteDate).isEqualTo(dDate);
+    }
 }
