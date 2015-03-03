@@ -20,7 +20,7 @@ import java.util.Arrays;
 import java.util.TreeSet;
 
 import org.genomebridge.boss.http.models.StoragePlatform;
-import org.genomebridge.boss.http.resources.ObjectResource;
+import org.genomebridge.boss.http.service.BossAPI.ObjectDesc;
 
 /**
  * Abstract super-class for tests, that allows easy loading of resources from the classpath.
@@ -38,12 +38,12 @@ abstract public class ResourcedTest {
         return new TreeSet<>(Arrays.asList(vals)).toArray(new String[0]);
     }
 
-    public static ObjectResource fixture()
+    public static ObjectDesc fixture()
     {
-        ObjectResource rec = new ObjectResource();
+        ObjectDesc rec = new ObjectDesc();
         rec.objectName = "newObj";
-        rec.storagePlatform = StoragePlatform.FILESYSTEM.getValue();
-        rec.directoryPath = "/path/to/newObj";
+        rec.storagePlatform = StoragePlatform.OPAQUEURI.getValue();
+        rec.directoryPath = "file:///path/to/newObj";
         rec.sizeEstimateBytes = 1234L;
         rec.ownerId = "me";
         rec.readers = arraySet("me","him","her");

@@ -17,19 +17,18 @@
 package org.genomebridge.boss.http;
 
 import io.dropwizard.testing.junit.DropwizardAppRule;
+
 import org.genomebridge.boss.http.models.StoragePlatform;
-import org.genomebridge.boss.http.objectstore.HttpMethod;
-import org.genomebridge.boss.http.objectstore.ObjectStore;
-import org.genomebridge.boss.http.objectstore.S3ObjectStore;
-import org.genomebridge.boss.http.resources.ObjectResource;
+import org.genomebridge.boss.http.objectstore.ObjectStoreConfiguration;
 import org.genomebridge.boss.http.service.BossAPI;
-import org.genomebridge.boss.http.service.DatabaseBossAPI;
+import org.genomebridge.boss.http.service.BossAPI.ObjectDesc;
+import org.genomebridge.boss.http.service.BossAPI.ResolveRequest;
+import org.genomebridge.boss.http.service.BossAPI.ResolveResponse;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 
 import java.net.URI;
-import java.util.UUID;
 
 import static org.fest.assertions.api.Assertions.assertThat;
 import static org.fest.assertions.api.Fail.fail;
@@ -45,30 +44,24 @@ public class DatabaseBossAPITest extends ResourcedTest {
 
     @BeforeClass
     public static void setup() {
-        ObjectStore objectStore = new S3ObjectStore(
-                RULE.getConfiguration().getObjectStoreConfiguration().createClient(),
-                RULE.getConfiguration().getObjectStoreConfiguration().getBucket());
-        api = new DatabaseBossAPI(objectStore);
+        api = BossApplication.getAPI();
     }
-
-    private String randomID() { return UUID.randomUUID().toString(); }
 
     @Test
     public void testUpdateAndRetrieveObject() {
-        ObjectResource obj = new ObjectResource();
-        obj.objectId = randomID();
+        ObjectDesc obj = new ObjectDesc();
         obj.ownerId = "tdanford";
         obj.sizeEstimateBytes = 1000L;
         obj.objectName = "Test Name";
         obj.readers = new String[] { "tdanford", "testuser", "tdanford" };
         obj.writers = new String[] { "carlyeks", "tdanford", "testuser", "carlyeks" };
-        obj.storagePlatform = StoragePlatform.OBJECTSTORE.getValue();
+        obj.storagePlatform = StoragePlatform.LOCALSTORE.getValue();
 
-        api.insertObject(obj,"remoteUser");
+        assertThat(api.insertObject(obj,"remoteUser")).isNull();
 
-        ObjectResource retrieved = api.getObject(obj.objectId);
+        ObjectDesc retrieved = new ObjectDesc();
+        assertThat(api.getObject(obj.objectId,"testuser",retrieved)).isNull();
 
-        assertThat(retrieved.active).isEqualTo("Y");
         assertThat(retrieved.objectId).isEqualTo(obj.objectId);
         assertThat(retrieved.ownerId).isEqualTo(obj.ownerId);
         assertThat(retrieved.objectName).isEqualTo(obj.objectName);
@@ -85,29 +78,33 @@ public class DatabaseBossAPITest extends ResourcedTest {
 
     @Test
     public void testGeneratePresignedURLWithContent() {
-        testGeneratePresignedURL("application/octet-stream", new byte[16]);
+        testGeneratePresignedURL("application/octet-stream", "deadf00dbeef1234567890abcdefdead");
     }
 
-    private void testGeneratePresignedURL(String contentType, byte[] contentMD5) {
-        ObjectResource obj = new ObjectResource();
-        obj.objectId = randomID();
+    private void testGeneratePresignedURL(String contentType, String contentMD5) {
+        ObjectDesc obj = new ObjectDesc();
         obj.ownerId = "tdanford";
         obj.sizeEstimateBytes = 1000L;
         obj.objectName = "Test Name";
         obj.readers = new String[] { "tdanford", "testuser" };
         obj.writers = new String[] { "carlyeks", "tdanford", "testuser" };
-        obj.storagePlatform = StoragePlatform.OBJECTSTORE.getValue();
+        obj.storagePlatform = StoragePlatform.LOCALSTORE.getValue();
 
-        api.insertObject(obj,"remoteUser");
+        assertThat(api.insertObject(obj,"remoteUser")).isNull();
 
         try {
-            URI uri = api.getPresignedURL(obj.objectId, HttpMethod.GET, 10 * 1000, contentType, contentMD5);
-
+            ResolveRequest req = new ResolveRequest();
+            req.httpMethod = "GET";
+            req.validityPeriodSeconds = 10;
+            req.contentType = contentType;
+            req.contentMD5Hex = contentMD5;
+            ResolveResponse resp = new ResolveResponse();
+            assertThat(api.resolveObject(obj.objectId,"tdanford",req,resp)).isNull();
+            URI uri = resp.objectUrl;
             assertThat(uri).isNotNull();
-            assertThat(uri.getHost()).isEqualTo("genomebridge-variantstore-ci.s3.amazonaws.com");
-            assertThat(uri.toString()).startsWith(
-                    String.format("https://genomebridge-variantstore-ci.s3.amazonaws.com/%s-",
-                            obj.objectId));
+            ObjectStoreConfiguration config = RULE.getConfiguration().getLocalStoreConfiguration();
+            String urlToExpect = config.endpoint + '/' + config.bucket + '/' + obj.objectId;
+            assertThat(uri.toString()).startsWith(urlToExpect);
         }
         catch (NullPointerException e) {
             // If the user doesn't have a correct objectstore configuration, this is a typical symptom

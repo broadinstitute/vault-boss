@@ -17,243 +17,69 @@
 package org.genomebridge.boss.http.resources;
 
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.sun.jersey.api.NotFoundException;
 
-import org.apache.log4j.Logger;
-import org.genomebridge.boss.http.models.ResolutionRequest;
-import org.genomebridge.boss.http.models.StoragePlatform;
-import org.genomebridge.boss.http.objectstore.ObjectStoreException;
 import org.genomebridge.boss.http.service.BossAPI;
-import org.genomebridge.boss.http.service.BossAPIProvider;
-import org.genomebridge.boss.http.service.DeletedObjectException;
+import org.genomebridge.boss.http.service.BossAPI.ErrorDesc;
+import org.genomebridge.boss.http.service.BossAPI.ObjectDesc;
+import org.genomebridge.boss.http.service.BossAPI.ResolveRequest;
+import org.genomebridge.boss.http.service.BossAPI.ResolveResponse;
 
 import javax.ws.rs.*;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.HttpHeaders;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.UriInfo;
-import javax.xml.bind.DatatypeConverter;
-
-import java.net.URI;
-import java.sql.Timestamp;
-import java.util.ArrayList;
-
 import static com.fasterxml.jackson.annotation.JsonInclude.Include;
 
 @Path("objects/{objectId}")
 @JsonInclude(Include.NON_NULL)
-public class ObjectResource extends PermissionedResource {
+public class ObjectResource extends AbstractResource {
 
-    private BossAPI api;
-
-    public String objectId;
-    public String objectName;
-    public String storagePlatform;
-    public String directoryPath;
-    public Long sizeEstimateBytes;
-    public String ownerId;
-    public String[] readers, writers;
-
-    @JsonIgnore
-    public String active;
-    @JsonIgnore
-    public String createdBy;
-    @JsonIgnore
-    public Timestamp createDate;
-    @JsonIgnore
-    public Timestamp modifyDate;
-    @JsonIgnore
-    public Timestamp resolveDate;
-    @JsonIgnore
-    public Timestamp deleteDate;
-
-    public ObjectResource() {
-        this.api = BossAPIProvider.getInstance().getApi();
+    public ObjectResource( BossAPI api ) {
+        this.api = api;
     }
 
     @GET
     @Produces("application/json")
-    public ObjectResource describe(@PathParam("objectId") String objectId,
-                                   @Context HttpHeaders headers,
-                                   @Context UriInfo uriInfo) {
-        try {
-            populateFromAPI(objectId);
-            checkUserRead(headers);
-        } catch(DeletedObjectException e) {
-            throw new WebApplicationException(Response.status(Response.Status.GONE)
-                    .entity(e.getMessage()).build());
-        }
-
-        return this;
-    }
-
-    @Override
-    protected Logger logger() {
-        return Logger.getLogger(objectId);
-    }
-
-    public void checkUserRead( String user ) { checkUser(user, "READ", readers); }
-    public void checkUserWrite( String user ) { checkUser(user, "WRITE", writers); }
-
-    @JsonIgnore
-    public boolean isObjectStoreObject() { return (StoragePlatform.OBJECTSTORE.getValue()).equals( this.storagePlatform ); }
-    @JsonIgnore
-    public boolean isFilesystemObject() { return (StoragePlatform.FILESYSTEM.getValue()).equals( this.storagePlatform ); }
-
-    @JsonIgnore
-    public String testValidity() {
-        ArrayList<String> errors = new ArrayList<String>();
-        if ( objectName == null ) errors.add("objectName cannot be null");
-        if ( ownerId == null ) errors.add("ownerId cannot be null");
-        if ( storagePlatform == null ) errors.add("storagePlatform cannot be null");
-        else if ( !storagePlatform.equals(StoragePlatform.OBJECTSTORE.getValue()) ) {
-            if ( !storagePlatform.equals(StoragePlatform.FILESYSTEM.getValue()) )
-                errors.add("storagePlatform must be either " + StoragePlatform.OBJECTSTORE.getValue() +
-                        " or " + StoragePlatform.FILESYSTEM.getValue());
-            else if ( directoryPath == null)
-                errors.add("directoryPath must be supplied for filesystem objects");
-        }
-        String errMsg = null;
-        if ( !errors.isEmpty() ) {
-            errMsg = "";
-            String sep = "";
-            for ( String err : errors ) {
-                errMsg += sep + err;
-                sep = "; ";
-            }
-        }
-        return errMsg;
-    }
-
-    private void populateFromAPI(String objectId) throws NotFoundException, DeletedObjectException {
-
-        if (api.wasObjectDeleted(objectId))
-            throw new DeletedObjectException(String.format("Object with id %s has been deleted", objectId));
-
-        ObjectResource rec = api.getObject(objectId);
-        if (rec == null)
-            throw new NotFoundException(String.format("Couldn't find object with id %s", objectId));
-
-        this.objectId = rec.objectId;
-        ownerId = rec.ownerId;
-        objectName = rec.objectName;
-        storagePlatform = rec.storagePlatform;
-        sizeEstimateBytes = rec.sizeEstimateBytes;
-
-        if (storagePlatform.equals("filesystem")) {
-            directoryPath = rec.directoryPath;
-        }
-
-        readers = rec.readers;
-        writers = rec.writers;
+    public ObjectDesc describe(@PathParam("objectId") String objectId,
+                               @HeaderParam("REMOTE_USER") String userName) {
+        ObjectDesc desc = new ObjectDesc();
+        ErrorDesc err = api.getObject(objectId, userName, desc);
+        if ( err != null )
+            throwWAE(err);
+        return desc;
     }
 
     @Path("resolve")
     @Produces("application/json")
     @POST
-    public ResolutionResource resolve(
-            @PathParam("objectId") String objectId,
-            @Context UriInfo uriInfo,
-            @Context HttpHeaders headers,
-            ResolutionRequest request) {
-
-        try {
-            populateFromAPI(objectId);
-            checkUserRead(headers);
-
-            long timeoutMillis = 1000L * request.validityPeriodSeconds;
-            org.genomebridge.boss.http.objectstore.HttpMethod method = org.genomebridge.boss.http.objectstore.HttpMethod.valueOf(request.httpMethod);
-
-            byte[] contentMD5 = null;
-            if (request.contentMD5Hex != null) {
-                if (request.contentMD5Hex.length() != 32) {
-                    throw new IllegalArgumentException("MD5 must be 32 hexadecimal characters long");
-                }
-                contentMD5 = DatatypeConverter.parseHexBinary(request.contentMD5Hex);
-                if (contentMD5.length != 16) {
-                    throw new IllegalArgumentException("MD5 must be 16 bytes long");
-                }
-            }
-
-            URI presignedURL =
-                    isObjectStoreObject() ?
-                            getPresignedURL(objectId, method, timeoutMillis, request.contentType, contentMD5) :
-                            URI.create(String.format("file://%s", directoryPath));
-
-            return new ResolutionResource(
-                    presignedURL,
-                    request.validityPeriodSeconds,
-                    request.contentType,
-                    request.contentMD5Hex);
-
-        } catch(DeletedObjectException e) {
-            throw new WebApplicationException(Response.status(Response.Status.GONE)
-                    .entity(e.getMessage()).build());
-        } catch(IllegalArgumentException e) {
-            String msg = String.format("Error in request, with message \"%s\"", e.getMessage());
-            throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST)
-                    .entity(msg).build());
-        }
-    }
-
-    private URI getPresignedURL(String objId, org.genomebridge.boss.http.objectstore.HttpMethod method, long millis,
-                                String contentType, byte[] contentMD5) {
-        return api.getPresignedURL(objId, method, millis, contentType, contentMD5);
+    public ResolveResponse resolve(@PathParam("objectId") String objectId,
+                                   @HeaderParam("REMOTE_USER") String userName,
+                                   ResolveRequest req) {
+        ResolveResponse resp = new ResolveResponse();
+        ErrorDesc err = api.resolveObject(objectId, userName, req, resp);
+        if ( err != null )
+            throwWAE(err);
+        return resp;
     }
 
     @POST
     @Consumes("application/json")
     @Produces("application/json")
-    public ObjectResource update(@PathParam("objectId") String objectId,
-                                 @Context HttpHeaders header,
-                                 @Context UriInfo info,
-                                 ObjectResource newrec) {
-        try {
-            populateFromAPI(objectId);
-        } catch(DeletedObjectException e) {
-            throw new WebApplicationException(Response.status(Response.Status.GONE)
-                    .entity(e.getMessage()).build());
-        }
-
-        checkUserWrite(header);
-
-        this.objectId = errorIfSet(objectId, newrec.objectId, "objectId");
-        this.objectName = errorIfSet(objectName, newrec.objectName, "objectName");
-        this.ownerId = setFrom(ownerId, newrec.ownerId);
-        this.storagePlatform = errorIfSet(storagePlatform, newrec.storagePlatform, "storagePlatform");
-        this.sizeEstimateBytes = errorIfSet(
-                sizeEstimateBytes, newrec.sizeEstimateBytes, "sizeEstimateBytes");
-        this.directoryPath = errorIfSet(
-                directoryPath, newrec.directoryPath, "directoryPath");
-        this.readers = setFrom(readers, newrec.readers);
-        this.writers = setFrom(writers, newrec.writers);
-
-        api.updateObject(this);
-
-        return this;
+    public ObjectDesc update(@PathParam("objectId") String objectId,
+                             @HeaderParam("REMOTE_USER") String userName,
+                             ObjectDesc desc) {
+        ErrorDesc err = api.updateObject(desc,objectId,userName);
+        if ( err != null )
+            throwWAE(err);
+        return desc;
     }
 
     @DELETE
     public String delete(@PathParam("objectId") String objectId,
-                         @Context HttpHeaders headers) {
-        try {
-            populateFromAPI(objectId);
-            checkUserWrite(headers);
-            deleteFromAPI(this);
-
-            return this.objectId;
-
-        } catch(DeletedObjectException e) {
-            throw new WebApplicationException(Response.Status.BAD_REQUEST);
-        } catch (ObjectStoreException ose) {
-            logger().error("Error deleting object '" + objectId + "' from object store: " + ose.getLocalizedMessage(), ose);
-            throw new WebApplicationException(Response.Status.BAD_REQUEST);
-        }
+                         @HeaderParam("REMOTE_USER") String userName) {
+        ErrorDesc err = api.deleteObject(objectId,userName);
+        if ( err != null )
+            throwWAE(err);
+        return objectId;
     }
 
-    private void deleteFromAPI(ObjectResource rec) {
-        api.deleteObject(rec);
-    }
+    private BossAPI api;
 }

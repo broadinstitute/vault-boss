@@ -4,8 +4,9 @@ package org.genomebridge.boss.http.models;
  * Created by davidan on 9/3/14.
  */
 public enum StoragePlatform {
-    OBJECTSTORE ("objectstore"),
-    FILESYSTEM ("filesystem");
+    CLOUDSTORE ("cloudStore"),
+    LOCALSTORE ("localStore"),
+    OPAQUEURI ("opaqueURI");
 
     private final String value;
     public String getValue() {return value;}
@@ -14,5 +15,8 @@ public enum StoragePlatform {
         this.value = value;
     }
 
-
+    @Override
+    public String toString() {
+        return value;
+    }
 }

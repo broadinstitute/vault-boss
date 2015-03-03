@@ -10,8 +10,9 @@
 package org.genomebridge.boss.http;
 
 import io.dropwizard.testing.junit.DropwizardAppRule;
+
 import org.genomebridge.boss.http.db.BossDAO;
-import org.genomebridge.boss.http.resources.ObjectResource;
+import org.genomebridge.boss.http.service.BossAPI.ObjectDesc;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -57,7 +58,7 @@ public class BossDAOTransactionTest extends ResourcedTest {
         // Set up a resource
         String user = "testUser";
         String id = UUID.randomUUID().toString();
-        ObjectResource rec = fixture();
+        ObjectDesc rec = fixture();
         rec.objectId = id;
         Timestamp now = new Timestamp(System.currentTimeMillis());
         dao1.insertObject(rec.objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes, rec.directoryPath, rec.storagePlatform, user, now);

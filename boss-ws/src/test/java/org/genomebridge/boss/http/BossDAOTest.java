@@ -18,8 +18,9 @@ package org.genomebridge.boss.http;
 import io.dropwizard.testing.junit.DropwizardAppRule;
 
 import org.genomebridge.boss.http.db.BossDAO;
+import org.genomebridge.boss.http.db.ObjectRow;
 import org.genomebridge.boss.http.models.StoragePlatform;
-import org.genomebridge.boss.http.resources.ObjectResource;
+import org.genomebridge.boss.http.service.BossAPI.ObjectDesc;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -42,16 +43,12 @@ public class BossDAOTest extends ResourcedTest {
 
     @BeforeClass
     public static void setup() {
-       dao = dao();
-    }
-
-    private static BossDAO dao() {
-        return BossApplication.getDAO();
+       dao = BossApplication.getDAO();
     }
 
     private String createObject()
     {
-        ObjectResource rec = fixture();
+        ObjectDesc rec = fixture();
         rec.objectId = UUID.randomUUID().toString();
         Timestamp now = new Timestamp(System.currentTimeMillis());
         dao.insertObject(rec.objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes, rec.directoryPath, rec.storagePlatform, "me", now);
@@ -106,19 +103,19 @@ public class BossDAOTest extends ResourcedTest {
 
     @Test
     public void testInsertAndGetObject() {
-        ObjectResource rec = new ObjectResource();
+        ObjectDesc rec = new ObjectDesc();
         rec.objectId = UUID.randomUUID().toString();
         rec.ownerId = "tdanford";
         rec.sizeEstimateBytes = 1000L;
         rec.objectName = "Name";
-        rec.storagePlatform = StoragePlatform.FILESYSTEM.getValue();
+        rec.storagePlatform = StoragePlatform.OPAQUEURI.getValue();
         rec.directoryPath = "/some/path";
 
         Timestamp now = new Timestamp(System.currentTimeMillis());
         dao.insertObject(rec.objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes,
                             rec.directoryPath, rec.storagePlatform, "remoteUser", now);
 
-        ObjectResource fetched = dao.findObjectById(rec.objectId);
+        ObjectRow fetched = dao.findObjectById(rec.objectId);
 
         assertThat(fetched.active).isEqualTo("Y");
         assertThat(fetched.objectId).isEqualTo(rec.objectId);
@@ -130,19 +127,19 @@ public class BossDAOTest extends ResourcedTest {
 
     @Test
     public void testInsertAndUpdateObject() {
-        ObjectResource rec = new ObjectResource();
+        ObjectDesc rec = new ObjectDesc();
         rec.objectId = UUID.randomUUID().toString();
         rec.ownerId = "tdanford";
         rec.sizeEstimateBytes = 1000L;
         rec.objectName = "Name";
-        rec.storagePlatform = StoragePlatform.FILESYSTEM.getValue();
+        rec.storagePlatform = StoragePlatform.OPAQUEURI.getValue();
         rec.directoryPath = "/some/path";
 
         Timestamp now = new Timestamp(System.currentTimeMillis());
         dao.insertObject(rec.objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes,
                             rec.directoryPath, rec.storagePlatform, "remoteUser", now);
 
-        ObjectResource fetched = dao.findObjectById(rec.objectId);
+        ObjectRow fetched = dao.findObjectById(rec.objectId);
 
         assertThat(fetched.active).isEqualTo("Y");
         assertThat(fetched.objectId).isEqualTo(rec.objectId);
@@ -169,18 +166,18 @@ public class BossDAOTest extends ResourcedTest {
 
     @Test
     public void testTimestamps() {
-        ObjectResource rec = new ObjectResource();
+        ObjectDesc rec = new ObjectDesc();
         rec.objectId = UUID.randomUUID().toString();
         rec.ownerId = "tdanford";
         rec.sizeEstimateBytes = 1000L;
         rec.objectName = "Name";
-        rec.storagePlatform = StoragePlatform.FILESYSTEM.getValue();
+        rec.storagePlatform = StoragePlatform.OPAQUEURI.getValue();
         rec.directoryPath = "/some/path";
 
         Timestamp cDate = new Timestamp(System.currentTimeMillis());
         dao.insertObject(rec.objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes,
                             rec.directoryPath, rec.storagePlatform, "remoteUser", cDate);
-        ObjectResource fetched = dao.findObjectById(rec.objectId);
+        ObjectRow fetched = dao.findObjectById(rec.objectId);
         assertThat(fetched.active).isEqualTo("Y");
         assertThat(fetched.createdBy).isEqualTo("remoteUser");
         assertThat(fetched.createDate).isEqualTo(cDate);

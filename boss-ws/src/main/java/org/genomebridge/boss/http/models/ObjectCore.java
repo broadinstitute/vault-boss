@@ -13,23 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.genomebridge.boss.http.objectstore;
+package org.genomebridge.boss.http.models;
 
-/**
- * Created by davidan on 9/3/14.
- */
-public class ObjectStoreException extends RuntimeException {
+public class ObjectCore {
 
-    public ObjectStoreException(Throwable cause) {
-        super(cause);
+    public void copy( ObjectCore that ) {
+        this.objectId = that.objectId;
+        this.objectName = that.objectName;
+        this.storagePlatform = that.storagePlatform;
+        this.directoryPath = that.directoryPath;
+        this.sizeEstimateBytes = that.sizeEstimateBytes;
+        this.ownerId = that.ownerId;
     }
 
-    public ObjectStoreException( String message ) {
-        super(message);
-    }
-
-    public ObjectStoreException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
+    public String objectId;
+    public String objectName;
+    public String storagePlatform;
+    public String directoryPath;
+    public Long sizeEstimateBytes;
+    public String ownerId;
 }

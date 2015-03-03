@@ -16,9 +16,13 @@
 package org.genomebridge.boss.http.objectstore;
 
 import com.amazonaws.AmazonClientException;
+import com.amazonaws.HttpMethod;
+import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.S3ClientOptions;
 import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
-import com.amazonaws.util.Base64;
 
 import java.net.URI;
 import java.net.URL;
@@ -26,35 +30,33 @@ import java.util.Date;
 
 public class S3ObjectStore implements ObjectStore {
 
-    private AmazonS3 client;
-    private String bucket;
+    public S3ObjectStore( ObjectStoreConfiguration config ) {
+        bucket = config.bucket;
 
-    public S3ObjectStore(AmazonS3 client, String bucket) {
-        this.client = client;
-        this.bucket = bucket;
-    }
-
-    private com.amazonaws.HttpMethod awsMethod( HttpMethod method ) {
-        switch(method) {
-            case GET: return com.amazonaws.HttpMethod.GET;
-            case HEAD: return com.amazonaws.HttpMethod.HEAD;
-            case PUT: return com.amazonaws.HttpMethod.PUT;
-            case DELETE: return com.amazonaws.HttpMethod.DELETE;
-            default: throw new IllegalArgumentException(
-                    String.format("No AWS Method equivalent for method %s", method.toString()) );
+        if ( config.username != null && config.password != null ) {
+            AWSCredentials creds = new BasicAWSCredentials(config.username, config.password);
+            client = new AmazonS3Client(creds);
+        } else {
+            client = new AmazonS3Client();
+        }
+        if ( config.endpoint != null ) {
+            client.setEndpoint(config.endpoint);
+        }
+        if ( config.pathStyleAccess != null && config.pathStyleAccess ) {
+            client.setS3ClientOptions(new S3ClientOptions().withPathStyleAccess(true));
         }
     }
 
     @Override
-    public URI generatePresignedURL(String key, HttpMethod method, long timeoutInMillis,
-                                    String contentType, byte[] contentMD5) {
-        GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(bucket, key, awsMethod(method));
-        request.setExpiration(new Date(System.currentTimeMillis() + timeoutInMillis));
+    public URI generatePresignedURL(String key, String httpMethod, long timeoutInMillis,
+                                    String contentType, String contentMD5) {
+        GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(bucket, key, HttpMethod.valueOf(httpMethod));
+        request.setExpiration(new Date(timeoutInMillis));
         if (contentType != null) {
             request.setContentType(contentType);
         }
         if (contentMD5 != null) {
-            request.setContentMd5(Base64.encodeAsString(contentMD5));
+            request.setContentMd5(contentMD5);
         }
         URL url = client.generatePresignedUrl(request);
         return URI.create(url.toString());
@@ -68,4 +70,7 @@ public class S3ObjectStore implements ObjectStore {
             throw new ObjectStoreException(ace);
         }
     }
+
+    private AmazonS3 client;
+    private String bucket;
 }
