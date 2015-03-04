@@ -30,6 +30,8 @@ import org.junit.Test;
 
 import java.net.URI;
 
+import javax.ws.rs.HttpMethod;
+
 import static org.fest.assertions.api.Assertions.assertThat;
 import static org.fest.assertions.api.Fail.fail;
 
@@ -94,7 +96,7 @@ public class DatabaseBossAPITest extends ResourcedTest {
 
         try {
             ResolveRequest req = new ResolveRequest();
-            req.httpMethod = "GET";
+            req.httpMethod = HttpMethod.GET;
             req.validityPeriodSeconds = 10;
             req.contentType = contentType;
             req.contentMD5Hex = contentMD5;

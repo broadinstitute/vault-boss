@@ -29,6 +29,7 @@ import org.genomebridge.boss.http.service.BossAPI.ResolveResponse;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import javax.ws.rs.HttpMethod;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
@@ -290,7 +291,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         ObjectDesc desc = response.getEntity(ObjectDesc.class);
 
         ResolveRequest req = new ResolveRequest();
-        req.httpMethod = "GET";
+        req.httpMethod = HttpMethod.GET;
         req.validityPeriodSeconds = seconds;
         req.contentType = contentType;
         req.contentMD5Hex = contentMD5Hex;
@@ -343,7 +344,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         response.getEntity(ObjectDesc.class);
 
         ResolveRequest req = new ResolveRequest();
-        req.httpMethod = "GET";
+        req.httpMethod = HttpMethod.GET;
         req.validityPeriodSeconds = seconds;
         req.contentType = contentType;
         req.contentMD5Hex = contentMD5Hex;
@@ -364,7 +365,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
         int seconds = 1000;
         ResolveRequest req = new ResolveRequest();
-        req.httpMethod = "GET";
+        req.httpMethod = HttpMethod.GET;
         req.validityPeriodSeconds = seconds;
 
         response = check200( post(client, objectPath + "/resolve", req) );
@@ -389,7 +390,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         String objectPath = checkHeader(response, "Location");
         ObjectDesc desc = response.getEntity(ObjectDesc.class);
         ResolveRequest req = new ResolveRequest();
-        req.httpMethod = "GET";
+        req.httpMethod = HttpMethod.GET;
         req.validityPeriodSeconds = seconds;
 
         response = checkStatus(FORBIDDEN, post(client, objectPath + "/resolve", fakeUser, req));
@@ -411,7 +412,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         String truncatedObjectId = created.objectId.substring(0, created.objectId.length() - 1);
 
         ResolveRequest req = new ResolveRequest();
-        req.httpMethod = "GET";
+        req.httpMethod = HttpMethod.GET;
         req.validityPeriodSeconds = seconds;
         response = checkStatus( NOT_FOUND, post(client, truncatedObjectPath + "/resolve", req));
         assertThat(response.getEntity(String.class)).isEqualTo(String.format("Object %s not found.", truncatedObjectId));
@@ -438,7 +439,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         checkStatus( OK, get(client, objectPath) );
         checkStatus( OK, delete(client, objectPath));
         ResolveRequest req = new ResolveRequest();
-        req.httpMethod = "GET";
+        req.httpMethod = HttpMethod.GET;
         req.validityPeriodSeconds = seconds;
         response = checkStatus( GONE, post(client, objectPath + "/resolve", req));
         assertThat(response.getEntity(String.class)).isEqualTo(String.format("Object %s was deleted.", created.objectId));
@@ -475,7 +476,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
                          .put(ClientResponse.class,putContent);
         assertThat(response.getStatus()).isEqualTo(OK);
 
-        req.httpMethod = "GET";
+        req.httpMethod = HttpMethod.GET;
         response = checkStatus(OK, post(client,objectPath+"/resolve","testuser",req));
         resp = response.getEntity(ResolveResponse.class);
 
