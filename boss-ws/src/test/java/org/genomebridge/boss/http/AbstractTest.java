@@ -17,11 +17,15 @@ package org.genomebridge.boss.http;
 
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
+
 import io.dropwizard.testing.junit.DropwizardAppRule;
-import org.genomebridge.boss.http.resources.ObjectResource;
+
+import org.genomebridge.boss.http.models.StoragePlatform;
+import org.genomebridge.boss.http.service.BossAPI.ObjectDesc;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
+
 import java.util.Arrays;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -114,13 +118,13 @@ abstract public class AbstractTest extends ResourcedTest {
     }
 
     public ClientResponse createObject(String objectName, String owner, long size) {
-        return createObject(objectName, owner, "objectstore", null, size);
+        return createObject(objectName, owner, StoragePlatform.LOCALSTORE.getValue(), null, size);
     }
 
     public ClientResponse createObject(String objectName, String owner, String platform, String path, long size) {
         Client client = new Client();
 
-        ObjectResource obj = new ObjectResource();
+        ObjectDesc obj = new ObjectDesc();
         obj.ownerId = owner;
         obj.objectName = objectName;
         obj.readers = arraySet( owner, "testuser" );

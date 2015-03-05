@@ -15,21 +15,47 @@
  */
 package org.genomebridge.boss.http.service;
 
-import org.genomebridge.boss.http.objectstore.HttpMethod;
-import org.genomebridge.boss.http.resources.ObjectResource;
+import org.genomebridge.boss.http.models.ObjectCore;
 
 import java.net.URI;
 import java.util.List;
 
+import javax.ws.rs.core.Response;
+
 public interface BossAPI {
 
-    public ObjectResource getObject(String objectId);
-    public boolean wasObjectDeleted(String objectId);
-    public List<ObjectResource> findObjectsByName(String username, String objectName);
-    public void insertObject(ObjectResource rec, String user);
-    public void updateObject(ObjectResource rec);
-    public void deleteObject(ObjectResource rec);
+    public static class ObjectDesc extends ObjectCore {
+        public String[] readers, writers;
+    }
 
-    public URI getPresignedURL(String objectId, HttpMethod method, long millis,
-                               String contentType, byte[] contentMD5);
+    public static class ErrorDesc {
+        public ErrorDesc( Response.Status status, String message ) {
+            mStatus = status;
+            mMessage = message;
+        }
+        public Response.Status mStatus;
+        public String mMessage;
+    }
+
+    public ErrorDesc getObject(String objectId, String userName, ObjectDesc desc);
+    public ErrorDesc findObjectsByName(String objectName, String userName, List<ObjectDesc> descs);
+    public ErrorDesc insertObject(ObjectDesc desc, String userName);
+    public ErrorDesc updateObject(ObjectDesc desc, String objectId, String userName);
+    public ErrorDesc deleteObject(String objectId, String userName);
+
+    public static class ResolveRequest {
+        public Integer validityPeriodSeconds;
+        public String httpMethod;
+        public String contentType;
+        public String contentMD5Hex;
+    }
+
+    public static class ResolveResponse {
+        public URI objectUrl;
+        public Integer validityPeriodSeconds;
+        public String contentType;
+        public String contentMD5Hex;
+    }
+
+    public ErrorDesc resolveObject(String objectId, String userName, ResolveRequest req, ResolveResponse resp);
 }

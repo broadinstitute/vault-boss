@@ -15,78 +15,19 @@
  */
 package org.genomebridge.boss.http.resources;
 
-import org.apache.log4j.Logger;
-
 import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.Arrays;
+
+import org.genomebridge.boss.http.service.BossAPI.ErrorDesc;
 
 public abstract class AbstractResource {
 
-    public static <T> T setFrom(T original, T newValue) {
-        if(newValue != null) {
-            return newValue;
-        } else {
-            return original;
-        }
+    public static void throwWAE( ErrorDesc err )
+    {
+        throw new WebApplicationException(Response.status(err.mStatus)
+                                                    .type(MediaType.TEXT_PLAIN)
+                                                    .entity(err.mMessage)
+                                                    .build());
     }
-
-    private static RuntimeException generateException(String fieldName, String expected, String given) {
-        return new WebApplicationException(
-                Response.status(Response.Status.BAD_REQUEST)
-                .entity(String.format("%s was different than previously set. Expected: %s; given: %s",
-                        fieldName,
-                        expected,
-                        given))
-                .build());
-    }
-
-    /**
-     * Throw a WebApplicationException (Status: BAD_REQUEST) if a particular value is
-     * set to something other than the original value.
-     *
-     * @param original  The original value
-     * @param newValue  The new value
-     * @param fieldName The name of the field that is being tested
-     * @param <T> The type of the values.
-     *
-     * @return The original value.
-     */
-    public static <T> T errorIfSet(T original, T newValue, String fieldName) {
-        if(original == null) {
-            if (newValue != null) {
-                throw generateException(fieldName, "null", newValue.toString());
-            }
-        } else {
-            if(newValue != null && !original.equals(newValue)) {
-                throw generateException(fieldName, original.toString(), newValue.toString());
-            }
-        }
-
-        return original;
-    }
-
-    public static <T> boolean eq(T mine, T theirs) {
-        if(mine == null) {
-            return theirs == null;
-        } else {
-            return mine.equals(theirs);
-        }
-    }
-
-    public static <T> boolean arrayEq(T[] mine, T[] theirs) {
-        if(mine == null) {
-            return theirs == null;
-        } else {
-            return Arrays.equals(mine, theirs);
-        }
-    }
-
-    protected abstract Logger logger();
-
-    public static int hash(Object v) {
-        return v != null ? v.hashCode() : 1;
-    }
-
 }

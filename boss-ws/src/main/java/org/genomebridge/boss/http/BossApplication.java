@@ -28,12 +28,13 @@ import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 
 import org.genomebridge.boss.http.db.BossDAO;
+import org.genomebridge.boss.http.objectstore.GCSObjectStore;
 import org.genomebridge.boss.http.objectstore.ObjectStore;
+import org.genomebridge.boss.http.objectstore.ObjectStoreConfiguration;
 import org.genomebridge.boss.http.objectstore.S3ObjectStore;
 import org.genomebridge.boss.http.resources.AllObjectsResource;
 import org.genomebridge.boss.http.resources.ObjectResource;
 import org.genomebridge.boss.http.service.BossAPI;
-import org.genomebridge.boss.http.service.BossAPIProvider;
 import org.genomebridge.boss.http.service.DatabaseBossAPI;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.StatementContext;
@@ -50,80 +51,31 @@ import org.skife.jdbi.v2.tweak.ArgumentFactory;
 public class BossApplication extends Application<BossConfiguration> {
 
     public static void main(String[] args) throws Exception {
-        new BossApplication().run(args);
-    }
-
-    public static class NullArgumentFactory implements ArgumentFactory<Object> {
-
-        @Override
-        public boolean accepts(Class<?> expectedType, Object value, StatementContext ctx) {
-            return value == null;
-        }
-
-        @Override
-        public Argument build(Class<?> expectedType, Object value, StatementContext ctx) {
-            return new NullArgument();
-        }
-
-        private class NullArgument implements Argument {
-            @Override
-            public void apply(int position, PreparedStatement statement, StatementContext ctx) throws SQLException {
-                statement.setNull(position, Types.NULL);
-            }
-        }
-    }
-
-    private static DBI DBI;
-    private static void initDBI(BossConfiguration config, Environment env) throws ClassNotFoundException {
-        DBIFactory factory = new DBIFactory();
-        DBI = factory.build(env, config.getDataSourceFactory(), "db");
-        DBI.registerArgumentFactory(new NullArgumentFactory());
-    }
-
-    public static BossDAO getDAO() {
-        if (null == DBI) {
-            throw new RuntimeException("DBI has not been set up correctly.");
-        }
-        return DBI.onDemand(BossDAO.class);
-    }
-
-    public void run(BossConfiguration config, Environment env) {
-
-        /*
-        Set up the Boss API, which includes the object store, here. Then stash that API into the BossAPIProvider
-        singleton. We manage this singleton ourselves, instead of relying on dependency injection, due to problems
-        with Dropwizard + Guice lifecycle. See https://github.com/HubSpot/dropwizard-guice/issues/19 for discussion
-        of those lifecycle problems.
-
-        Furthermore, creating the DBI objects in the run() method properly registers health checks and metrics
-        for the DBI connection pool. When we tried creating the DBI objects elsewhere, the db pool metrics
-        did not work correctly; we did not investigate workarounds for this.
-         */
         try {
-            // DBI
-            initDBI(config, env);
-
-            // Object store
-            ObjectStoreConfiguration osConfig = config.getObjectStoreConfiguration();
-            ObjectStore store = new S3ObjectStore(osConfig.createClient(), osConfig.getBucket());
-
-            // BOSS API
-            BossAPI api = new DatabaseBossAPI(store);
-
-            // stash in singleton
-            BossAPIProvider.getInstance().setApi(api);
-
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace(System.err);
+            new BossApplication().run(args);
         }
-
-        /*
-        Set up the resources themselves.
-         */
-        env.jersey().register(ObjectResource.class);
-        env.jersey().register(AllObjectsResource.class);
+        catch ( Exception e ) {
+            e.printStackTrace();
+        }
     }
 
+    public void run(BossConfiguration config, Environment env) throws Exception {
+
+        // Create an API object that the resources can use.
+        gDBI = new DBIFactory().build(env, config.getDataSourceFactory(), "db");
+        gDBI.registerArgumentFactory(new NullArgumentFactory());
+        ObjectStoreConfiguration localConf = config.getLocalStoreConfiguration();
+        ObjectStore localStore = getObjectStore(localConf);
+        ObjectStoreConfiguration cloudConf = config.getCloudStoreConfiguration();
+        ObjectStore cloudStore = getObjectStore(cloudConf);
+        gBossAPI = new DatabaseBossAPI(gDBI,localStore,cloudStore);
+
+        // Set up the resources themselves.
+        env.jersey().register(new ObjectResource(gBossAPI));
+        env.jersey().register(new AllObjectsResource(gBossAPI));
+    }
+
+    // For invoking some liquibase magic when the args to the server invocation so specify.
     public void initialize(Bootstrap<BossConfiguration> bootstrap) {
 
         bootstrap.addBundle(new MigrationsBundle<BossConfiguration>() {
@@ -135,4 +87,44 @@ public class BossApplication extends Application<BossConfiguration> {
 
         bootstrap.addBundle(new AssetsBundle("/assets/", "/site"));
     }
+
+    // These next two little methods break encapsulation, and are just for unit testing.
+    public static BossDAO getDAO() {
+        return gDBI.onDemand(BossDAO.class);
+    }
+    public static BossAPI getAPI() {
+        return gBossAPI;
+    }
+
+    private ObjectStore getObjectStore( ObjectStoreConfiguration config ) throws Exception {
+        if ( "S3".equals(config.type) )
+            return new S3ObjectStore(config);
+        if ( "GCS".equals(config.type) )
+            return new GCSObjectStore(config);
+        throw new IllegalStateException("ObjectStore configuration has unrecognized type: "+config.type);
+    }
+
+    // Workaround for some null argument funkiness in JDBI that breaks on Oracle.
+    private static class NullArgumentFactory implements ArgumentFactory<Object> {
+
+        @Override
+        public boolean accepts(Class<?> expectedType, Object value, StatementContext ctx) {
+            return value == null;
+        }
+
+        @Override
+        public Argument build(Class<?> expectedType, Object value, StatementContext ctx) {
+            return new NullArgument();
+        }
+
+        private static class NullArgument implements Argument {
+            @Override
+            public void apply(int position, PreparedStatement statement, StatementContext ctx) throws SQLException {
+                statement.setNull(position, Types.NULL);
+            }
+        }
+    }
+
+    private static DBI gDBI;
+    private static BossAPI gBossAPI;
 }
