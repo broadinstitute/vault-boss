@@ -372,7 +372,7 @@ public class ObjectMaker implements Runnable {
 
     private static int CHUNK_SIZE = 16*1024*1024; // 16Mb
     private static int VALIDITY_DURATION = 1000; // 1000 seconds
-    private static String OBJECTSTORE = "objectstore";
+    private static String OBJECTSTORE = "localStore";
     private static String gBossURL;
     private static String gUser;
     private static String[] gACL;
