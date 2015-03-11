@@ -34,13 +34,13 @@ database:
       url: <Oracle Host DB>
       validationQuery: select 1 from dual
 
-objectStore:
+localStore:
   endpoint: s3Server
   bucket: someBucket
   pathStyleAccess: true
   username: <ECS_USERNAME>
   password: <ECS_PASSWORD>
-
+  type: S3
 cloudStore:
   username: mygoogleprojectaccountnumber@developer.gserviceaccount.com
   password: file_does_not_exist.p12
