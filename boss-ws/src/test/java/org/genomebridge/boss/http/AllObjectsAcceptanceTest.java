@@ -24,7 +24,8 @@ import com.sun.jersey.api.client.GenericType;
 
 import io.dropwizard.testing.junit.DropwizardAppRule;
 
-import org.genomebridge.boss.http.resources.ObjectResource;
+import org.genomebridge.boss.http.models.StoragePlatform;
+import org.genomebridge.boss.http.service.BossAPI.ObjectDesc;
 import org.junit.ClassRule;
 import org.junit.Test;
 
@@ -52,7 +53,7 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
     @Test
     public void testObjectStoreObjectCreation() {
         /**
-         * "The user should be able to create a new ObjectResource by POSTing to objects"
+         * "The user should be able to create a new ObjectDesc by POSTing to objects"
          */
 
         Client client = new Client();
@@ -63,7 +64,7 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
 
         response = check200( get(client, location) );
 
-        ObjectResource rec = response.getEntity(ObjectResource.class);
+        ObjectDesc rec = response.getEntity(ObjectDesc.class);
 
         assertThat(rec).isNotNull();
         assertThat(rec.objectName).isEqualTo("Name");
@@ -74,12 +75,12 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
     @Test
     public void testNullNameObjectCreation() {
         /**
-         * "The user should not be able to create an object with a null storagePlatform"
+         * "The user should not be able to create an object with a null objectName"
          */
-        ObjectResource rec = fixture();
+        ObjectDesc rec = fixture();
         rec.objectName = null;
         ClientResponse response = checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
-        assertThat(response.getEntity(String.class)).isEqualTo("objectName cannot be null");
+        assertThat(response.getEntity(String.class)).isEqualTo("ObjectName cannot be null.");
     }
 
     @Test
@@ -87,10 +88,10 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
         /**
          * "The user should not be able to create an object with a null storagePlatform"
          */
-        ObjectResource rec = fixture();
+        ObjectDesc rec = fixture();
         rec.storagePlatform = null;
         ClientResponse response = checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
-        assertThat(response.getEntity(String.class)).isEqualTo("storagePlatform cannot be null");
+        assertThat(response.getEntity(String.class)).isEqualTo("StoragePlatform cannot be null.");
     }
 
     @Test
@@ -98,32 +99,32 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
         /**
          * "The user should not be able to create an object with a bogus storagePlatform"
          */
-        ObjectResource rec = fixture();
+        ObjectDesc rec = fixture();
         rec.storagePlatform = "xyzzy";
         ClientResponse response = checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
-        assertThat(response.getEntity(String.class)).isEqualTo("storagePlatform must be either objectstore or filesystem");
+        assertThat(response.getEntity(String.class)).isEqualTo("StoragePlatform must be either cloudStore, localStore, or opaqueURI.");
     }
 
     @Test
     public void testNoPathFilesystemObjectCreation() {
         /**
-         * "The user should not be able to create a filesystem object without a directoryPath"
+         * "The user should not be able to create an opaqueURI object without a directoryPath"
          */
-        ObjectResource rec = fixture();
+        ObjectDesc rec = fixture();
         rec.directoryPath = null;
         ClientResponse response = checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
-        assertThat(response.getEntity(String.class)).isEqualTo("directoryPath must be supplied for filesystem objects");
+        assertThat(response.getEntity(String.class)).isEqualTo("DirectoryPath must be supplied for opaqueURI objects.");
     }
 
     @Test
     public void testNullOwnerObjectCreation() {
         /**
-         * "The user should not be able to create an object with a null storagePlatform"
+         * "The user should not be able to create an object with a null ownerId"
          */
-        ObjectResource rec = fixture();
+        ObjectDesc rec = fixture();
         rec.ownerId = null;
         ClientResponse response = checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
-        assertThat(response.getEntity(String.class)).isEqualTo("ownerId cannot be null");
+        assertThat(response.getEntity(String.class)).isEqualTo("OwnerId cannot be null.");
     }
 
     @Test
@@ -131,34 +132,34 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
         /**
          * "The user should not be able to create an object via an update"
          */
-        ObjectResource rec = fixture();
+        ObjectDesc rec = fixture();
         Client client = new Client();
         final String fakeObjectId = "xyzzy";
 
         ClientResponse response = checkStatus(NOT_FOUND, post(client, String.format("%s/%s", objectsPath(), fakeObjectId), rec));
-        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Couldn't find object with id %s", fakeObjectId));
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Object %s not found.", fakeObjectId));
 
         // check that this is also true for deleted objects
 
         // until we have a mock object store, calling delete on an objectstore-object will fail, because
         // the system will reach out to the real objectstore and attempt to delete it. We'll cover that test
         // in the end-to-end integration tests.
-        response = checkStatus(CREATED, createObject("Name", "tdanford", "filesystem", "/path/to/file", 500L));
-        ObjectResource created = response.getEntity(ObjectResource.class);
+        response = checkStatus(CREATED, createObject("Name", "tdanford", StoragePlatform.OPAQUEURI.getValue(), "file:///path/to/file", 500L));
+        ObjectDesc created = response.getEntity(ObjectDesc.class);
         String objectPath = checkHeader(response, "Location");
 
         checkStatus(OK, get(client, objectPath));
         checkStatus(OK, delete(client, objectPath));
         response = checkStatus( GONE, post(client, String.format("%s/%s", objectsPath(), created.objectId), rec));
-        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Object with id %s has been deleted", created.objectId));
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Object %s was deleted.", created.objectId));
         response = checkStatus( GONE, get(client, objectPath));
-        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Object with id %s has been deleted", created.objectId));
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Object %s was deleted.", created.objectId));
     }
 
     @Test
     public void testFindByName() {
         Client client = new Client();
-        ObjectResource rec = fixture();
+        ObjectDesc rec = fixture();
         rec.objectName = UUID.randomUUID().toString();
         String queryURL = objectsPath()+"?name="+rec.objectName;
 
@@ -168,8 +169,8 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
         // make an object with our name, and see if we can find it
         checkStatus(CREATED,post(client,objectsPath(),"me",rec));
         ClientResponse response = checkStatus(OK,get(client,queryURL,"me"));
-        GenericType<List<ObjectResource>> genTyp = new GenericType<List<ObjectResource>>() {};
-        List<ObjectResource> recs = response.getEntity(genTyp);
+        GenericType<List<ObjectDesc>> genTyp = new GenericType<List<ObjectDesc>>() {};
+        List<ObjectDesc> recs = response.getEntity(genTyp);
         assertThat(recs.size()).isEqualTo(1);
         assertThat(recs.get(0).objectName).isEqualTo(rec.objectName);
 

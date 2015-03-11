@@ -16,16 +16,15 @@
 
 package org.genomebridge.boss.http.db;
 
-import org.genomebridge.boss.http.resources.ObjectResource;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.tweak.ResultSetMapper;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-public class ObjectResourceMapper implements ResultSetMapper<ObjectResource> {
-    public ObjectResource map(int index, ResultSet r, StatementContext ctx) throws SQLException {
-        ObjectResource rec = new ObjectResource();
+public class ObjectRowMapper implements ResultSetMapper<ObjectRow> {
+    public ObjectRow map(int index, ResultSet r, StatementContext ctx) throws SQLException {
+        ObjectRow rec = new ObjectRow();
 
         rec.objectId = r.getString("objectId");
         rec.objectName = r.getString("objectName");
@@ -39,6 +38,7 @@ public class ObjectResourceMapper implements ResultSetMapper<ObjectResource> {
         rec.modifyDate = r.getTimestamp("modifyDate");
         rec.resolveDate = r.getTimestamp("resolveDate");
         rec.deleteDate = r.getTimestamp("deleteDate");
+
         return rec;
     }
 }

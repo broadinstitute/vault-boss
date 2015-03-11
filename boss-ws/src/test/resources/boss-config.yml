@@ -11,5 +11,16 @@ database:
   password: ${dataSource.password}
   url: ${dataSource.url}
   validationQuery: ${dataSource.validationQuery}
-objectStore:
-  bucket: genomebridge-variantstore-ci
+cloudStore:
+  username: serviceAccountEmail
+  password: key.p12
+  bucket: someBucket
+  endpoint: https://storage.googleapis.com
+  type: GCS
+localStore:
+  username: s3User
+  password: bogus
+  bucket: someBucket
+  endpoint: s3Server
+  pathStyleAccess: true
+  type: S3

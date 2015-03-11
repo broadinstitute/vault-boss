@@ -34,11 +34,20 @@ database:
       url: <Oracle Host DB>
       validationQuery: select 1 from dual
 
-objectStore:
-  endpoint: http://10.200.10.4:7070
+localStore:
+  endpoint: s3Server
+  bucket: someBucket
   pathStyleAccess: true
-  username: <AMPLIDATA_USERNAME>
-  password: <AMPLIDATA_PASSWORD>
+  username: <ECS_USERNAME>
+  password: <ECS_PASSWORD>
+  type: S3
+cloudStore:
+  username: mygoogleprojectaccountnumber@developer.gserviceaccount.com
+  password: file_does_not_exist.p12
+  bucket: someBucket
+  endpoint: https://storage.googleapis.com
+  type: GCS
+
 ```
 
 ## Database Schema

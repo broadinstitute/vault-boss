@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Broad Institute
+ * Copyright 2015 Broad Institute
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,8 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.genomebridge.boss.http.objectstore;
+package org.genomebridge.boss.http.db;
 
-public enum HttpMethod {
-    GET, PUT, DELETE, HEAD
+import java.sql.Timestamp;
+
+import org.genomebridge.boss.http.models.ObjectCore;
+
+public class ObjectRow extends ObjectCore {
+    public String active;
+    public String createdBy;
+    public Timestamp createDate;
+    public Timestamp modifyDate;
+    public Timestamp resolveDate;
+    public Timestamp deleteDate;
 }

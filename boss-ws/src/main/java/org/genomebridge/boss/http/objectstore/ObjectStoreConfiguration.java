@@ -13,12 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.genomebridge.boss.http.service;
+package org.genomebridge.boss.http.objectstore;
 
-public class DeletedObjectException extends RuntimeException {
+/**
+ * Configuration for the object store behind the BOSS API.  This is configured
+ * using an objectStore clause in the YAML configuration file.
+ */
+public class ObjectStoreConfiguration {
 
-    // using message here instead of objectId for consistency with NotFoundException
-    public DeletedObjectException(String message) {
-        super(message);
-    }
+    public String username;
+    public String password;
+    public String endpoint;
+    public Boolean pathStyleAccess;
+    public String bucket;
+    public String type; // currently either S3 or GCS
 }

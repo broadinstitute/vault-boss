@@ -15,7 +15,6 @@
  */
 package org.genomebridge.boss.http.db;
 
-import org.genomebridge.boss.http.resources.ObjectResource;
 import org.skife.jdbi.v2.sqlobject.Bind;
 import org.skife.jdbi.v2.sqlobject.SqlBatch;
 import org.skife.jdbi.v2.sqlobject.SqlQuery;
@@ -26,7 +25,7 @@ import org.skife.jdbi.v2.sqlobject.mixins.Transactional;
 import java.sql.Timestamp;
 import java.util.List;
 
-@RegisterMapper({ ObjectResourceMapper.class })
+@RegisterMapper({ ObjectRowMapper.class })
 public interface BossDAO extends Transactional<BossDAO> {
 
     /*
@@ -34,14 +33,11 @@ public interface BossDAO extends Transactional<BossDAO> {
      */
 
     @SqlQuery("select * from objects where objectId = :objectId")
-    public ObjectResource findObjectById(@Bind("objectId") String objectId);
-
-    @SqlQuery("select location from objects where objectId = :objectId and active='Y'")
-    public String findObjectLocation(@Bind("objectId") String objectId);
+    public ObjectRow findObjectById(@Bind("objectId") String objectId);
 
     @SqlQuery("select o.* from objects o inner join readers r on o.objectId = r.objectId " +
               "where o.objectName = :objectName and o.active='Y' and r.username = :username")
-    public List<ObjectResource> findObjectsByName(@Bind("username") String username, @Bind("objectName") String objectName);
+    public List<ObjectRow> findObjectsByName(@Bind("username") String username, @Bind("objectName") String objectName);
 
     @SqlUpdate("insert into objects " +
             "(objectId, objectName, ownerId, sizeEstimateBytes, location, storagePlatform, createdBy, active, createDate ) values " +
@@ -72,6 +68,12 @@ public interface BossDAO extends Transactional<BossDAO> {
     /*
     Readers/Writers API
      */
+
+    @SqlQuery("select count(*) from readers where objectId = :objectId and username = :userName")
+    public boolean canRead(@Bind("objectId") String objectId, @Bind("userName") String userName);
+
+    @SqlQuery("select count(*) from writers where objectId = :objectId and username = :userName")
+    public boolean canWrite(@Bind("objectId") String objectId, @Bind("userName") String userName);
 
     @SqlQuery("select distinct(username) from readers where objectId = :objectId")
     public List<String> findReadersById(@Bind("objectId") String objectId);

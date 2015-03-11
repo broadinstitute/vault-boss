@@ -15,70 +15,55 @@
  */
 package org.genomebridge.boss.http.resources;
 
-import org.genomebridge.boss.http.models.StoragePlatform;
 import org.genomebridge.boss.http.service.BossAPI;
-import org.genomebridge.boss.http.service.BossAPIProvider;
-
-import com.sun.jersey.api.NotFoundException;
+import org.genomebridge.boss.http.service.BossAPI.ErrorDesc;
+import org.genomebridge.boss.http.service.BossAPI.ObjectDesc;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
-import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
-import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
 import java.net.URI;
-import java.util.UUID;
+import java.util.ArrayList;
 import java.util.List;
 
 @Path("/objects")
-public class AllObjectsResource {
+public class AllObjectsResource extends AbstractResource {
 
-    private BossAPI api;
-
-    public AllObjectsResource() {
-        this.api = BossAPIProvider.getInstance().getApi();
+    public AllObjectsResource( BossAPI api ) {
+        this.api = api;
     }
-
-    public String randomID() { return UUID.randomUUID().toString(); }
 
     @GET
     @Produces("application/json")
     public Response findObjectsByName( @QueryParam("name") String objectName,
-                                       @Context HttpHeaders headers ) {
-        String username = headers.getRequestHeaders().getFirst("REMOTE_USER");
-        List<ObjectResource> recs = api.findObjectsByName(username, objectName);
-        if ( recs.size() == 0 )
-            throw new NotFoundException("There are no objects by the name: " + objectName);
-        for ( ObjectResource rec : recs )
-            if (rec.storagePlatform.equals(StoragePlatform.OBJECTSTORE.getValue()))
-                rec.directoryPath = null;
-        return Response.status(Response.Status.OK).type("application/json").entity(recs).build();
+                                       @HeaderParam("REMOTE_USER") String userName ) {
+        List<ObjectDesc> recs = new ArrayList<>();
+        ErrorDesc err = api.findObjectsByName(objectName, userName, recs);
+        if ( err != null )
+            throwWAE(err);
+        return Response.ok(recs).build();
     }
 
     @POST
     @Consumes("application/json")
     @Produces("application/json")
-    public Response createObject( @Context UriInfo info, @Context HttpHeaders headers, ObjectResource rec ) {
-        String errMsg = rec.testValidity();
-        if ( errMsg != null )
-            throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST)
-                    .entity(errMsg).build());
-
-        rec.objectId = randomID();
-        api.insertObject(rec,headers.getRequestHeaders().getFirst("REMOTE_USER"));
-
-        URI uri = info.getBaseUriBuilder().path("/objects/{objectId}").build(rec.objectId);
-        return Response.status(Response.Status.CREATED)
-                .location(uri)
-                .type("application/json")
-                .entity(rec)
-                .build();
+    public Response createObject( @Context UriInfo info,
+                                  @HeaderParam("REMOTE_USER") String userName,
+                                  ObjectDesc req ) {
+        ErrorDesc err = api.insertObject(req,userName);
+        if ( err != null )
+            throwWAE(err);
+        URI uri = info.getBaseUriBuilder().path("/objects/{objectId}").build(req.objectId);
+        return Response.created(uri).entity(req).build();
     }
+
+    private BossAPI api;
 }
