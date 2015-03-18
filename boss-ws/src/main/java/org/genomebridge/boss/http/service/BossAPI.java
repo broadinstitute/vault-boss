@@ -58,4 +58,10 @@ public interface BossAPI {
     }
 
     public ErrorDesc resolveObject(String objectId, String userName, ResolveRequest req, ResolveResponse resp);
+
+    public static class CopyResponse {
+        public URI uri;
+    }
+
+    public ErrorDesc copyObject(String objectId, String userName, String locationToCopy, CopyResponse resp);
 }

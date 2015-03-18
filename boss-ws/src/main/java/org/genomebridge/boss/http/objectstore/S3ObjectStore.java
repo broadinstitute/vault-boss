@@ -48,7 +48,7 @@ public class S3ObjectStore implements ObjectStore {
     }
 
     @Override
-    public URI generatePresignedURL(String key, String httpMethod, long timeoutInMillis,
+    public URI generateResolveURI(String key, String httpMethod, long timeoutInMillis,
                                     String contentType, String contentMD5) {
         GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(bucket, key, HttpMethod.valueOf(httpMethod));
         request.setExpiration(new Date(timeoutInMillis));
@@ -60,6 +60,11 @@ public class S3ObjectStore implements ObjectStore {
         }
         URL url = client.generatePresignedUrl(request);
         return URI.create(url.toString());
+    }
+
+    @Override
+    public URI generateCopyURI(String key, String locationToCopy) {
+        throw new ObjectStoreException("Copying objects is not currently supported on S3 storage.");
     }
 
     @Override

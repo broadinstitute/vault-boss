@@ -23,6 +23,7 @@ import io.dropwizard.testing.junit.DropwizardAppRule;
 
 import org.genomebridge.boss.http.models.StoragePlatform;
 import org.genomebridge.boss.http.objectstore.ObjectStoreConfiguration;
+import org.genomebridge.boss.http.service.BossAPI.CopyResponse;
 import org.genomebridge.boss.http.service.BossAPI.ObjectDesc;
 import org.genomebridge.boss.http.service.BossAPI.ResolveRequest;
 import org.genomebridge.boss.http.service.BossAPI.ResolveResponse;
@@ -33,6 +34,7 @@ import javax.ws.rs.HttpMethod;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import java.net.HttpURLConnection;
 import java.util.Random;
 
 import static org.fest.assertions.api.Assertions.assertThat;
@@ -448,11 +450,14 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         checkStatus(NOT_FOUND, delete(client, objectPath));
     }
 
-    // can't do this right now -- we don't want to put valid objectstore credentials into github
+    // can't do this right now -- we don't want to put valid objectstore credentials into github.
+    // to run this test, copy a valid boss-config.yml to src/test/resources, and put the bossdev.p12
+    // key file wherever boss-config.yml says it is.
     //@Test
     public void testActuallyStoringSomeContent() {
         Client client = new Client();
 
+        // create a cloudStore object
         ObjectDesc obj = new ObjectDesc();
         obj.ownerId = "testuser";
         obj.objectName = "someObject";
@@ -460,33 +465,104 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         obj.writers = arraySet( "testuser" );
         obj.sizeEstimateBytes = 13L;
         obj.storagePlatform = StoragePlatform.CLOUDSTORE.getValue();
-
         ClientResponse response = checkStatus(CREATED, post(client,objectsPath(),obj));
         String objectPath = checkHeader(response, "Location");
+
+        // resolve the object for a PUT
         ResolveRequest req = new ResolveRequest();
-        req.httpMethod = "PUT";
+        req.httpMethod = HttpMethod.PUT;
         req.validityPeriodSeconds = 120;
         req.contentType = MediaType.TEXT_PLAIN;
         response = checkStatus(OK, post(client,objectPath+"/resolve","testuser",req));
         ResolveResponse resp = response.getEntity(ResolveResponse.class);
 
+        // write some content to the signed URL
         String putContent = "Some content.";
         response = client.resource(resp.objectUrl.toString())
                          .type(MediaType.TEXT_PLAIN)
                          .put(ClientResponse.class,putContent);
         assertThat(response.getStatus()).isEqualTo(OK);
 
+        // resolve the object for a GET
         req.httpMethod = HttpMethod.GET;
         response = checkStatus(OK, post(client,objectPath+"/resolve","testuser",req));
         resp = response.getEntity(ResolveResponse.class);
 
+        // get the data from the signed URL
         response = client.resource(resp.objectUrl.toString())
                          .type(MediaType.TEXT_PLAIN)
                          .get(ClientResponse.class);
         assertThat(response.getStatus()).isEqualTo(OK);
         String getContent = response.getEntity(String.class);
+
+        // make sure we got back what we wrote
         assertThat(getContent).isEqualTo(putContent);
 
+        // clean up by deleting object
+        checkStatus(OK,delete(client,objectPath));
+    }
+
+    // can't do this right now -- we don't want to put valid objectstore credentials into github.
+    // to run this test, copy a valid boss-config.yml to src/test/resources, and put the bossdev.p12
+    // key file wherever boss-config.yml says it is.
+    //@Test
+    public void testCopy() throws Exception {
+        Client client = new Client();
+
+        // create a cloudStore object
+        ObjectDesc obj = new ObjectDesc();
+        obj.ownerId = "testuser";
+        obj.objectName = "copiedObject";
+        obj.readers = arraySet( "testuser" );
+        obj.writers = arraySet( "testuser" );
+        obj.sizeEstimateBytes = 13L;
+        obj.storagePlatform = StoragePlatform.CLOUDSTORE.getValue();
+        ClientResponse response = checkStatus(CREATED, post(client,objectsPath(),obj));
+        String objectPath = checkHeader(response, "Location");
+
+        // here's a test object in another bucket to copy
+        String locationToCopy = "/broad-dsde-dev-public/NA12878/uBam_21.bam";
+
+        // get a signed URL for copying the test object to our new object
+        CopyResponse copyResp = checkStatus(OK,
+                client.resource(objectPath)
+                .queryParam("copy", locationToCopy)
+                .accept(MediaType.APPLICATION_JSON_TYPE)
+                .header("REMOTE_USER", "testuser")
+                .put(ClientResponse.class)).getEntity(CopyResponse.class);
+
+        // ask GCS to do the copy
+        // Jersey is too smart to send an empty PUT
+        HttpURLConnection conn = (HttpURLConnection)copyResp.uri.toURL().openConnection();
+        conn.setDoOutput(true);
+        conn.setDoInput(true);
+        conn.setUseCaches(false);
+        conn.setRequestMethod(HttpMethod.PUT);
+        conn.setRequestProperty("x-goog-copy-source",locationToCopy);
+        conn.getOutputStream().close();
+        int respCode = conn.getResponseCode();
+        assertThat(respCode).isEqualTo(OK);
+        conn.disconnect();
+
+        // resolve the object for a GET
+        ResolveRequest req = new ResolveRequest();
+        req.httpMethod = HttpMethod.GET;
+        req.contentType = MediaType.APPLICATION_OCTET_STREAM;
+        req.validityPeriodSeconds = 5;
+        response = checkStatus(OK, post(client,objectPath+"/resolve","testuser",req));
+        ResolveResponse resolveResp = response.getEntity(ResolveResponse.class);
+
+        // get the data from the signed URL
+        response = client.resource(resolveResp.objectUrl.toString())
+                         .type(MediaType.APPLICATION_OCTET_STREAM)
+                         .get(ClientResponse.class);
+        assertThat(response.getStatus()).isEqualTo(OK);
+
+        // see that there are some bytes there
+        byte[] content = response.getEntity(byte[].class);
+        assertThat(content.length).isGreaterThan(155*1024*1024);
+
+        // clean up by deleting object
         checkStatus(OK,delete(client,objectPath));
     }
 }
