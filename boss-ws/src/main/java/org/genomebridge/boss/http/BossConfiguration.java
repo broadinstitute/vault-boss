@@ -23,7 +23,11 @@ import io.dropwizard.db.DataSourceFactory;
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 
+import org.genomebridge.boss.http.config.MessageConfiguration;
 import org.genomebridge.boss.http.objectstore.ObjectStoreConfiguration;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class BossConfiguration extends Configuration {
 
@@ -42,6 +46,13 @@ public class BossConfiguration extends Configuration {
     }
 
     @Valid
+    @JsonProperty
+    @NotNull
+    private HashMap<String,String> messages;
+
+    private MessageConfiguration messageConfiguration = new MessageConfiguration();
+
+    @Valid
     @NotNull
     @JsonProperty
     private DataSourceFactory database = new DataSourceFactory();
@@ -51,4 +62,13 @@ public class BossConfiguration extends Configuration {
 
     @JsonProperty
     private ObjectStoreConfiguration cloudStore = new ObjectStoreConfiguration();
+
+    public MessageConfiguration getMessageConfiguration() {
+        return messageConfiguration;
+    }
+
+    public void setMessages(HashMap<String, String> messages) {
+        this.messages = messages;
+        messageConfiguration.setMessages(messages);
+    }
 }

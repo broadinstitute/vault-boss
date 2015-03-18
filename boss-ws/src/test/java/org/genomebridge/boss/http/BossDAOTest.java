@@ -175,6 +175,7 @@ public class BossDAOTest extends ResourcedTest {
         rec.directoryPath = "/some/path";
 
         Timestamp cDate = new Timestamp(System.currentTimeMillis());
+        cDate.setNanos(0);
         dao.insertObject(rec.objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes,
                             rec.directoryPath, rec.storagePlatform, "remoteUser", cDate);
         ObjectRow fetched = dao.findObjectById(rec.objectId);
@@ -186,6 +187,7 @@ public class BossDAOTest extends ResourcedTest {
         assertThat(fetched.deleteDate).isNull();
 
         Timestamp mDate = new Timestamp(System.currentTimeMillis());
+        mDate.setNanos(0);
         dao.updateObject(rec.objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes, mDate);
         fetched = dao.findObjectById(rec.objectId);
         assertThat(fetched.active).isEqualTo("Y");
@@ -196,6 +198,7 @@ public class BossDAOTest extends ResourcedTest {
         assertThat(fetched.deleteDate).isNull();
 
         Timestamp rDate = new Timestamp(System.currentTimeMillis());
+        rDate.setNanos(0);
         dao.updateResolveDate(rec.objectId, rDate);
         fetched = dao.findObjectById(rec.objectId);
         assertThat(fetched.active).isEqualTo("Y");
@@ -206,6 +209,7 @@ public class BossDAOTest extends ResourcedTest {
         assertThat(fetched.deleteDate).isNull();
 
         Timestamp dDate = new Timestamp(System.currentTimeMillis());
+        dDate.setNanos(0);
         dao.deleteObject(rec.objectId, dDate);
         fetched = dao.findObjectById(rec.objectId);
         assertThat(fetched.active).isEqualTo("N");

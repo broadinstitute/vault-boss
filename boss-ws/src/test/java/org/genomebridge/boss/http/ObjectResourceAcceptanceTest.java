@@ -136,7 +136,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         checkStatus( OK, get(client, objectPath) );
         checkStatus( OK, delete(client, objectPath));
         response = checkStatus( GONE, get(client, objectPath) );
-        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Object %s was deleted.", created.objectId));
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format(messages.get("objectDeleted"), created.objectId));
     }
 
     @Test
@@ -151,7 +151,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
         response = checkStatus( NOT_FOUND, get(client, truncatedObjectPath));
 
-        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Object %s not found.", truncatedObjectId));
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format(messages.get("objectNotFound"), truncatedObjectId));
     }
 
     @Test
@@ -165,7 +165,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         ClientResponse response = checkStatus(FORBIDDEN, delete(client, objectPath, fakeUser));
         String objectId = objectPath.substring(objectPath.length()-36,objectPath.length());
         assertThat(response.getEntity(String.class))
-                .isEqualTo(String.format("No read permission for %s by %s.", objectId, fakeUser));
+                .isEqualTo(String.format(messages.get("noWritePermission"), objectId, fakeUser));
 
         check200( get(client, objectPath) );
     }
@@ -235,7 +235,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         // It's illegal to change the name!
         response = checkStatus(BAD_REQUEST, post(client, objectPath, rec));
         assertThat(response.getEntity(String.class))
-                .isEqualTo("ObjectName cannot be modified.");
+                .isEqualTo(messages.get("objectNameFixed")+'.');
 
         response = check200( get(client, objectPath));
 
@@ -260,7 +260,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         // It's illegal, as the user 'fake_user', to update the readers field of the ObjectDesc
         response = checkStatus(FORBIDDEN, post(client, objectPath, fakeUser, rec));
         assertThat(response.getEntity(String.class))
-                .isEqualTo(String.format("No write permission for %s by %s.", rec.objectId, fakeUser));
+                .isEqualTo(String.format(messages.get("noWritePermission"), rec.objectId, fakeUser));
 
         response = check200( get(client, objectPath) );
 
@@ -351,7 +351,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
         response = post(client, objectPath + "/resolve", req);
         // If the user doesn't have a correct objectstore configuration, this is a typical symptom
-        assertThat(response.getStatus()).overridingErrorMessage("Unexpected server error: Is your environment correctly configured for the S3 objectstore?").isNotEqualTo(INTERNAL_SERVER_ERROR);
+        assertThat(response.getStatus()).overridingErrorMessage(messages.get("serverError")).isNotEqualTo(INTERNAL_SERVER_ERROR);
 
         checkStatus(BAD_REQUEST, response);
     }
@@ -395,7 +395,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
         response = checkStatus(FORBIDDEN, post(client, objectPath + "/resolve", fakeUser, req));
         assertThat(response.getEntity(String.class))
-                .isEqualTo(String.format("No read permission for %s by %s.", desc.objectId, fakeUser));
+                .isEqualTo(String.format(messages.get("noReadPermission"), desc.objectId, fakeUser));
     }
 
     @Test
@@ -415,11 +415,11 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         req.httpMethod = HttpMethod.GET;
         req.validityPeriodSeconds = seconds;
         response = checkStatus( NOT_FOUND, post(client, truncatedObjectPath + "/resolve", req));
-        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Object %s not found.", truncatedObjectId));
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format(messages.get("objectNotFound"), truncatedObjectId));
 
         // confirm that we also can't delete it
         response = checkStatus(NOT_FOUND, delete(client, truncatedObjectPath));
-        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Object %s not found.", truncatedObjectId));
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format(messages.get("objectNotFound"), truncatedObjectId));
     }
 
     @Test
@@ -442,7 +442,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         req.httpMethod = HttpMethod.GET;
         req.validityPeriodSeconds = seconds;
         response = checkStatus( GONE, post(client, objectPath + "/resolve", req));
-        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Object %s was deleted.", created.objectId));
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format(messages.get("objectDeleted"), created.objectId));
 
         // confirm that we can't re-delete it
         checkStatus(NOT_FOUND, delete(client, objectPath));

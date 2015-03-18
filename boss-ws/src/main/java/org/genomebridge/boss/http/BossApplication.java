@@ -18,6 +18,7 @@ package org.genomebridge.boss.http;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.util.Map;
 
 import io.dropwizard.Application;
 import io.dropwizard.assets.AssetsBundle;
@@ -68,11 +69,13 @@ public class BossApplication extends Application<BossConfiguration> {
         ObjectStore localStore = getObjectStore(localConf);
         ObjectStoreConfiguration cloudConf = config.getCloudStoreConfiguration();
         ObjectStore cloudStore = getObjectStore(cloudConf);
-        gBossAPI = new DatabaseBossAPI(gDBI,localStore,cloudStore);
+        gBossAPI = new DatabaseBossAPI(gDBI,localStore,cloudStore,config.getMessageConfiguration());
 
         // Set up the resources themselves.
         env.jersey().register(new ObjectResource(gBossAPI));
         env.jersey().register(new AllObjectsResource(gBossAPI));
+
+
     }
 
     // For invoking some liquibase magic when the args to the server invocation so specify.

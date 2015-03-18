@@ -80,7 +80,7 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
         ObjectDesc rec = fixture();
         rec.objectName = null;
         ClientResponse response = checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
-        assertThat(response.getEntity(String.class)).isEqualTo("ObjectName cannot be null.");
+        assertThat(response.getEntity(String.class)).isEqualTo(messages.get("objectValidation")+'.');
     }
 
     @Test
@@ -91,7 +91,7 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
         ObjectDesc rec = fixture();
         rec.storagePlatform = null;
         ClientResponse response = checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
-        assertThat(response.getEntity(String.class)).isEqualTo("StoragePlatform cannot be null.");
+        assertThat(response.getEntity(String.class)).isEqualTo(messages.get("storagePlatformValidation")+'.');
     }
 
     @Test
@@ -102,7 +102,10 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
         ObjectDesc rec = fixture();
         rec.storagePlatform = "xyzzy";
         ClientResponse response = checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
-        assertThat(response.getEntity(String.class)).isEqualTo("StoragePlatform must be either cloudStore, localStore, or opaqueURI.");
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format(messages.get("storagePlatformOptions"),
+                StoragePlatform.CLOUDSTORE.getValue(),
+                StoragePlatform.LOCALSTORE.getValue(),
+                StoragePlatform.OPAQUEURI.getValue())+'.');
     }
 
     @Test
@@ -113,7 +116,7 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
         ObjectDesc rec = fixture();
         rec.directoryPath = null;
         ClientResponse response = checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
-        assertThat(response.getEntity(String.class)).isEqualTo("DirectoryPath must be supplied for opaqueURI objects.");
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format(messages.get("directoryPathToSupply"),"opaqueURI") + '.');
     }
 
     @Test
@@ -124,7 +127,7 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
         ObjectDesc rec = fixture();
         rec.ownerId = null;
         ClientResponse response = checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
-        assertThat(response.getEntity(String.class)).isEqualTo("OwnerId cannot be null.");
+        assertThat(response.getEntity(String.class)).isEqualTo(messages.get("ownerIdValidation")+'.');
     }
 
     @Test
@@ -137,7 +140,7 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
         final String fakeObjectId = "xyzzy";
 
         ClientResponse response = checkStatus(NOT_FOUND, post(client, String.format("%s/%s", objectsPath(), fakeObjectId), rec));
-        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Object %s not found.", fakeObjectId));
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format(messages.get("objectNotFound"), fakeObjectId));
 
         // check that this is also true for deleted objects
 
@@ -151,9 +154,9 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
         checkStatus(OK, get(client, objectPath));
         checkStatus(OK, delete(client, objectPath));
         response = checkStatus( GONE, post(client, String.format("%s/%s", objectsPath(), created.objectId), rec));
-        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Object %s was deleted.", created.objectId));
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format(String.format(messages.get("objectDeleted"), created.objectId)));
         response = checkStatus( GONE, get(client, objectPath));
-        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Object %s was deleted.", created.objectId));
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format(messages.get("objectDeleted"), created.objectId));
     }
 
     @Test
