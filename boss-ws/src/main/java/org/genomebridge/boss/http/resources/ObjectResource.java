@@ -20,6 +20,7 @@ package org.genomebridge.boss.http.resources;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 import org.genomebridge.boss.http.service.BossAPI;
+import org.genomebridge.boss.http.service.BossAPI.CopyRequest;
 import org.genomebridge.boss.http.service.BossAPI.CopyResponse;
 import org.genomebridge.boss.http.service.BossAPI.ErrorDesc;
 import org.genomebridge.boss.http.service.BossAPI.ObjectDesc;
@@ -74,13 +75,15 @@ public class ObjectResource extends AbstractResource {
         return desc;
     }
 
-    @PUT
+    @Path("copy")
+    @Consumes("application/json")
     @Produces("application/json")
-    public CopyResponse copy(@PathParam("objectId") String objectId,
-                             @QueryParam("copy") String locationToCopy,
-                             @HeaderParam("REMOTE_USER") String userName) {
+    @POST
+    public CopyResponse resolveForCopy(@PathParam("objectId") String objectId,
+                                       @HeaderParam("REMOTE_USER") String userName,
+                                       CopyRequest req) {
         CopyResponse resp = new CopyResponse();
-        ErrorDesc err = api.copyObject(objectId, userName, locationToCopy, resp);
+        ErrorDesc err = api.resolveObjectForCopying(objectId, userName, req, resp);
         if ( err != null )
             throwWAE(err);
         return resp;

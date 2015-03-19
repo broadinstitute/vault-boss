@@ -63,7 +63,7 @@ public class S3ObjectStore implements ObjectStore {
     }
 
     @Override
-    public URI generateCopyURI(String key, String locationToCopy) {
+    public URI generateCopyURI(String key, String locationToCopy, long timeoutInMillis) {
         throw new ObjectStoreException("Copying objects is not currently supported on S3 storage.");
     }
 

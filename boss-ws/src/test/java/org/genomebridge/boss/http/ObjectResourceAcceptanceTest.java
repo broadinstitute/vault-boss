@@ -23,6 +23,7 @@ import io.dropwizard.testing.junit.DropwizardAppRule;
 
 import org.genomebridge.boss.http.models.StoragePlatform;
 import org.genomebridge.boss.http.objectstore.ObjectStoreConfiguration;
+import org.genomebridge.boss.http.service.BossAPI.CopyRequest;
 import org.genomebridge.boss.http.service.BossAPI.CopyResponse;
 import org.genomebridge.boss.http.service.BossAPI.ObjectDesc;
 import org.genomebridge.boss.http.service.BossAPI.ResolveRequest;
@@ -524,12 +525,12 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         String locationToCopy = "/broad-dsde-dev-public/NA12878/uBam_21.bam";
 
         // get a signed URL for copying the test object to our new object
+        CopyRequest copyReq = new CopyRequest();
+        copyReq.locationToCopy = locationToCopy;
+        copyReq.validityPeriodSeconds = 5;
         CopyResponse copyResp = checkStatus(OK,
-                client.resource(objectPath)
-                .queryParam("copy", locationToCopy)
-                .accept(MediaType.APPLICATION_JSON_TYPE)
-                .header("REMOTE_USER", "testuser")
-                .put(ClientResponse.class)).getEntity(CopyResponse.class);
+                                            post(client,objectPath+"/copy","testuser",copyReq))
+                                        .getEntity(CopyResponse.class);
 
         // ask GCS to do the copy
         // Jersey is too smart to send an empty PUT

@@ -264,7 +264,7 @@ public class DatabaseBossAPI implements BossAPI {
     }
 
     @Override
-    public ErrorDesc copyObject(String objectId, String userName, String locationToCopy, CopyResponse resp) {
+    public ErrorDesc resolveObjectForCopying(String objectId, String userName, CopyRequest req, CopyResponse resp) {
         if ( userName == null )
             return badReqErr("REMOTE_USER header is required.");
         BossDAO dao = getDao();
@@ -282,7 +282,8 @@ public class DatabaseBossAPI implements BossAPI {
         dao.updateResolveDate(objectId, now);
 
         ObjectStore objStore = getObjectStore(rec.storagePlatform);
-        resp.uri = objStore.generateCopyURI(rec.directoryPath, locationToCopy);
+        long timeout = now.getTime() + 1000L*req.validityPeriodSeconds;
+        resp.uri = objStore.generateCopyURI(rec.directoryPath, req.locationToCopy, timeout);
 
         return null;
     }

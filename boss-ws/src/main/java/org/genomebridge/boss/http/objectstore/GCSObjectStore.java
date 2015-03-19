@@ -44,10 +44,9 @@ public class GCSObjectStore implements ObjectStore {
     }
 
     @Override
-    public URI generateCopyURI( String objKey, String locationToCopy ) {
+    public URI generateCopyURI( String objKey, String locationToCopy, long timeoutInMillis ) {
 
         String location = getLocation(objKey);
-        long timeoutInMillis = System.currentTimeMillis() + A_FEW_SECONDS;
         String xHeaders = "x-goog-copy-source:" + locationToCopy + '\n';
         return getSignedURI(location,HttpMethod.PUT,timeoutInMillis,null,null,xHeaders);
     }

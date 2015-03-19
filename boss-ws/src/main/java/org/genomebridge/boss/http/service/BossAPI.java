@@ -59,9 +59,14 @@ public interface BossAPI {
 
     public ErrorDesc resolveObject(String objectId, String userName, ResolveRequest req, ResolveResponse resp);
 
+    public static class CopyRequest {
+        public Integer validityPeriodSeconds;
+        public String locationToCopy; // expecting something of the form "/bucket/key"
+    }
+
     public static class CopyResponse {
         public URI uri;
     }
 
-    public ErrorDesc copyObject(String objectId, String userName, String locationToCopy, CopyResponse resp);
+    public ErrorDesc resolveObjectForCopying(String objectId, String userName, CopyRequest req, CopyResponse resp);
 }
