@@ -257,9 +257,34 @@ public class DatabaseBossAPI implements BossAPI {
         else {
             long timeout = now.getTime() + 1000L*req.validityPeriodSeconds;
             ObjectStore objStore = getObjectStore(rec.storagePlatform);
-            resp.objectUrl = objStore.generatePresignedURL(rec.directoryPath, req.httpMethod,
+            resp.objectUrl = objStore.generateResolveURI(rec.directoryPath, req.httpMethod,
                                                             timeout, req.contentType, contentMD5x64);
         }
+        return null;
+    }
+
+    @Override
+    public ErrorDesc resolveObjectForCopying(String objectId, String userName, CopyRequest req, CopyResponse resp) {
+        if ( userName == null )
+            return badReqErr("REMOTE_USER header is required.");
+        BossDAO dao = getDao();
+        ObjectRow rec = dao.findObjectById(objectId);
+        if ( rec == null )
+            return notFoundErr(objectId);
+        if ( !"Y".equals(rec.active) )
+            return goneErr(objectId);
+        if ( rec.storagePlatform.equals(StoragePlatform.OPAQUEURI.getValue()) )
+            return badReqErr("Can't copy opaqueURI objects.");
+        if ( !dao.canWrite(objectId,userName) )
+            return permsErr(objectId,userName,"write");
+
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        dao.updateResolveDate(objectId, now);
+
+        ObjectStore objStore = getObjectStore(rec.storagePlatform);
+        long timeout = now.getTime() + 1000L*req.validityPeriodSeconds;
+        resp.uri = objStore.generateCopyURI(rec.directoryPath, req.locationToCopy, timeout);
+
         return null;
     }
 
