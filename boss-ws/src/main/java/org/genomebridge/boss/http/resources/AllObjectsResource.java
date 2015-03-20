@@ -44,7 +44,7 @@ public class AllObjectsResource extends AbstractResource {
     @GET
     @Produces("application/json")
     public Response findObjectsByName( @QueryParam("name") String objectName,
-                                       @HeaderParam("REMOTE_USER") String userName ) {
+                                       @HeaderParam(REMOTE_USER_HEADER) String userName ) {
         List<ObjectDesc> recs = new ArrayList<>();
         ErrorDesc err = api.findObjectsByName(objectName, userName, recs);
         if ( err != null )
@@ -56,7 +56,7 @@ public class AllObjectsResource extends AbstractResource {
     @Consumes("application/json")
     @Produces("application/json")
     public Response createObject( @Context UriInfo info,
-                                  @HeaderParam("REMOTE_USER") String userName,
+                                  @HeaderParam(REMOTE_USER_HEADER) String userName,
                                   ObjectDesc req ) {
         ErrorDesc err = api.insertObject(req,userName);
         if ( err != null )

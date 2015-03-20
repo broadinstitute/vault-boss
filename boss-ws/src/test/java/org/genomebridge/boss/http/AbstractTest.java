@@ -20,8 +20,8 @@ import com.sun.jersey.api.client.ClientResponse;
 
 import io.dropwizard.testing.junit.DropwizardAppRule;
 
-import org.genomebridge.boss.http.config.MessageConfiguration;
 import org.genomebridge.boss.http.models.StoragePlatform;
+import org.genomebridge.boss.http.resources.AbstractResource;
 import org.genomebridge.boss.http.service.BossAPI.ObjectDesc;
 
 import javax.ws.rs.core.MediaType;
@@ -39,7 +39,7 @@ import static org.fest.assertions.api.Assertions.assertThat;
 abstract public class AbstractTest extends ResourcedTest {
 
     abstract public DropwizardAppRule<BossConfiguration> rule();
-    public  final MessageConfiguration messages = rule().getConfiguration().getMessageConfiguration();
+    public static final String REMOTE_USER_HEADER = AbstractResource.REMOTE_USER_HEADER;
 
     /*
      * Some utility methods for interacting with HTTP-services.
@@ -51,7 +51,7 @@ abstract public class AbstractTest extends ResourcedTest {
         return client.resource(url)
                 .type(MediaType.APPLICATION_JSON_TYPE)
                 .accept(MediaType.APPLICATION_JSON_TYPE)
-                .header(messages.get("remoteUserHeader"), user)
+                .header(REMOTE_USER_HEADER, user)
                 .post(ClientResponse.class, value);
     }
 
@@ -59,7 +59,7 @@ abstract public class AbstractTest extends ResourcedTest {
 
     public ClientResponse delete(Client client, String url, String user) {
         return client.resource(url)
-                .header(messages.get("remoteUserHeader"), user)
+                .header(REMOTE_USER_HEADER, user)
                 .delete(ClientResponse.class);
     }
 
@@ -68,7 +68,7 @@ abstract public class AbstractTest extends ResourcedTest {
     public ClientResponse get(Client client, String url, String user) {
         return client.resource(url)
                 .accept(MediaType.APPLICATION_JSON_TYPE)
-                .header(messages.get("remoteUserHeader"), user)
+                .header(REMOTE_USER_HEADER, user)
                 .get(ClientResponse.class);
     }
 

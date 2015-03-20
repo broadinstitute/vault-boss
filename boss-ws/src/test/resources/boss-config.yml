@@ -26,17 +26,15 @@ localStore:
   type: S3
 messages:
   remoteUser: REMOTE_USER header is required.
-  read: read
   noReadable: No readable objects for the name %s.
-  write: write
-  unableDelete: Unable to delete object resource
   httpMethod: httpMethod must be GET, HEAD, or PUT
-  md5: MD5 must be 32 hexadecimal characters long
-  contentMD5: contentMD5Hex contains non-hexadecimal characters
+  md5: MD5 must be 32 hexadecimal characters long.
+  contentMD5: contentMD5Hex contains non-hexadecimal characters.
   objectIdNotSupplied: ObjectId must not be supplied, it will be returned
   objectValidation: ObjectName cannot be null
   ownerIdValidation: OwnerId cannot be null
   storagePlatformValidation: StoragePlatform cannot be null
+  directoryPathNotSupplied: DirectoryPath must not be supplied for %s objects
   directoryPathToSupply: DirectoryPath must be supplied for %s objects
   storagePlatformOptions: StoragePlatform must be either %s, %s, or %s
   objectIdFixed: ObjectId cannot be modified
@@ -46,10 +44,8 @@ messages:
   directoryPathFixed: DirectoryPath cannot be modified
   objectNotFound: Object %s not found.
   objectDeleted: Object %s was deleted.
-  permission: No %s permission for %s by %s.
-  unableDeleteFromObjectStore: Unable to delete object resource from object store
-  directoryPathNotSupplied: DirectoryPath must not be supplied for %s objects
+  unableDelete: 'Unable to delete object resource: '
+  unableDeleteFromObjectStore: 'Unable to delete object resource from object store: '
   noReadPermission: No read permission for %s by %s.
   noWritePermission: No write permission for %s by %s.
-  remoteUserHeader: REMOTE_USER
-  serverError: Unexpected server error Is your environment correctly configured for the S3 objectstore
+  serverError: 'Unexpected server error -- Is your environment correctly configured for the S3 objectstore?'

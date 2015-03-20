@@ -33,6 +33,7 @@ import javax.ws.rs.HttpMethod;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import java.util.HashMap;
 import java.util.Random;
 
 import static org.fest.assertions.api.Assertions.assertThat;
@@ -52,6 +53,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
             new DropwizardAppRule<>(BossApplication.class,
                     resourceFilePath("boss-config.yml"));
 
+    private HashMap<String,String> messages = RULE.getConfiguration().getMessages();
 
     @Override
     public DropwizardAppRule<BossConfiguration> rule() {
@@ -464,7 +466,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         ClientResponse response = checkStatus(CREATED, post(client,objectsPath(),obj));
         String objectPath = checkHeader(response, "Location");
         ResolveRequest req = new ResolveRequest();
-        req.httpMethod = "PUT";
+        req.httpMethod = HttpMethod.PUT;
         req.validityPeriodSeconds = 120;
         req.contentType = MediaType.TEXT_PLAIN;
         response = checkStatus(OK, post(client,objectPath+"/resolve","testuser",req));

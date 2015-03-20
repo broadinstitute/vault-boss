@@ -30,4 +30,6 @@ public abstract class AbstractResource {
                                                     .entity(err.mMessage)
                                                     .build());
     }
+
+    public static final String REMOTE_USER_HEADER = "REMOTE_USER";
 }

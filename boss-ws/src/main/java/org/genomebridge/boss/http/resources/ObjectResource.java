@@ -39,7 +39,7 @@ public class ObjectResource extends AbstractResource {
     @GET
     @Produces("application/json")
     public ObjectDesc describe(@PathParam("objectId") String objectId,
-                               @HeaderParam("REMOTE_USER") String userName) {
+                               @HeaderParam(REMOTE_USER_HEADER) String userName) {
         ObjectDesc desc = new ObjectDesc();
         ErrorDesc err = api.getObject(objectId, userName, desc);
         if ( err != null )
@@ -51,7 +51,7 @@ public class ObjectResource extends AbstractResource {
     @Produces("application/json")
     @POST
     public ResolveResponse resolve(@PathParam("objectId") String objectId,
-                                   @HeaderParam("REMOTE_USER") String userName,
+                                   @HeaderParam(REMOTE_USER_HEADER) String userName,
                                    ResolveRequest req) {
         ResolveResponse resp = new ResolveResponse();
         ErrorDesc err = api.resolveObject(objectId, userName, req, resp);
@@ -64,7 +64,7 @@ public class ObjectResource extends AbstractResource {
     @Consumes("application/json")
     @Produces("application/json")
     public ObjectDesc update(@PathParam("objectId") String objectId,
-                             @HeaderParam("REMOTE_USER") String userName,
+                             @HeaderParam(REMOTE_USER_HEADER) String userName,
                              ObjectDesc desc) {
         ErrorDesc err = api.updateObject(desc,objectId,userName);
         if ( err != null )
@@ -74,7 +74,7 @@ public class ObjectResource extends AbstractResource {
 
     @DELETE
     public String delete(@PathParam("objectId") String objectId,
-                         @HeaderParam("REMOTE_USER") String userName) {
+                         @HeaderParam(REMOTE_USER_HEADER) String userName) {
         ErrorDesc err = api.deleteObject(objectId,userName);
         if ( err != null )
             throwWAE(err);
