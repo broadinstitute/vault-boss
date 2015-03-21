@@ -23,8 +23,10 @@ import java.net.URI;
  */
 public interface ObjectStore {
 
-    public URI generatePresignedURL(String objectId, String httpMethod, long timeoutInMillis,
+    public URI generateResolveURI(String objKey, String httpMethod, long timeoutInMillis,
                                     String contentType, String contentMD5);
 
-    public void deleteObject(String objectId);
+    public URI generateCopyURI(String objKey, String locationToCopy, long timeoutInMillis);
+
+    public void deleteObject(String objKey);
 }
