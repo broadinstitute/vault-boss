@@ -110,7 +110,7 @@ public class DatabaseBossAPITest extends ResourcedTest {
         }
         catch (NullPointerException e) {
             // If the user doesn't have a correct objectstore configuration, this is a typical symptom
-            fail("Unexpected exception: Is your environment correctly configured for the S3 objectstore?", e);
+            fail(RULE.getConfiguration().getMessages().get("serverError"), e);
         }
     }
 

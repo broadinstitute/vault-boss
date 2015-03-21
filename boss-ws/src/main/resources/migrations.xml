@@ -84,4 +84,10 @@
         </createTable>
     </changeSet>
 
+    <changeSet id="1" author="tsharpe">
+      <modifyDataType tableName="objects" columnName="createDate" newDataType="datetime(6)"/>
+      <modifyDataType tableName="objects" columnName="modifyDate" newDataType="datetime(6)"/>
+      <modifyDataType tableName="objects" columnName="resolveDate" newDataType="datetime(6)"/>
+      <modifyDataType tableName="objects" columnName="deleteDate" newDataType="datetime(6)"/>
+    </changeSet>
 </databaseChangeLog>
