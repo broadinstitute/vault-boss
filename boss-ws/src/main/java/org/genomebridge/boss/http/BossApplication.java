@@ -20,7 +20,9 @@ import java.io.InputStream;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Map;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
@@ -122,10 +124,10 @@ public class BossApplication extends Application<BossConfiguration> {
         public HashMap<String,String> messages;
     }
 
-    public static HashMap<String,String> getMessages() {
+    public static synchronized Map<String,String> getMessages() {
         if ( gMessages == null ) {
             try (InputStream messageInput = ClassLoader.getSystemResourceAsStream(MESSAGES_FILE)) {
-                gMessages = new Yaml().loadAs(messageInput,BossMessages.class).messages;
+                gMessages = Collections.unmodifiableMap(new Yaml().loadAs(messageInput,BossMessages.class).messages);
             }
             catch ( IOException e ) {
                 throw new IllegalStateException("Couldn't load resource " + MESSAGES_FILE,e);
@@ -157,6 +159,6 @@ public class BossApplication extends Application<BossConfiguration> {
 
     private static DBI gDBI;
     private static BossAPI gBossAPI;
-    private static HashMap<String,String> gMessages;
+    private static Map<String,String> gMessages;
     private static final String MESSAGES_FILE = "messages.yml";
 }

@@ -36,7 +36,7 @@ import javax.xml.bind.DatatypeConverter;
  */
 public class DatabaseBossAPI implements BossAPI {
 
-    public DatabaseBossAPI( DBI dbi, ObjectStore localStore, ObjectStore cloudStore,  HashMap<String,String> messages) {
+    public DatabaseBossAPI( DBI dbi, ObjectStore localStore, ObjectStore cloudStore,  Map<String,String> messages) {
         mDBI = dbi;
         mLocalStore = localStore;
         mCloudStore = cloudStore;
@@ -409,6 +409,6 @@ public class DatabaseBossAPI implements BossAPI {
     DBI mDBI;
     private ObjectStore mLocalStore;
     private ObjectStore mCloudStore;
-    private HashMap<String,String> mMessages;
+    private Map<String,String> mMessages;
     static private Long gDefaultEstSize = new Long(-1);
 }
