@@ -20,7 +20,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import java.net.HttpURLConnection;
-import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 
 import static org.fest.assertions.api.Assertions.assertThat;
@@ -40,7 +40,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
             new DropwizardAppRule<>(BossApplication.class,
                     resourceFilePath("boss-config.yml"));
 
-    private HashMap<String,String> messages = RULE.getConfiguration().getMessages();
+    private Map<String,String> messages = BossApplication.getMessages();
 
     @Override
     public DropwizardAppRule<BossConfiguration> rule() {

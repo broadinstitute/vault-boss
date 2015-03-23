@@ -1,6 +1,6 @@
 package org.genomebridge.boss.http;
 
-import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.List;
 
@@ -30,7 +30,7 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
             new DropwizardAppRule<>(BossApplication.class,
                     resourceFilePath("boss-config.yml"));
 
-    private HashMap<String,String> messages = RULE.getConfiguration().getMessages();
+    private Map<String,String> messages = BossApplication.getMessages();
 
     @Override
     public DropwizardAppRule<BossConfiguration> rule() {
