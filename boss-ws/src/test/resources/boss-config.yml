@@ -24,28 +24,3 @@ localStore:
   endpoint: s3Server
   pathStyleAccess: true
   type: S3
-messages:
-  remoteUser: REMOTE_USER header is required.
-  noReadable: No readable objects for the name %s.
-  httpMethod: httpMethod must be GET, HEAD, or PUT
-  md5: MD5 must be 32 hexadecimal characters long.
-  contentMD5: contentMD5Hex contains non-hexadecimal characters.
-  objectIdNotSupplied: ObjectId must not be supplied, it will be returned
-  objectValidation: ObjectName cannot be null
-  ownerIdValidation: OwnerId cannot be null
-  storagePlatformValidation: StoragePlatform cannot be null
-  directoryPathNotSupplied: DirectoryPath must not be supplied for %s objects
-  directoryPathToSupply: DirectoryPath must be supplied for %s objects
-  storagePlatformOptions: StoragePlatform must be either %s, %s, or %s
-  objectIdFixed: ObjectId cannot be modified
-  objectNameFixed: ObjectName cannot be modified
-  storagePlatformFixed: StoragePlatform cannot be modified
-  sizeEstimateFixed: SizeEstimateBytes cannot be modified
-  directoryPathFixed: DirectoryPath cannot be modified
-  objectNotFound: Object %s not found.
-  objectDeleted: Object %s was deleted.
-  unableDelete: 'Unable to delete object resource: '
-  unableDeleteFromObjectStore: 'Unable to delete object resource from object store: '
-  noReadPermission: No read permission for %s by %s.
-  noWritePermission: No write permission for %s by %s.
-  serverError: 'Unexpected server error -- Is your environment correctly configured for the S3 objectstore?'

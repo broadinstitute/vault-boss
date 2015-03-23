@@ -110,7 +110,7 @@ public class DatabaseBossAPITest extends ResourcedTest {
         }
         catch (NullPointerException e) {
             // If the user doesn't have a correct objectstore configuration, this is a typical symptom
-            fail(RULE.getConfiguration().getMessages().get("serverError"), e);
+            fail(BossApplication.getMessages().get("serverError"), e);
         }
     }
 

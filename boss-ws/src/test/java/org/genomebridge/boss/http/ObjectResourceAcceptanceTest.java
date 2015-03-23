@@ -56,7 +56,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
             new DropwizardAppRule<>(BossApplication.class,
                     resourceFilePath("boss-config.yml"));
 
-    private HashMap<String,String> messages = RULE.getConfiguration().getMessages();
+    private HashMap<String,String> messages = BossApplication.getMessages();
 
     @Override
     public DropwizardAppRule<BossConfiguration> rule() {

@@ -25,8 +25,6 @@ import javax.validation.constraints.NotNull;
 
 import org.genomebridge.boss.http.objectstore.ObjectStoreConfiguration;
 
-import java.util.HashMap;
-
 public class BossConfiguration extends Configuration {
 
     public BossConfiguration() {}
@@ -43,10 +41,6 @@ public class BossConfiguration extends Configuration {
         return cloudStore;
     }
 
-    public HashMap<String,String> getMessages() {
-        return messages;
-    }
-
     @Valid
     @NotNull
     @JsonProperty
@@ -57,9 +51,4 @@ public class BossConfiguration extends Configuration {
 
     @JsonProperty
     private ObjectStoreConfiguration cloudStore = new ObjectStoreConfiguration();
-
-    @Valid
-    @JsonProperty
-    @NotNull
-    private HashMap<String,String> messages;
 }
