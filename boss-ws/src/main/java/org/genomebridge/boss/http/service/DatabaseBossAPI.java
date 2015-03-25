@@ -75,8 +75,10 @@ public class DatabaseBossAPI implements BossAPI {
 
         // Use the location passed in by the user if the Object is an opaqueURI object,
         // otherwise generate a new (fresh) location.
-        String loc = rec.storagePlatform.equals(StoragePlatform.OPAQUEURI.getValue()) ?
-                rec.directoryPath : createLocation(rec);
+        String loc = rec.directoryPath;
+        if ( !rec.storagePlatform.equals(StoragePlatform.OPAQUEURI.getValue()) &&
+                !Boolean.TRUE.equals(rec.forceLocation) )
+            loc = createLocation(rec);
 
         if ( rec.sizeEstimateBytes == null )
             rec.sizeEstimateBytes = gDefaultEstSize;
@@ -296,7 +298,7 @@ public class DatabaseBossAPI implements BossAPI {
         else {
             if ( desc.storagePlatform.equals(StoragePlatform.CLOUDSTORE.getValue()) ||
                     desc.storagePlatform.equals(StoragePlatform.LOCALSTORE.getValue()) ) {
-                if ( desc.directoryPath != null )
+                if ( desc.directoryPath != null && !Boolean.TRUE.equals(desc.forceLocation) )
                     add(sb,String.format(getMessage("directoryPathNotSupplied"),desc.storagePlatform));
             }
             else if ( desc.storagePlatform.equals(StoragePlatform.OPAQUEURI.getValue()) ) {
