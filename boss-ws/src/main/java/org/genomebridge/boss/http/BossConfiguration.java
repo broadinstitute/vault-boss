@@ -31,9 +31,13 @@ public class BossConfiguration extends Configuration {
     @JsonProperty
     private DataSourceFactory database = new DataSourceFactory();
 
+    @Valid
+    @NotNull
     @JsonProperty
     private ObjectStoreConfiguration localStore = new ObjectStoreConfiguration();
 
+    @Valid
+    @NotNull
     @JsonProperty
     private ObjectStoreConfiguration cloudStore = new ObjectStoreConfiguration();
 }
