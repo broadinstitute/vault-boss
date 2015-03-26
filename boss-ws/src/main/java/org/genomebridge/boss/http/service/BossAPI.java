@@ -2,6 +2,9 @@ package org.genomebridge.boss.http.service;
 
 import org.genomebridge.boss.http.models.ObjectCore;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+
 import java.net.URI;
 import java.util.List;
 
@@ -9,6 +12,7 @@ import javax.ws.rs.core.Response;
 
 public interface BossAPI {
 
+    @JsonInclude(Include.NON_NULL)
     public static class ObjectDesc extends ObjectCore {
         public String[] readers, writers;
     }
@@ -35,6 +39,7 @@ public interface BossAPI {
         public String contentMD5Hex;
     }
 
+    @JsonInclude(Include.NON_NULL)
     public static class ResolveResponse {
         public URI objectUrl;
         public Integer validityPeriodSeconds;
