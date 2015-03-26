@@ -3,7 +3,6 @@ package org.genomebridge.boss;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -100,8 +99,11 @@ public class ObjectMaker implements Runnable {
             cleanUpProcess();
         }
 
-        if ( mErrMsg == null )
+        if ( mErrMsg == null ) {
             System.out.println(mJobDir+": OK");
+            System.out.println("\tMD5: "+DatatypeConverter.printHexBinary(mMD5)+" Len: "+mSize);
+            mMD5 = null;
+        }
         else {
             // clean up if things did not go well
             if ( mObjectURL != null ) {
@@ -153,6 +155,27 @@ public class ObjectMaker implements Runnable {
             mErrMsg = "Unable to find location of new object."; return;
         }
 
+        // get length of tar file
+        ProcessBuilder procBldr = new ProcessBuilder("tar","--atime-preserve","-czC",parentDir.toString(),jobDir.getName())
+                        .redirectError(ProcessBuilder.Redirect.INHERIT);
+        procBldr.environment().put("GZIP","-n");
+        long tarLen = 0L;
+        try {
+            mTarProc = procBldr.start();
+            DigestInputStream dis = new DigestInputStream(mTarProc.getInputStream(),createMD5Digester());
+            byte[] buf = new byte[CHUNK_SIZE];
+            int len;
+            while ( (len = dis.read(buf)) != -1 )
+                tarLen += len;
+            mMD5 = dis.getMessageDigest().digest();
+            mSize = tarLen;
+            cleanUpProcess();
+            if ( mErrMsg != null )
+                return;
+        } catch ( IOException e ) {
+            mErrMsg = "Unable to calculate tar length--"+e.getMessage(); return;
+        }
+
         // resolve new object to get writable URL for object's data
         String resolveURL = mObjectURL + "/resolve";
         ResolutionRequest req = new ResolutionRequest();
@@ -166,24 +189,6 @@ public class ObjectMaker implements Runnable {
 
         if ( response.getStatus() != ClientResponse.Status.OK.getStatusCode() ) {
             response.close(); mErrMsg = "Unable to resolve object."; return;
-        }
-
-        // get length of tar file
-        ProcessBuilder procBldr = new ProcessBuilder("tar","-czC",parentDir.toString(),jobDir.getName())
-                        .redirectError(ProcessBuilder.Redirect.INHERIT);
-        long tarLen = 0L;
-        try {
-            mTarProc = procBldr.start();
-            InputStream is = mTarProc.getInputStream();
-            byte[] buf = new byte[CHUNK_SIZE];
-            int len;
-            while ( (len = is.read(buf)) != -1 )
-                tarLen += len;
-            cleanUpProcess();
-            if ( mErrMsg != null )
-                return;
-        } catch ( IOException e ) {
-            mErrMsg = "Unable to calculate tar length--"+e.getMessage(); return;
         }
 
         // create tar process and stream that process's output to the upload URL
@@ -266,9 +271,13 @@ public class ObjectMaker implements Runnable {
                 if ( eTags == null || eTags.size() < 1 )
                     mErrMsg = "Unable to get ETag for uploaded data";
                 else {
+                    byte[] sentMD5 = is.getMessageDigest().digest();
+                    if ( !Arrays.equals(mMD5,sentMD5) ) {
+                        mErrMsg = "MD5 changed across the two tar passes."; return;
+                    }
+
                     String eTag = eTags.get(0);
                     byte[] gotMD5 = DatatypeConverter.parseHexBinary(eTag.substring(1,eTag.length()-1));
-                    byte[] sentMD5 = is.getMessageDigest().digest();
                     if ( !Arrays.equals(gotMD5,sentMD5) ) {
                         mErrMsg = "ETag doesn't match streamed data's MD5."; return;
                     }
@@ -351,12 +360,14 @@ public class ObjectMaker implements Runnable {
     }
 
     private String mJobDir;
+    private byte[] mMD5;
+    private long mSize;
     private String mErrMsg;
     private String mObjectURL;
     private Process mTarProc;
 
     private static int CHUNK_SIZE = 16*1024*1024; // 16Mb
-    private static int VALIDITY_DURATION = 1000; // 1000 seconds
+    private static int VALIDITY_DURATION = 604800; // 1 week
     private static String OBJECTSTORE = "localStore";
     private static String gBossURL;
     private static String gUser;
