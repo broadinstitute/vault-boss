@@ -187,4 +187,27 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
         assertThat(recs.size()).isEqualTo(1);
         assertThat(recs.get(0).objectId).isEqualTo(expectedId);
     }
+
+    @Test
+    public void testForceLocation() {
+        Client client = new Client();
+
+        ObjectDesc obj = new ObjectDesc();
+        obj.ownerId = "fred";
+        obj.objectName = "john";
+        String[] actors = new String[1];
+        actors[0] = obj.ownerId;
+        obj.readers = actors;
+        obj.writers = actors;
+        obj.sizeEstimateBytes = 500L;
+        obj.storagePlatform = StoragePlatform.CLOUDSTORE.getValue();
+        obj.directoryPath = "gcsLocationThatAlreadyExists";
+        obj.forceLocation = Boolean.TRUE;
+
+        ClientResponse response = checkStatus(CREATED, post(client,objectsPath(),obj.ownerId,obj));
+        ObjectDesc rec = response.getEntity(ObjectDesc.class);
+
+        assertThat(rec).isNotNull();
+        assertThat(rec.directoryPath).isEqualTo(obj.directoryPath);
+    }
 }

@@ -10,6 +10,7 @@ import javax.ws.rs.core.Response;
 public interface BossAPI {
 
     public static class ObjectDesc extends ObjectCore {
+        public Boolean forceLocation;
         public String[] readers, writers;
     }
 
