@@ -18,69 +18,12 @@ An HTTP ``GET`` on any resource will return the resource's representation (in th
 
 ## Configuration 
 
-Example of a typical configuration file: 
-```
-server:
-  adminConnectors:
-    - type: http
-      port: 8181
-  applicationConnectors:
-    - type: http
-      port: 8180
-database:
-      driverClass: oracle.jdbc.OracleDriver
-      user: <Username>
-      password: <Password>
-      url: <Oracle Host DB>
-      validationQuery: select 1 from dual
-
-localStore:
-  endpoint: s3Server
-  bucket: someBucket
-  pathStyleAccess: true
-  username: <ECS_USERNAME>
-  password: <ECS_PASSWORD>
-  type: S3
-cloudStore:
-  username: mygoogleprojectaccountnumber@developer.gserviceaccount.com
-  password: file_does_not_exist.p12
-  bucket: someBucket
-  endpoint: https://storage.googleapis.com
-  type: GCS
-
-```
+Example of a typical configuration file: See boss-ws/src/test/resources/boss-config.yml
 
 ## Database Schema
 
-Currently, the database consists of three tables: 
-
-### OBJECTS
-
-The ``OBJECTS`` table contains the representation of all the objects stored by the BOSS system.
-
-Most identifiers are currently limited to 255 characters -- the ``location`` field is limited to 1024 characters.
-
-Column Name | Column Type
-------------|------------
-objectId    | varchar(255)
-ownerId     | varchar(255) 
-sizeEstimateBytes | int
-objectName | varchar(255) 
-active | boolean
-location | varchar(1024) 
-storagePlatform | varchar(255) 
-
-### READERS and WRITERS 
-
-The ACL (the list of readers and writers) for each object is stored in the tables READERS and WRITERS, respectively.
-These two tables have an identical schema to each other.
-
-Column Name | Column Type
-------------|------------
-id | varchar(255) 
-username | varchar(255) 
-
-The ``id`` field is a foreign-key into the OBJECTS table.  
+Currently, the database consists of three tables: Objects, Readers, and Writers.
+You can see the details in the file boss-ws/src/main/resources/migrations.xml.
 
 ## Development Environment
 

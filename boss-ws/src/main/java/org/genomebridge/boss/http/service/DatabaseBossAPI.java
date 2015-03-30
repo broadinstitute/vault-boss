@@ -1,18 +1,3 @@
-/*
- * Copyright 2014 Broad Institute
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package org.genomebridge.boss.http.service;
 
 import org.apache.commons.lang.ArrayUtils;
@@ -36,24 +21,25 @@ import javax.xml.bind.DatatypeConverter;
  */
 public class DatabaseBossAPI implements BossAPI {
 
-    public DatabaseBossAPI( DBI dbi, ObjectStore localStore, ObjectStore cloudStore ) {
+    public DatabaseBossAPI( DBI dbi, ObjectStore localStore, ObjectStore cloudStore,  Map<String,String> messages) {
         mDBI = dbi;
         mLocalStore = localStore;
         mCloudStore = cloudStore;
+        mMessages = messages;
     }
 
     @Override
     public ErrorDesc getObject(String objectId, String userName, ObjectDesc desc) {
         BossDAO dao = getDao();
         if ( userName == null )
-            return badReqErr("REMOTE_USER header is required.");
+            return badReqErr(getMessage("remoteUser"));
         ObjectRow rec = dao.findObjectById(objectId);
         if ( rec == null )
             return notFoundErr(objectId);
         if ( !"Y".equals(rec.active) )
             return goneErr(objectId);
         if ( !dao.canRead(objectId,userName) )
-            return permsErr(objectId,userName,"read");
+            return readPermsErr(objectId,userName);
         rowToDesc(rec,desc,dao);
         return null;
     }
@@ -62,12 +48,12 @@ public class DatabaseBossAPI implements BossAPI {
     public ErrorDesc findObjectsByName(String objectName, String userName, List<ObjectDesc> descs) {
         descs.clear();
         if ( userName == null )
-            return badReqErr("REMOTE_USER header is required.");
+            return badReqErr(getMessage("remoteUser"));
 
         BossDAO dao = getDao();
         List<ObjectRow> recs = dao.findObjectsByName(userName, objectName);
         if ( recs == null || recs.size() == 0 )
-            return new ErrorDesc(Response.Status.NOT_FOUND,"No readable objects for the name "+objectName+'.');
+            return new ErrorDesc(Response.Status.NOT_FOUND,String.format(getMessage("noReadable"),objectName));
 
         for ( ObjectRow rec : recs ) {
             ObjectDesc desc = new ObjectDesc();
@@ -80,7 +66,7 @@ public class DatabaseBossAPI implements BossAPI {
     @Override
     public ErrorDesc insertObject(ObjectDesc rec, String userName) {
         if ( userName == null )
-            return badReqErr("REMOTE_USER header is required.");
+            return badReqErr(getMessage("remoteUser"));
         String errMsg = testCreationValidity(rec);
         if ( errMsg != null )
             return badReqErr(errMsg);
@@ -89,8 +75,10 @@ public class DatabaseBossAPI implements BossAPI {
 
         // Use the location passed in by the user if the Object is an opaqueURI object,
         // otherwise generate a new (fresh) location.
-        String loc = rec.storagePlatform.equals(StoragePlatform.OPAQUEURI.getValue()) ?
-                rec.directoryPath : createLocation(rec);
+        String loc = rec.directoryPath;
+        if ( !rec.storagePlatform.equals(StoragePlatform.OPAQUEURI.getValue()) &&
+                !Boolean.TRUE.equals(rec.forceLocation) )
+            loc = createLocation(rec);
 
         if ( rec.sizeEstimateBytes == null )
             rec.sizeEstimateBytes = gDefaultEstSize;
@@ -102,7 +90,7 @@ public class DatabaseBossAPI implements BossAPI {
         BossDAO dao = getDao();
         dao.begin();
         dao.insertObject(rec.objectId, rec.objectName, rec.ownerId, rec.sizeEstimateBytes,
-                            loc, rec.storagePlatform, userName, now);
+                loc, rec.storagePlatform, userName, now);
         dao.insertReaders(rec.objectId, readers);
         dao.insertWriters(rec.objectId, writers);
         dao.commit();
@@ -112,7 +100,7 @@ public class DatabaseBossAPI implements BossAPI {
     @Override
     public ErrorDesc updateObject(ObjectDesc desc, String objectId, String userName) {
         if ( userName == null )
-            return badReqErr("REMOTE_USER header is required.");
+            return badReqErr(getMessage("remoteUser"));
         BossDAO dao = getDao();
         ObjectRow rec = dao.findObjectById(objectId);
         if ( rec == null )
@@ -120,7 +108,7 @@ public class DatabaseBossAPI implements BossAPI {
         if ( !"Y".equals(rec.active) )
             return goneErr(objectId);
         if ( !dao.canWrite(objectId,userName) )
-            return permsErr(objectId,userName,"write");
+            return writePermsErr(objectId,userName);
 
         String errMsg = testUpdateValidity(rec,desc);
         if ( errMsg != null )
@@ -169,20 +157,20 @@ public class DatabaseBossAPI implements BossAPI {
         BOSS rev3 spec says: If BOSS is unable to delete the underlying object from the object storage
         (e.g. non-transient network failure, or other error from object store server), it will return an
         appropriate 50x error, and the entry for this object will not be deleted from BOSS.
-    
+
         So, we delete from the db first, then the object store. If object store deletion fails,
         we rollback the db deletion.
     */
     @Override
     public ErrorDesc deleteObject(String objectId, String userName) {
         if ( userName == null )
-            return badReqErr("REMOTE_USER header is required.");
+            return badReqErr(getMessage("remoteUser"));
         BossDAO dao = getDao();
         ObjectRow rec = dao.findObjectById(objectId);
         if ( rec == null || !"Y".equals(rec.active) )
             return notFoundErr(objectId);
         if ( !dao.canWrite(objectId,userName) )
-            return permsErr(objectId,userName,"read");
+            return writePermsErr(objectId,userName);
 
         ObjectStore store = getObjectStore(rec.storagePlatform);
         Timestamp now = new Timestamp(System.currentTimeMillis());
@@ -194,7 +182,7 @@ public class DatabaseBossAPI implements BossAPI {
         } catch (Exception e) {
             dao.rollback();
             return new ErrorDesc(Response.Status.INTERNAL_SERVER_ERROR,
-                    "Unable to delete object resource: "+e.getMessage());
+                    getMessage("unableDelete")+e.getMessage());
         }
 
         // Only commit the ObjectResource delete after checking for ObjectStore deletion.
@@ -205,7 +193,7 @@ public class DatabaseBossAPI implements BossAPI {
         } catch (Exception e) {
             dao.rollback();
             return new ErrorDesc(Response.Status.INTERNAL_SERVER_ERROR,
-                    "Unable to delete object resource from object store: "+e.getMessage());
+                   getMessage("unableDeleteFromObjectStore")+e.getMessage());
         }
 
         return null;
@@ -214,7 +202,7 @@ public class DatabaseBossAPI implements BossAPI {
     @Override
     public ErrorDesc resolveObject(String objectId, String userName, ResolveRequest req, ResolveResponse resp) {
         if ( userName == null )
-            return badReqErr("REMOTE_USER header is required.");
+            return badReqErr(getMessage("remoteUser"));
         BossDAO dao = getDao();
         ObjectRow rec = dao.findObjectById(objectId);
         if ( rec == null )
@@ -224,25 +212,25 @@ public class DatabaseBossAPI implements BossAPI {
 
         if ( req.httpMethod.equals(HttpMethod.PUT) ) {
             if ( !dao.canWrite(objectId,userName) )
-                return permsErr(objectId,userName,"write");
+                return writePermsErr(objectId,userName);
         }
         else if ( req.httpMethod.equals(HttpMethod.GET) ||
-                 req.httpMethod.equals(HttpMethod.HEAD) ) {
+                req.httpMethod.equals(HttpMethod.HEAD) ) {
             if ( !dao.canRead(objectId,userName) )
-                return permsErr(objectId,userName,"read");
+                return readPermsErr(objectId,userName);
         }
         else
-            return badReqErr("httpMethod must be GET, HEAD, or PUT");
+            return badReqErr(getMessage("httpMethod"));
 
         String contentMD5x64 = null;
         if ( req.contentMD5Hex != null ) {
             if ( req.contentMD5Hex.length() != 32 )
-                return badReqErr("MD5 must be 32 hexadecimal characters long");
+                return badReqErr(getMessage("md5"));
             try {
                 contentMD5x64 = DatatypeConverter.printBase64Binary(DatatypeConverter.parseHexBinary(req.contentMD5Hex));
             }
             catch ( IllegalArgumentException e ) {
-                return badReqErr("contentMD5Hex contains non-hexadecimal characters: "+req.contentMD5Hex);
+                return badReqErr(getMessage("contentMD5"));
             }
         }
 
@@ -257,9 +245,34 @@ public class DatabaseBossAPI implements BossAPI {
         else {
             long timeout = now.getTime() + 1000L*req.validityPeriodSeconds;
             ObjectStore objStore = getObjectStore(rec.storagePlatform);
-            resp.objectUrl = objStore.generatePresignedURL(rec.directoryPath, req.httpMethod,
+            resp.objectUrl = objStore.generateResolveURI(rec.directoryPath, req.httpMethod,
                                                             timeout, req.contentType, contentMD5x64);
         }
+        return null;
+    }
+
+    @Override
+    public ErrorDesc resolveObjectForCopying(String objectId, String userName, CopyRequest req, CopyResponse resp) {
+        if ( userName == null )
+            return badReqErr("REMOTE_USER header is required.");
+        BossDAO dao = getDao();
+        ObjectRow rec = dao.findObjectById(objectId);
+        if ( rec == null )
+            return notFoundErr(objectId);
+        if ( !"Y".equals(rec.active) )
+            return goneErr(objectId);
+        if ( rec.storagePlatform.equals(StoragePlatform.OPAQUEURI.getValue()) )
+            return badReqErr("Can't copy opaqueURI objects.");
+        if ( !dao.canWrite(objectId,userName) )
+            return writePermsErr(objectId,userName);
+
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        dao.updateResolveDate(objectId, now);
+
+        ObjectStore objStore = getObjectStore(rec.storagePlatform);
+        long timeout = now.getTime() + 1000L*req.validityPeriodSeconds;
+        resp.uri = objStore.generateCopyURI(rec.directoryPath, req.locationToCopy, timeout);
+
         return null;
     }
 
@@ -276,44 +289,45 @@ public class DatabaseBossAPI implements BossAPI {
         return null;
     }
 
-    private static String testCreationValidity( ObjectDesc desc ) {
+    private String testCreationValidity( ObjectDesc desc ) {
         StringBuilder sb = new StringBuilder();
-        if ( desc.objectId != null ) add(sb,"ObjectId must not be supplied, it will be returned");
-        if ( desc.objectName == null ) add(sb,"ObjectName cannot be null");
-        if ( desc.ownerId == null ) add(sb,"OwnerId cannot be null");
-        if ( desc.storagePlatform == null ) add(sb,"StoragePlatform cannot be null");
+        if ( desc.objectId != null ) add(sb,getMessage("objectIdNotSupplied"));
+        if ( desc.objectName == null ) add(sb,getMessage("objectValidation"));
+        if ( desc.ownerId == null ) add(sb,getMessage("ownerIdValidation"));
+        if ( desc.storagePlatform == null ) add(sb,getMessage("storagePlatformValidation"));
         else {
             if ( desc.storagePlatform.equals(StoragePlatform.CLOUDSTORE.getValue()) ||
-                 desc.storagePlatform.equals(StoragePlatform.LOCALSTORE.getValue()) ) {
-                if ( desc.directoryPath != null )
-                    add(sb,"DirectoryPath must not be supplied for "+desc.storagePlatform+" objects");
+                    desc.storagePlatform.equals(StoragePlatform.LOCALSTORE.getValue()) ) {
+                if ( desc.directoryPath != null && !Boolean.TRUE.equals(desc.forceLocation) )
+                    add(sb,String.format(getMessage("directoryPathNotSupplied"),desc.storagePlatform));
             }
             else if ( desc.storagePlatform.equals(StoragePlatform.OPAQUEURI.getValue()) ) {
                 if ( desc.directoryPath == null )
-                    add(sb,"DirectoryPath must be supplied for "+StoragePlatform.OPAQUEURI.getValue()+" objects");
+                    add(sb,String.format(getMessage("directoryPathToSupply"),StoragePlatform.OPAQUEURI.getValue()));
             }
             else {
-                add(sb,"StoragePlatform must be either " +
-                            StoragePlatform.CLOUDSTORE.getValue() + ", " +
-                            StoragePlatform.LOCALSTORE.getValue() + ", or " +
-                            StoragePlatform.OPAQUEURI.getValue());
+
+                add(sb, String.format(getMessage("storagePlatformOptions"),
+                        StoragePlatform.CLOUDSTORE.getValue(),
+                        StoragePlatform.LOCALSTORE.getValue(),
+                        StoragePlatform.OPAQUEURI.getValue()));
             }
         }
         return sb.length() > 0 ? sb.append('.').toString() : null;
     }
 
-    private static String testUpdateValidity( ObjectCore oldObj, ObjectCore newObj ) {
+    private String testUpdateValidity( ObjectCore oldObj, ObjectCore newObj ) {
         StringBuilder sb = new StringBuilder();
         if ( !consistent(oldObj.objectId,newObj.objectId) )
-            add(sb,"ObjectId cannot be modified");
+            add(sb,getMessage("objectIdFixed"));
         if ( !consistent(oldObj.objectName,newObj.objectName) )
-            add(sb,"ObjectName cannot be modified");
+            add(sb,getMessage("objectNameFixed"));
         if ( !consistent(oldObj.storagePlatform,newObj.storagePlatform) )
-            add(sb,"StoragePlatform cannot be modified");
+            add(sb,getMessage("storagePlatformFixed"));
         if ( !consistent(oldObj.sizeEstimateBytes,newObj.sizeEstimateBytes) )
-            add(sb,"SizeEstimateBytes cannot be modified");
+            add(sb,getMessage("sizeEstimateFixed"));
         if ( !consistent(oldObj.directoryPath,newObj.directoryPath) )
-            add(sb,"DirectoryPath cannot be modified");
+            add(sb,getMessage("directoryPathFixed"));
         return sb.length() > 0 ? sb.append('.').toString() : null;
     }
 
@@ -352,24 +366,36 @@ public class DatabaseBossAPI implements BossAPI {
         return newVal == null || newVal.equals(oldVal);
     }
 
-    private static ErrorDesc notFoundErr(String objectId) {
-        return new ErrorDesc(Response.Status.NOT_FOUND,"Object "+objectId+" not found.");
+    private ErrorDesc notFoundErr(String objectId) {
+        return new ErrorDesc(Response.Status.NOT_FOUND,String.format(getMessage("objectNotFound"),objectId));
     }
 
-    private static ErrorDesc goneErr(String objectId) {
-        return new ErrorDesc(Response.Status.GONE,"Object "+objectId+" was deleted.");
+    private ErrorDesc goneErr(String objectId) {
+        return new ErrorDesc(Response.Status.GONE,String.format(getMessage("objectDeleted"),objectId));
     }
 
-    private static ErrorDesc permsErr(String objectId, String userName, String op) {
-        return new ErrorDesc(Response.Status.FORBIDDEN,"No "+op+" permission for "+objectId+" by "+userName+'.');
+    private ErrorDesc readPermsErr(String objectId, String userName) {
+        return new ErrorDesc(Response.Status.FORBIDDEN,String.format(getMessage("noReadPermission"),objectId,userName));
+    }
+
+    private ErrorDesc writePermsErr(String objectId, String userName) {
+        return new ErrorDesc(Response.Status.FORBIDDEN,String.format(getMessage("noWritePermission"),objectId,userName));
     }
 
     private static ErrorDesc badReqErr(String message) {
         return new ErrorDesc(Response.Status.BAD_REQUEST,message);
     }
 
+    private String getMessage(String key) {
+        String msg = mMessages.get(key);
+        if ( msg == null )
+            msg = "Server misconfiguration: No message for "+key+'.';
+        return msg;
+    }
+
     DBI mDBI;
     private ObjectStore mLocalStore;
     private ObjectStore mCloudStore;
+    private Map<String,String> mMessages;
     static private Long gDefaultEstSize = new Long(-1);
 }

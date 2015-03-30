@@ -1,19 +1,3 @@
-/*
- * Copyright 2014 Broad Institute
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package org.genomebridge.boss.http;
 
 import com.sun.jersey.api.client.Client;
@@ -23,6 +7,8 @@ import io.dropwizard.testing.junit.DropwizardAppRule;
 
 import org.genomebridge.boss.http.models.StoragePlatform;
 import org.genomebridge.boss.http.objectstore.ObjectStoreConfiguration;
+import org.genomebridge.boss.http.service.BossAPI.CopyRequest;
+import org.genomebridge.boss.http.service.BossAPI.CopyResponse;
 import org.genomebridge.boss.http.service.BossAPI.ObjectDesc;
 import org.genomebridge.boss.http.service.BossAPI.ResolveRequest;
 import org.genomebridge.boss.http.service.BossAPI.ResolveResponse;
@@ -33,6 +19,8 @@ import javax.ws.rs.HttpMethod;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import java.net.HttpURLConnection;
+import java.util.Map;
 import java.util.Random;
 
 import static org.fest.assertions.api.Assertions.assertThat;
@@ -52,6 +40,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
             new DropwizardAppRule<>(BossApplication.class,
                     resourceFilePath("boss-config.yml"));
 
+    private Map<String,String> messages = BossApplication.getMessages();
 
     @Override
     public DropwizardAppRule<BossConfiguration> rule() {
@@ -136,7 +125,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         checkStatus( OK, get(client, objectPath) );
         checkStatus( OK, delete(client, objectPath));
         response = checkStatus( GONE, get(client, objectPath) );
-        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Object %s was deleted.", created.objectId));
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format(messages.get("objectDeleted"), created.objectId));
     }
 
     @Test
@@ -151,7 +140,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
         response = checkStatus( NOT_FOUND, get(client, truncatedObjectPath));
 
-        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Object %s not found.", truncatedObjectId));
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format(messages.get("objectNotFound"), truncatedObjectId));
     }
 
     @Test
@@ -165,7 +154,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         ClientResponse response = checkStatus(FORBIDDEN, delete(client, objectPath, fakeUser));
         String objectId = objectPath.substring(objectPath.length()-36,objectPath.length());
         assertThat(response.getEntity(String.class))
-                .isEqualTo(String.format("No read permission for %s by %s.", objectId, fakeUser));
+                .isEqualTo(String.format(messages.get("noWritePermission"), objectId, fakeUser));
 
         check200( get(client, objectPath) );
     }
@@ -235,7 +224,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         // It's illegal to change the name!
         response = checkStatus(BAD_REQUEST, post(client, objectPath, rec));
         assertThat(response.getEntity(String.class))
-                .isEqualTo("ObjectName cannot be modified.");
+                .isEqualTo(messages.get("objectNameFixed")+'.');
 
         response = check200( get(client, objectPath));
 
@@ -260,7 +249,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         // It's illegal, as the user 'fake_user', to update the readers field of the ObjectDesc
         response = checkStatus(FORBIDDEN, post(client, objectPath, fakeUser, rec));
         assertThat(response.getEntity(String.class))
-                .isEqualTo(String.format("No write permission for %s by %s.", rec.objectId, fakeUser));
+                .isEqualTo(String.format(messages.get("noWritePermission"), rec.objectId, fakeUser));
 
         response = check200( get(client, objectPath) );
 
@@ -351,7 +340,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
         response = post(client, objectPath + "/resolve", req);
         // If the user doesn't have a correct objectstore configuration, this is a typical symptom
-        assertThat(response.getStatus()).overridingErrorMessage("Unexpected server error: Is your environment correctly configured for the S3 objectstore?").isNotEqualTo(INTERNAL_SERVER_ERROR);
+        assertThat(response.getStatus()).overridingErrorMessage(messages.get("serverError")).isNotEqualTo(INTERNAL_SERVER_ERROR);
 
         checkStatus(BAD_REQUEST, response);
     }
@@ -395,7 +384,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
         response = checkStatus(FORBIDDEN, post(client, objectPath + "/resolve", fakeUser, req));
         assertThat(response.getEntity(String.class))
-                .isEqualTo(String.format("No read permission for %s by %s.", desc.objectId, fakeUser));
+                .isEqualTo(String.format(messages.get("noReadPermission"), desc.objectId, fakeUser));
     }
 
     @Test
@@ -415,11 +404,11 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         req.httpMethod = HttpMethod.GET;
         req.validityPeriodSeconds = seconds;
         response = checkStatus( NOT_FOUND, post(client, truncatedObjectPath + "/resolve", req));
-        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Object %s not found.", truncatedObjectId));
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format(messages.get("objectNotFound"), truncatedObjectId));
 
         // confirm that we also can't delete it
         response = checkStatus(NOT_FOUND, delete(client, truncatedObjectPath));
-        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Object %s not found.", truncatedObjectId));
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format(messages.get("objectNotFound"), truncatedObjectId));
     }
 
     @Test
@@ -442,17 +431,20 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         req.httpMethod = HttpMethod.GET;
         req.validityPeriodSeconds = seconds;
         response = checkStatus( GONE, post(client, objectPath + "/resolve", req));
-        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Object %s was deleted.", created.objectId));
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format(messages.get("objectDeleted"), created.objectId));
 
         // confirm that we can't re-delete it
         checkStatus(NOT_FOUND, delete(client, objectPath));
     }
 
-    // can't do this right now -- we don't want to put valid objectstore credentials into github
+    // can't do this right now -- we don't want to put valid objectstore credentials into github.
+    // to run this test, copy a valid boss-config.yml to src/test/resources, and put the bossdev.p12
+    // key file wherever boss-config.yml says it is.
     //@Test
     public void testActuallyStoringSomeContent() {
         Client client = new Client();
 
+        // create a cloudStore object
         ObjectDesc obj = new ObjectDesc();
         obj.ownerId = "testuser";
         obj.objectName = "someObject";
@@ -460,33 +452,104 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         obj.writers = arraySet( "testuser" );
         obj.sizeEstimateBytes = 13L;
         obj.storagePlatform = StoragePlatform.CLOUDSTORE.getValue();
-
         ClientResponse response = checkStatus(CREATED, post(client,objectsPath(),obj));
         String objectPath = checkHeader(response, "Location");
+
+        // resolve the object for a PUT
         ResolveRequest req = new ResolveRequest();
-        req.httpMethod = "PUT";
+        req.httpMethod = HttpMethod.PUT;
         req.validityPeriodSeconds = 120;
         req.contentType = MediaType.TEXT_PLAIN;
         response = checkStatus(OK, post(client,objectPath+"/resolve","testuser",req));
         ResolveResponse resp = response.getEntity(ResolveResponse.class);
 
+        // write some content to the signed URL
         String putContent = "Some content.";
         response = client.resource(resp.objectUrl.toString())
                          .type(MediaType.TEXT_PLAIN)
                          .put(ClientResponse.class,putContent);
         assertThat(response.getStatus()).isEqualTo(OK);
 
+        // resolve the object for a GET
         req.httpMethod = HttpMethod.GET;
         response = checkStatus(OK, post(client,objectPath+"/resolve","testuser",req));
         resp = response.getEntity(ResolveResponse.class);
 
+        // get the data from the signed URL
         response = client.resource(resp.objectUrl.toString())
                          .type(MediaType.TEXT_PLAIN)
                          .get(ClientResponse.class);
         assertThat(response.getStatus()).isEqualTo(OK);
         String getContent = response.getEntity(String.class);
+
+        // make sure we got back what we wrote
         assertThat(getContent).isEqualTo(putContent);
 
+        // clean up by deleting object
+        checkStatus(OK,delete(client,objectPath));
+    }
+
+    // can't do this right now -- we don't want to put valid objectstore credentials into github.
+    // to run this test, copy a valid boss-config.yml to src/test/resources, and put the bossdev.p12
+    // key file wherever boss-config.yml says it is.
+    //@Test
+    public void testCopy() throws Exception {
+        Client client = new Client();
+
+        // create a cloudStore object
+        ObjectDesc obj = new ObjectDesc();
+        obj.ownerId = "testuser";
+        obj.objectName = "copiedObject";
+        obj.readers = arraySet( "testuser" );
+        obj.writers = arraySet( "testuser" );
+        obj.sizeEstimateBytes = 13L;
+        obj.storagePlatform = StoragePlatform.CLOUDSTORE.getValue();
+        ClientResponse response = checkStatus(CREATED, post(client,objectsPath(),obj));
+        String objectPath = checkHeader(response, "Location");
+
+        // here's a test object in another bucket to copy
+        String locationToCopy = "/broad-dsde-dev-public/NA12878/uBam_21.bam";
+
+        // get a signed URL for copying the test object to our new object
+        CopyRequest copyReq = new CopyRequest();
+        copyReq.locationToCopy = locationToCopy;
+        copyReq.validityPeriodSeconds = 5;
+        CopyResponse copyResp = checkStatus(OK,
+                                            post(client,objectPath+"/copy","testuser",copyReq))
+                                        .getEntity(CopyResponse.class);
+
+        // ask GCS to do the copy
+        // Jersey is too smart to send an empty PUT
+        HttpURLConnection conn = (HttpURLConnection)copyResp.uri.toURL().openConnection();
+        conn.setDoOutput(true);
+        conn.setDoInput(true);
+        conn.setUseCaches(false);
+        conn.setRequestMethod(HttpMethod.PUT);
+        conn.setRequestProperty("x-goog-copy-source",locationToCopy);
+        conn.getOutputStream().close();
+        int respCode = conn.getResponseCode();
+        assertThat(respCode).isEqualTo(OK);
+        conn.disconnect();
+
+        // resolve the object for a GET
+        ResolveRequest req = new ResolveRequest();
+        req.httpMethod = HttpMethod.GET;
+        req.contentType = MediaType.APPLICATION_OCTET_STREAM;
+        req.validityPeriodSeconds = 5;
+        response = checkStatus(OK, post(client,objectPath+"/resolve","testuser",req));
+        ResolveResponse resolveResp = response.getEntity(ResolveResponse.class);
+
+        // get the data from the signed URL
+        response = client.resource(resolveResp.objectUrl.toString())
+                         .type(MediaType.APPLICATION_OCTET_STREAM)
+                         .get(ClientResponse.class);
+        assertThat(response.getStatus()).isEqualTo(OK);
+
+        // see that there are some bytes there
+        byte[] content = response.getEntity(byte[].class);
+        assertThat(content.length).isGreaterThan(155*1024*1024);
+
+        // clean up by deleting object
         checkStatus(OK,delete(client,objectPath));
     }
 }

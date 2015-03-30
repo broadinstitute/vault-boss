@@ -1,18 +1,3 @@
-/*
- * Copyright 2014 Broad Institute
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package org.genomebridge.boss.http.resources;
 
 import org.genomebridge.boss.http.service.BossAPI;
@@ -44,7 +29,7 @@ public class AllObjectsResource extends AbstractResource {
     @GET
     @Produces("application/json")
     public Response findObjectsByName( @QueryParam("name") String objectName,
-                                       @HeaderParam("REMOTE_USER") String userName ) {
+                                       @HeaderParam(REMOTE_USER_HEADER) String userName ) {
         List<ObjectDesc> recs = new ArrayList<>();
         ErrorDesc err = api.findObjectsByName(objectName, userName, recs);
         if ( err != null )
@@ -56,7 +41,7 @@ public class AllObjectsResource extends AbstractResource {
     @Consumes("application/json")
     @Produces("application/json")
     public Response createObject( @Context UriInfo info,
-                                  @HeaderParam("REMOTE_USER") String userName,
+                                  @HeaderParam(REMOTE_USER_HEADER) String userName,
                                   ObjectDesc req ) {
         ErrorDesc err = api.insertObject(req,userName);
         if ( err != null )

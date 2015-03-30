@@ -1,20 +1,6 @@
-/*
- * Copyright 2014 Broad Institute
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package org.genomebridge.boss.http;
 
+import java.util.Map;
 import java.util.UUID;
 import java.util.List;
 
@@ -44,6 +30,7 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
             new DropwizardAppRule<>(BossApplication.class,
                     resourceFilePath("boss-config.yml"));
 
+    private Map<String,String> messages = BossApplication.getMessages();
 
     @Override
     public DropwizardAppRule<BossConfiguration> rule() {
@@ -80,7 +67,7 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
         ObjectDesc rec = fixture();
         rec.objectName = null;
         ClientResponse response = checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
-        assertThat(response.getEntity(String.class)).isEqualTo("ObjectName cannot be null.");
+        assertThat(response.getEntity(String.class)).isEqualTo(messages.get("objectValidation")+'.');
     }
 
     @Test
@@ -91,7 +78,7 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
         ObjectDesc rec = fixture();
         rec.storagePlatform = null;
         ClientResponse response = checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
-        assertThat(response.getEntity(String.class)).isEqualTo("StoragePlatform cannot be null.");
+        assertThat(response.getEntity(String.class)).isEqualTo(messages.get("storagePlatformValidation")+'.');
     }
 
     @Test
@@ -102,7 +89,10 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
         ObjectDesc rec = fixture();
         rec.storagePlatform = "xyzzy";
         ClientResponse response = checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
-        assertThat(response.getEntity(String.class)).isEqualTo("StoragePlatform must be either cloudStore, localStore, or opaqueURI.");
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format(messages.get("storagePlatformOptions"),
+                StoragePlatform.CLOUDSTORE.getValue(),
+                StoragePlatform.LOCALSTORE.getValue(),
+                StoragePlatform.OPAQUEURI.getValue())+'.');
     }
 
     @Test
@@ -113,7 +103,7 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
         ObjectDesc rec = fixture();
         rec.directoryPath = null;
         ClientResponse response = checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
-        assertThat(response.getEntity(String.class)).isEqualTo("DirectoryPath must be supplied for opaqueURI objects.");
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format(messages.get("directoryPathToSupply"),"opaqueURI") + '.');
     }
 
     @Test
@@ -124,7 +114,7 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
         ObjectDesc rec = fixture();
         rec.ownerId = null;
         ClientResponse response = checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
-        assertThat(response.getEntity(String.class)).isEqualTo("OwnerId cannot be null.");
+        assertThat(response.getEntity(String.class)).isEqualTo(messages.get("ownerIdValidation")+'.');
     }
 
     @Test
@@ -137,7 +127,7 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
         final String fakeObjectId = "xyzzy";
 
         ClientResponse response = checkStatus(NOT_FOUND, post(client, String.format("%s/%s", objectsPath(), fakeObjectId), rec));
-        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Object %s not found.", fakeObjectId));
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format(messages.get("objectNotFound"), fakeObjectId));
 
         // check that this is also true for deleted objects
 
@@ -151,9 +141,9 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
         checkStatus(OK, get(client, objectPath));
         checkStatus(OK, delete(client, objectPath));
         response = checkStatus( GONE, post(client, String.format("%s/%s", objectsPath(), created.objectId), rec));
-        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Object %s was deleted.", created.objectId));
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format(String.format(messages.get("objectDeleted"), created.objectId)));
         response = checkStatus( GONE, get(client, objectPath));
-        assertThat(response.getEntity(String.class)).isEqualTo(String.format("Object %s was deleted.", created.objectId));
+        assertThat(response.getEntity(String.class)).isEqualTo(String.format(messages.get("objectDeleted"), created.objectId));
     }
 
     @Test
@@ -196,5 +186,28 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
         recs = response.getEntity(genTyp);
         assertThat(recs.size()).isEqualTo(1);
         assertThat(recs.get(0).objectId).isEqualTo(expectedId);
+    }
+
+    @Test
+    public void testForceLocation() {
+        Client client = new Client();
+
+        ObjectDesc obj = new ObjectDesc();
+        obj.ownerId = "fred";
+        obj.objectName = "john";
+        String[] actors = new String[1];
+        actors[0] = obj.ownerId;
+        obj.readers = actors;
+        obj.writers = actors;
+        obj.sizeEstimateBytes = 500L;
+        obj.storagePlatform = StoragePlatform.CLOUDSTORE.getValue();
+        obj.directoryPath = "gcsLocationThatAlreadyExists";
+        obj.forceLocation = Boolean.TRUE;
+
+        ClientResponse response = checkStatus(CREATED, post(client,objectsPath(),obj.ownerId,obj));
+        ObjectDesc rec = response.getEntity(ObjectDesc.class);
+
+        assertThat(rec).isNotNull();
+        assertThat(rec.directoryPath).isEqualTo(obj.directoryPath);
     }
 }
