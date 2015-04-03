@@ -12,11 +12,11 @@ database:
   url: ${dataSource.url}
   validationQuery: ${dataSource.validationQuery}
 cloudStore:
-  username: mygoogleproject@developer.gserviceaccount.com
-  password: /path/to/key.p12
+  username: ignoredInUnitTesting
+  password: ignoredInUnitTesting
   bucket: bossbucket
-  endpoint: https://storage.googleapis.com
-  type: GCS
+  endpoint: http://localhost:8180/fcs
+  type: FCS
 localStore:
   username: ecsUserName
   password: ecsPassword

@@ -73,12 +73,16 @@ public class DatabaseBossAPI implements BossAPI {
 
         rec.objectId = UUID.randomUUID().toString();
 
-        // Use the location passed in by the user if the Object is an opaqueURI object,
+        // Use the location passed in by the user if the Object is an opaqueURI object
+        // or if the user is forcing the location to a known, pre-existing key,
         // otherwise generate a new (fresh) location.
         String loc = rec.directoryPath;
-        if ( !rec.storagePlatform.equals(StoragePlatform.OPAQUEURI.getValue()) &&
-                !Boolean.TRUE.equals(rec.forceLocation) )
-            loc = createLocation(rec);
+        if ( !rec.storagePlatform.equals(StoragePlatform.OPAQUEURI.getValue()) ) {
+            if ( !Boolean.TRUE.equals(rec.forceLocation) )
+                loc = createLocation(rec);
+            else if ( !getObjectStore(rec.storagePlatform).exists(loc) )
+                return new ErrorDesc(Response.Status.CONFLICT,getMessage("noSuchLocation"));
+        }
 
         if ( rec.sizeEstimateBytes == null )
             rec.sizeEstimateBytes = gDefaultEstSize;
@@ -254,7 +258,7 @@ public class DatabaseBossAPI implements BossAPI {
     @Override
     public ErrorDesc resolveObjectForCopying(String objectId, String userName, CopyRequest req, CopyResponse resp) {
         if ( userName == null )
-            return badReqErr("REMOTE_USER header is required.");
+            return badReqErr(getMessage("remoteUser"));
         BossDAO dao = getDao();
         ObjectRow rec = dao.findObjectById(objectId);
         if ( rec == null )
@@ -281,12 +285,13 @@ public class DatabaseBossAPI implements BossAPI {
     }
 
     private ObjectStore getObjectStore( String storagePlatform ) {
-        if ( storagePlatform.equals(StoragePlatform.CLOUDSTORE.getValue()) )
+        if ( StoragePlatform.CLOUDSTORE.getValue().equals(storagePlatform) )
             return mCloudStore;
-        if ( storagePlatform.equals(StoragePlatform.LOCALSTORE.getValue()) )
+        if ( StoragePlatform.LOCALSTORE.getValue().equals(storagePlatform) )
             return mLocalStore;
-
-        return null;
+        if ( StoragePlatform.OPAQUEURI.getValue().equals(storagePlatform) )
+            return null;
+        throw new IllegalArgumentException(String.format(getMessage("funkyStoragePlatform"),storagePlatform));
     }
 
     private String testCreationValidity( ObjectDesc desc ) {

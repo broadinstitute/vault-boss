@@ -21,11 +21,14 @@ import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 
 import org.genomebridge.boss.http.db.BossDAO;
+import org.genomebridge.boss.http.objectstore.FCSObjectStore;
 import org.genomebridge.boss.http.objectstore.GCSObjectStore;
 import org.genomebridge.boss.http.objectstore.ObjectStore;
 import org.genomebridge.boss.http.objectstore.ObjectStoreConfiguration;
+import org.genomebridge.boss.http.objectstore.ObjectStoreConfiguration.ObjectStoreType;
 import org.genomebridge.boss.http.objectstore.S3ObjectStore;
 import org.genomebridge.boss.http.resources.AllObjectsResource;
+import org.genomebridge.boss.http.resources.FCSResource;
 import org.genomebridge.boss.http.resources.ObjectResource;
 import org.genomebridge.boss.http.service.BossAPI;
 import org.genomebridge.boss.http.service.DatabaseBossAPI;
@@ -69,8 +72,9 @@ public class BossApplication extends Application<BossConfiguration> {
         // Set up the resources themselves.
         env.jersey().register(new ObjectResource(gBossAPI));
         env.jersey().register(new AllObjectsResource(gBossAPI));
-
-
+        if ( localConf.type == ObjectStoreType.FCS || cloudConf.type == ObjectStoreType.FCS ) {
+            env.jersey().register(new FCSResource());
+        }
     }
 
     // For invoking some liquibase magic when the args to the server invocation so specify.
@@ -95,11 +99,12 @@ public class BossApplication extends Application<BossConfiguration> {
     }
 
     private static ObjectStore getObjectStore( ObjectStoreConfiguration config ) throws Exception {
-        if ( "S3".equals(config.type) )
-            return new S3ObjectStore(config);
-        if ( "GCS".equals(config.type) )
-            return new GCSObjectStore(config);
-        throw new IllegalStateException("ObjectStore configuration has unrecognized type: "+config.type);
+        switch ( config.type ) {
+        case S3: return new S3ObjectStore(config);
+        case GCS: return new GCSObjectStore(config);
+        case FCS: return new FCSObjectStore(config);
+        }
+        throw new IllegalArgumentException("No handler for ObjectStoreType "+config.type.toString());
     }
 
     private static class BossMessages {

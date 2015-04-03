@@ -8,8 +8,10 @@ import javax.validation.constraints.NotNull;
  */
 public class ObjectStoreConfiguration {
 
+    @NotNull
     public String username;
 
+    @NotNull
     public String password;
 
     @NotNull
@@ -20,6 +22,12 @@ public class ObjectStoreConfiguration {
     @NotNull
     public String bucket;
 
+    public enum ObjectStoreType {
+        S3,  // Amazon S3 or ECS
+        GCS, // Google Cloud Storage
+        FCS  // Faux Cloud Storage
+    }
+
     @NotNull
-    public String type; // currently either S3 or GCS
+    public ObjectStoreType type;
 }

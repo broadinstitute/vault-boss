@@ -4,6 +4,10 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.List;
 
+import javax.ws.rs.HttpMethod;
+import javax.ws.rs.core.MediaType;
+
+import com.google.common.net.HttpHeaders;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.GenericType;
@@ -12,6 +16,8 @@ import io.dropwizard.testing.junit.DropwizardAppRule;
 
 import org.genomebridge.boss.http.models.StoragePlatform;
 import org.genomebridge.boss.http.service.BossAPI.ObjectDesc;
+import org.genomebridge.boss.http.service.BossAPI.ResolveRequest;
+import org.genomebridge.boss.http.service.BossAPI.ResolveResponse;
 import org.junit.ClassRule;
 import org.junit.Test;
 
@@ -24,6 +30,7 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
     public static int BAD_REQUEST = ClientResponse.Status.BAD_REQUEST.getStatusCode();
     public static int NOT_FOUND = ClientResponse.Status.NOT_FOUND.getStatusCode();
     public static int GONE = ClientResponse.Status.GONE.getStatusCode();
+    public static int CONFLICT = ClientResponse.Status.CONFLICT.getStatusCode();
 
     @ClassRule
     public static final DropwizardAppRule<BossConfiguration> RULE =
@@ -47,7 +54,7 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
 
         ClientResponse response = checkStatus(CREATED, createObject("Name", "tdanford", 500L));
 
-        String location = checkHeader(response, "Location");
+        String location = checkHeader(response, HttpHeaders.LOCATION);
 
         response = check200( get(client, location) );
 
@@ -136,7 +143,7 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
         // in the end-to-end integration tests.
         response = checkStatus(CREATED, createObject("Name", "tdanford", StoragePlatform.OPAQUEURI.getValue(), "file:///path/to/file", 500L));
         ObjectDesc created = response.getEntity(ObjectDesc.class);
-        String objectPath = checkHeader(response, "Location");
+        String objectPath = checkHeader(response, HttpHeaders.LOCATION);
 
         checkStatus(OK, get(client, objectPath));
         checkStatus(OK, delete(client, objectPath));
@@ -192,22 +199,64 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
     public void testForceLocation() {
         Client client = new Client();
 
+        // create an object
         ObjectDesc obj = new ObjectDesc();
         obj.ownerId = "fred";
         obj.objectName = "john";
-        String[] actors = new String[1];
-        actors[0] = obj.ownerId;
-        obj.readers = actors;
-        obj.writers = actors;
+        obj.readers = new String[1];
+        obj.readers[0] = obj.ownerId;
+        obj.writers = obj.readers;
         obj.sizeEstimateBytes = 500L;
         obj.storagePlatform = StoragePlatform.CLOUDSTORE.getValue();
-        obj.directoryPath = "gcsLocationThatAlreadyExists";
-        obj.forceLocation = Boolean.TRUE;
-
         ClientResponse response = checkStatus(CREATED, post(client,objectsPath(),obj.ownerId,obj));
-        ObjectDesc rec = response.getEntity(ObjectDesc.class);
+        String objectPath = checkHeader(response, HttpHeaders.LOCATION);
+        String objectId = response.getEntity(ObjectDesc.class).objectId;
 
+        // resolve the object for a PUT
+        ResolveRequest req = new ResolveRequest();
+        req.httpMethod = HttpMethod.PUT;
+        req.validityPeriodSeconds = 120;
+        req.contentType = MediaType.TEXT_PLAIN;
+        response = checkStatus(OK, post(client,objectPath+"/resolve",obj.ownerId,req));
+        String putURL = response.getEntity(ResolveResponse.class).objectUrl.toString();
+
+        // delete the object (but the PUT URL is still valid)
+        checkStatus(OK, delete(client, objectPath, obj.ownerId));
+
+        // write some content to the PUT URL
+        String putContent = "Some content.";
+        response = checkStatus(OK, client.resource(putURL)
+                                     .type(MediaType.TEXT_PLAIN)
+                                     .put(ClientResponse.class,putContent));
+
+        // do a forceLocation for the key where we shoved the content
+        // we're relying on "inside" knowledge to extract the key from the PUT URL -- not ideal
+        int idx = putURL.indexOf(objectId);
+        obj.directoryPath = putURL.substring(idx,idx+49);
+        obj.forceLocation = true;
+        response = checkStatus(CREATED, post(client,objectsPath(),obj.ownerId,obj));
+        objectPath = checkHeader(response, HttpHeaders.LOCATION);
+        ObjectDesc rec = response.getEntity(ObjectDesc.class);
         assertThat(rec).isNotNull();
         assertThat(rec.directoryPath).isEqualTo(obj.directoryPath);
+
+        checkStatus(OK, delete(client, objectPath, obj.ownerId));
+    }
+
+    @Test
+    public void testForceBogusLocation() {
+        // create an object
+        ObjectDesc obj = new ObjectDesc();
+        obj.ownerId = "fred";
+        obj.objectName = "john";
+        obj.readers = new String[1];
+        obj.readers[0] = obj.ownerId;
+        obj.writers = obj.readers;
+        obj.sizeEstimateBytes = 500L;
+        obj.storagePlatform = StoragePlatform.CLOUDSTORE.getValue();
+        obj.directoryPath = "doesNotExist";
+        obj.forceLocation = true;
+        ClientResponse response = checkStatus(CONFLICT, post(new Client(),objectsPath(),obj.ownerId,obj));
+        assertThat(response.getEntity(String.class)).isEqualTo(messages.get("noSuchLocation"));
     }
 }
