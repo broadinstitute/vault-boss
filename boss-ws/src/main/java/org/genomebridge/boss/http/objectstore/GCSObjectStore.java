@@ -29,11 +29,10 @@ public class GCSObjectStore implements ObjectStore {
     }
 
     @Override
-    public URI generateCopyURI( String objKey, String locationToCopy, long timeoutInMillis ) {
+    public URI generateCopyURI( String bucketAndKey, String locationToCopy, long timeoutInMillis ) {
 
-        String location = getLocation(objKey);
         String xHeaders = "x-goog-copy-source:" + locationToCopy + '\n';
-        return getSignedURI(location,HttpMethod.PUT,timeoutInMillis,null,null,xHeaders);
+        return getSignedURI(bucketAndKey,HttpMethod.PUT,timeoutInMillis,null,null,xHeaders);
     }
 
     @Override
@@ -49,6 +48,15 @@ public class GCSObjectStore implements ObjectStore {
                 status == Response.Status.NOT_FOUND.getStatusCode() )
             return;
         throw new ObjectStoreException(response.getEntity(String.class));
+    }
+
+    @Override
+    public boolean exists( String objKey ) {
+        String location = getLocation(objKey);
+        long timeoutInMillis = System.currentTimeMillis() + A_FEW_SECONDS;
+        URI uri = getSignedURI(location,HttpMethod.HEAD,timeoutInMillis,null,null,null);
+        ClientResponse response = new Client().resource(uri.toString()).head();
+        return response.getStatus() == Response.Status.OK.getStatusCode();
     }
 
     public URI getSignedURI( String location, String method, long timeoutInMillis, String contentType, String contentMD5, String xHeaders ) {

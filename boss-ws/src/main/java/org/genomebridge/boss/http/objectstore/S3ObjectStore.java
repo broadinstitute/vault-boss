@@ -18,16 +18,10 @@ public class S3ObjectStore implements ObjectStore {
     public S3ObjectStore( ObjectStoreConfiguration config ) {
         bucket = config.bucket;
 
-        if ( config.username != null && config.password != null ) {
-            AWSCredentials creds = new BasicAWSCredentials(config.username, config.password);
-            client = new AmazonS3Client(creds);
-        } else {
-            client = new AmazonS3Client();
-        }
-        if ( config.endpoint != null ) {
-            client.setEndpoint(config.endpoint);
-        }
-        if ( config.pathStyleAccess != null && config.pathStyleAccess ) {
+        AWSCredentials creds = new BasicAWSCredentials(config.username, config.password);
+        client = new AmazonS3Client(creds);
+        client.setEndpoint(config.endpoint);
+        if ( Boolean.TRUE.equals(config.pathStyleAccess) ) {
             client.setS3ClientOptions(new S3ClientOptions().withPathStyleAccess(true));
         }
     }
@@ -48,7 +42,7 @@ public class S3ObjectStore implements ObjectStore {
     }
 
     @Override
-    public URI generateCopyURI(String key, String locationToCopy, long timeoutInMillis) {
+    public URI generateCopyURI(String bucketAndKey, String locationToCopy, long timeoutInMillis) {
         throw new ObjectStoreException("Copying objects is not currently supported on S3 storage.");
     }
 
@@ -59,6 +53,17 @@ public class S3ObjectStore implements ObjectStore {
         } catch (AmazonClientException ace) {
             throw new ObjectStoreException(ace);
         }
+    }
+
+    @Override
+    public boolean exists(String key) {
+        try {
+            client.getObjectMetadata(bucket,key);
+            return true;
+        }
+        catch ( Exception e ) {
+        }
+        return false;
     }
 
     private AmazonS3 client;
