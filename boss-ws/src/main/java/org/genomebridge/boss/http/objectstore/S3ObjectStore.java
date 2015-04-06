@@ -65,7 +65,10 @@ public class S3ObjectStore implements ObjectStore {
         }
         return false;
     }
-
+    @Override
+    public URI generateResumableUploadURL(String objectName) {
+        throw new ObjectStoreException("Resumable upload is not currently supported on S3 storage.");
+    }
     private AmazonS3 client;
     private String bucket;
 }

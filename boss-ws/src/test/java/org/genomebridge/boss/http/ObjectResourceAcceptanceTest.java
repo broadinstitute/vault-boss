@@ -164,7 +164,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         assertThat(response.getEntity(String.class))
                 .isEqualTo(String.format(messages.get("noWritePermission"), objectId, fakeUser));
 
-        check200( get(client, objectPath) );
+        check200(get(client, objectPath));
     }
 
     @Test
@@ -182,7 +182,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
         check200( post(client, objectPath, rec));
 
-        response = check200( get(client, objectPath));
+        response = check200(get(client, objectPath));
 
         rec = response.getEntity(ObjectDesc.class);
 
@@ -570,4 +570,20 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         // clean up by deleting 2nd object
         checkStatus(OK,delete(client,objectPath2,obj.ownerId));
     }
+
+    @Test
+    public void testMultiResumable() {
+        Client client = new Client();
+        ClientResponse response = checkStatus( CREATED, createObject("testOject", "tdanford", StoragePlatform.CLOUDSTORE.getValue(),null,1001L));
+        String objectPath = checkHeader( response, "Location");
+        ObjectDesc desc = response.getEntity(ObjectDesc.class);
+        response = post(client, objectPath + "/multi",null);
+        assertThat(response.getStatus()).isEqualTo(OK);
+        CopyResponse rec = response.getEntity(CopyResponse.class);
+        assertThat(rec).isNotNull();
+        ObjectStoreConfiguration config = RULE.getConfiguration().getCloudStoreConfiguration();
+        String urlToExpect = config.endpoint + '/' + config.bucket + '/' + desc.objectName;
+        assertThat(rec.uri.toString()).startsWith(urlToExpect);
+    }
+
 }

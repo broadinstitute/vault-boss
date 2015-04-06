@@ -173,8 +173,8 @@ public class DatabaseBossAPI implements BossAPI {
         ObjectRow rec = dao.findObjectById(objectId);
         if ( rec == null || !"Y".equals(rec.active) )
             return notFoundErr(objectId);
-        if ( !dao.canWrite(objectId,userName) )
-            return writePermsErr(objectId,userName);
+        if ( !dao.canWrite(objectId, userName) )
+            return writePermsErr(objectId, userName);
 
         ObjectStore store = getObjectStore(rec.storagePlatform);
         Timestamp now = new Timestamp(System.currentTimeMillis());
@@ -278,6 +278,28 @@ public class DatabaseBossAPI implements BossAPI {
         resp.uri = objStore.generateCopyURI(rec.directoryPath, req.locationToCopy, timeout);
 
         return null;
+    }
+
+    @Override
+    public ErrorDesc getResumableUploadURL(String objectId, String userName, CopyResponse resp) {
+        ErrorDesc error = null;
+        if ( userName == null  ){
+            return badReqErr(getMessage("remoteUser"));
+        }
+        BossDAO dao = getDao();
+        ObjectRow rec = dao.findObjectById(objectId);
+        if ( rec == null ) {
+            return  notFoundErr(objectId);
+        }
+        if (rec.storagePlatform.equals(StoragePlatform.OPAQUEURI.getValue()))
+            return badReqErr("Can't get resumable url for "+rec.storagePlatform+" store objects.");
+        if ( !dao.canWrite(objectId,userName) ) {
+            return  writePermsErr(objectId,userName);
+        }
+        ObjectStore objStore = getObjectStore(rec.storagePlatform);
+        resp.uri = objStore.generateResumableUploadURL(rec.objectName);
+        return error;
+
     }
 
     private BossDAO getDao() {
@@ -397,6 +419,8 @@ public class DatabaseBossAPI implements BossAPI {
             msg = "Server misconfiguration: No message for "+key+'.';
         return msg;
     }
+
+
 
     DBI mDBI;
     private ObjectStore mLocalStore;

@@ -49,6 +49,7 @@ public interface BossAPI {
     }
 
     public ErrorDesc resolveObject(String objectId, String userName, ResolveRequest req, ResolveResponse resp);
+    public ErrorDesc getResumableUploadURL(String objectId, String userName, CopyResponse resp);
 
     public static class CopyRequest {
         public Integer validityPeriodSeconds;
