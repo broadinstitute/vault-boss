@@ -3,7 +3,7 @@ package org.genomebridge.boss.http;
 import io.dropwizard.testing.junit.DropwizardAppRule;
 
 import org.genomebridge.boss.http.db.BossDAO;
-import org.genomebridge.boss.http.service.BossAPI.ObjectDesc;
+import org.genomebridge.boss.http.models.ObjectDesc;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;

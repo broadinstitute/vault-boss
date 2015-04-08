@@ -5,9 +5,9 @@ import com.sun.jersey.api.client.ClientResponse;
 
 import io.dropwizard.testing.junit.DropwizardAppRule;
 
+import org.genomebridge.boss.http.models.ObjectDesc;
 import org.genomebridge.boss.http.models.StoragePlatform;
 import org.genomebridge.boss.http.resources.AbstractResource;
-import org.genomebridge.boss.http.service.BossAPI.ObjectDesc;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;

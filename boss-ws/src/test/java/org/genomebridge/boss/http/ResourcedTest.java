@@ -4,8 +4,8 @@ import java.net.URL;
 import java.util.Arrays;
 import java.util.TreeSet;
 
+import org.genomebridge.boss.http.models.ObjectDesc;
 import org.genomebridge.boss.http.models.StoragePlatform;
-import org.genomebridge.boss.http.service.BossAPI.ObjectDesc;
 
 /**
  * Abstract super-class for tests, that allows easy loading of resources from the classpath.
