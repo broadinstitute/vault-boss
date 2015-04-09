@@ -16,4 +16,6 @@ public interface ObjectStore {
     public void deleteObject(String objKey);
 
     public boolean exists(String objKey);
+
+    public URI generateResumableUploadURL(String objectName);
 }

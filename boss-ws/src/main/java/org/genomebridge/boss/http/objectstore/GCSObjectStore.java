@@ -1,12 +1,14 @@
 package org.genomebridge.boss.http.objectstore;
 
 import java.io.FileInputStream;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.Signature;
+import java.sql.Timestamp;
 
 import javax.ws.rs.HttpMethod;
 import javax.ws.rs.core.Response;
@@ -59,6 +61,28 @@ public class GCSObjectStore implements ObjectStore {
         return response.getStatus() == Response.Status.OK.getStatusCode();
     }
 
+    @Override
+    public URI generateResumableUploadURL(String objectName) {
+        URI uri = null;
+        try{
+            uri = generateResumableURI(objectName);
+            HttpURLConnection conn = (HttpURLConnection) uri.toURL().openConnection();
+            conn.setDoOutput(true);
+            conn.setDoInput(true);
+            conn.setUseCaches(false);
+            conn.setRequestMethod(HttpMethod.PUT);
+            conn.setRequestProperty("x-goog-resumable", "start");
+            conn.getOutputStream().close();
+            if (conn.getResponseCode() == Response.Status.CREATED.getStatusCode()) {
+                uri = URI.create(conn.getHeaderField("Location"));
+            }
+        }
+        catch (Exception e) {
+            throw new ObjectStoreException("Can't get resumable URL. "+e);
+        }
+        return uri;
+    }
+
     public URI getSignedURI( String location, String method, long timeoutInMillis, String contentType, String contentMD5, String xHeaders ) {
 
         long timeout = (timeoutInMillis+999L)/1000L;
@@ -109,6 +133,16 @@ public class GCSObjectStore implements ObjectStore {
             mKey = (PrivateKey)ks.getKey("privatekey", password);
         }
         return mKey;
+    }
+
+
+
+    private URI generateResumableURI(String name) throws Exception {
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        long timeout = now.getTime() + 1000L * 1000;
+        String location = getLocation(name);
+        String xHeaders = "x-goog-resumable:start" + '\n';
+        return getSignedURI(location, "PUT", timeout, null, null, xHeaders);
     }
 
     private ObjectStoreConfiguration mConfig;

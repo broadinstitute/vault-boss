@@ -51,5 +51,10 @@ public class FCSObjectStore implements ObjectStore {
         return response.getStatus() == Response.Status.OK.getStatusCode();
     }
 
+    @Override
+    public URI generateResumableUploadURL(String objectName) {
+        return generateResolveURI(objectName,HttpMethod.PUT,0L,null,null);
+    }
+
     private ObjectStoreConfiguration mConf;
 }

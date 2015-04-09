@@ -53,7 +53,7 @@ public class ObjectResource extends AbstractResource {
     public ObjectDesc update(@PathParam("objectId") String objectId,
                              @HeaderParam(REMOTE_USER_HEADER) String userName,
                              ObjectDesc desc) {
-        ErrorDesc err = api.updateObject(desc,objectId,userName);
+        ErrorDesc err = api.updateObject(desc, objectId, userName);
         if ( err != null )
             throwWAE(err);
         return desc;
@@ -76,10 +76,23 @@ public class ObjectResource extends AbstractResource {
     @DELETE
     public String delete(@PathParam("objectId") String objectId,
                          @HeaderParam(REMOTE_USER_HEADER) String userName) {
-        ErrorDesc err = api.deleteObject(objectId,userName);
+        ErrorDesc err = api.deleteObject(objectId, userName);
         if ( err != null )
             throwWAE(err);
         return objectId;
+    }
+
+    @Path("multi")
+    @Produces("application/json")
+    @POST
+    public CopyResponse getUploadID(@PathParam("objectId") String objectId,
+                                    @HeaderParam(REMOTE_USER_HEADER) String userName) {
+        CopyResponse resp = new CopyResponse();
+        ErrorDesc err = api.getResumableUploadURL(objectId, userName, resp);
+        if ( err != null ) {
+            throwWAE(err);
+        }
+        return resp;
     }
 
     private BossAPI api;
