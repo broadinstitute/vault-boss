@@ -11,7 +11,11 @@ public interface ObjectStore {
     public URI generateResolveURI(String objKey, String httpMethod, long timeoutInMillis,
                                     String contentType, String contentMD5);
 
-    public URI generateCopyURI(String objKey, String locationToCopy, long timeoutInMillis);
+    public URI generateCopyURI(String bucketAndKey, String locationToCopy, long timeoutInMillis);
 
     public void deleteObject(String objKey);
+
+    public boolean exists(String objKey);
+
+    public URI generateResumableUploadURL(String objectName);
 }

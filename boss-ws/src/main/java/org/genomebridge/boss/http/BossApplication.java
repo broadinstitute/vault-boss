@@ -21,11 +21,15 @@ import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 
 import org.genomebridge.boss.http.db.BossDAO;
+import org.genomebridge.boss.http.models.StoragePlatform;
+import org.genomebridge.boss.http.objectstore.FCSObjectStore;
 import org.genomebridge.boss.http.objectstore.GCSObjectStore;
 import org.genomebridge.boss.http.objectstore.ObjectStore;
 import org.genomebridge.boss.http.objectstore.ObjectStoreConfiguration;
+import org.genomebridge.boss.http.objectstore.ObjectStoreConfiguration.ObjectStoreType;
 import org.genomebridge.boss.http.objectstore.S3ObjectStore;
 import org.genomebridge.boss.http.resources.AllObjectsResource;
+import org.genomebridge.boss.http.resources.FCSResource;
 import org.genomebridge.boss.http.resources.ObjectResource;
 import org.genomebridge.boss.http.service.BossAPI;
 import org.genomebridge.boss.http.service.DatabaseBossAPI;
@@ -60,18 +64,20 @@ public class BossApplication extends Application<BossConfiguration> {
         // Create an API object that the resources can use.
         gDBI = new DBIFactory().build(env, config.getDataSourceFactory(), "db");
         gDBI.registerArgumentFactory(new NullArgumentFactory());
-        Map<String,ObjectStore> objectStores = getObjectStoresMap(config);
+        Map<String,ObjectStoreConfiguration> objectStoreConfigurationMap = config.getObjectStores();
+        Map<String,ObjectStore> objectStores = getObjectStoresMap(objectStoreConfigurationMap);
         gBossAPI = new DatabaseBossAPI(gDBI,objectStores,getMessages());
        // Set up the resources themselves.
         env.jersey().register(new ObjectResource(gBossAPI));
         env.jersey().register(new AllObjectsResource(gBossAPI));
-
-
+        if (objectStoreConfigurationMap.get(StoragePlatform.LOCALSTORE.getValue()).type == ObjectStoreType.FCS 
+        		|| objectStoreConfigurationMap.get(StoragePlatform.CLOUDSTORE.getValue()).type == ObjectStoreType.FCS ) {
+            env.jersey().register(new FCSResource());
+        }
     }
 
-    private Map<String, ObjectStore> getObjectStoresMap(BossConfiguration config) throws Exception {
-    	
-    	Map<String,ObjectStoreConfiguration> objectStoreConfigurationMap = config.getObjectStores();
+    private Map<String, ObjectStore> getObjectStoresMap(Map<String,ObjectStoreConfiguration> objectStoreConfigurationMap) throws Exception {
+    
     	Map<String,ObjectStore> objectStoreMap = new HashMap<String,ObjectStore>();
     	
     	if(objectStoreConfigurationMap != null){
@@ -105,11 +111,12 @@ public class BossApplication extends Application<BossConfiguration> {
     }
 
     private static ObjectStore getObjectStore( ObjectStoreConfiguration config ) throws Exception {
-        if ( "S3".equals(config.type) )
-            return new S3ObjectStore(config);
-        if ( "GCS".equals(config.type) )
-            return new GCSObjectStore(config);
-        throw new IllegalStateException("ObjectStore configuration has unrecognized type: "+config.type);
+        switch ( config.type ) {
+        case S3: return new S3ObjectStore(config);
+        case GCS: return new GCSObjectStore(config);
+        case FCS: return new FCSObjectStore(config);
+        }
+        throw new IllegalArgumentException("No handler for ObjectStoreType "+config.type.toString());
     }
 
     private static class BossMessages {

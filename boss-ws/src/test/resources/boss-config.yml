@@ -13,11 +13,11 @@ database:
   validationQuery: ${dataSource.validationQuery}
 objectStores:
   cloudStore:
-    username: test
-    password: /path/to/key.p12
+    username: ignoredInUnitTesting
+    password: ignoredInUnitTesting
     bucket: bossbucket
-    endpoint: https://storage.googleapis.com
-    type: GCS
+    endpoint: http://localhost:8180/fcs
+    type: FCS
   localStore:
     username: ecsUserName
     password: ecsPassword
@@ -25,3 +25,4 @@ objectStores:
     endpoint: https://ecsserver.broadinstitute.org
     pathStyleAccess: true
     type: S3
+    readOnly: false

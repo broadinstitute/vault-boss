@@ -1,5 +1,6 @@
 package org.genomebridge.boss.http;
 
+import com.google.common.net.HttpHeaders;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 
@@ -54,7 +55,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         Long sizeEstimate = 1010L;
 
         ClientResponse response = checkStatus( CREATED, createObject(name, owner, sizeEstimate) );
-        String objectPath = checkHeader(response, "Location");
+        String objectPath = checkHeader(response, HttpHeaders.LOCATION);
 
         ObjectDesc created = response.getEntity(ObjectDesc.class);
 
@@ -74,7 +75,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         Client client = new Client();
 
         ClientResponse response = checkStatus( CREATED, createObject("Test Name", "tdanford", 1010L) );
-        String objectPath = checkHeader(response, "Location");
+        String objectPath = checkHeader(response, HttpHeaders.LOCATION);
 
         response = check200( get(client, objectPath) );
 
@@ -95,7 +96,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
         ClientResponse response = checkStatus( CREATED,
                 createObject("Test Name", "tdanford", StoragePlatform.OPAQUEURI.getValue(), "/my/path", 1010L) );
-        String objectPath = checkHeader(response, "Location");
+        String objectPath = checkHeader(response, HttpHeaders.LOCATION);
 
         response = check200( get(client, objectPath) );
 
@@ -115,17 +116,24 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
     public void registerDescribeAndDeleteTest() {
         Client client = new Client();
 
-        // until we have a mock object store, calling delete on an objectstore-object will fail, because
-        // the system will reach out to the real objectstore and attempt to delete it. We'll cover that test
-        // in the end-to-end integration tests.
         ClientResponse response = checkStatus( CREATED, createObject("Test Name", "tdanford", StoragePlatform.OPAQUEURI.getValue(), "/foo/bar", 1010L) );
+        String objectPath = checkHeader(response, HttpHeaders.LOCATION);
         ObjectDesc created = response.getEntity(ObjectDesc.class);
-        String objectPath = checkHeader(response, "Location");
 
-        checkStatus( OK, get(client, objectPath) );
-        checkStatus( OK, delete(client, objectPath));
-        response = checkStatus( GONE, get(client, objectPath) );
+        checkStatus(OK, get(client, objectPath));
+        checkStatus(OK, delete(client, objectPath));
+        response = checkStatus(GONE, get(client, objectPath));
         assertThat(response.getEntity(String.class)).isEqualTo(String.format(messages.get("objectDeleted"), created.objectId));
+    }
+
+    @Test
+    public void deleteCloudObject() {
+        Client client = new Client();
+
+        ClientResponse response = checkStatus( CREATED, createObject("Test Name", "tdanford", StoragePlatform.CLOUDSTORE.getValue(), null, 1010L) );
+        String objectPath = checkHeader(response, HttpHeaders.LOCATION);
+        checkStatus(OK, delete(client, objectPath));
+        checkStatus(GONE, get(client, objectPath));
     }
 
     @Test
@@ -134,7 +142,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
         ClientResponse response = checkStatus(CREATED, createObject("test object", "tdanford", 100L));
         ObjectDesc created = response.getEntity(ObjectDesc.class);
-        String objectPath = checkHeader(response, "Location");
+        String objectPath = checkHeader(response, HttpHeaders.LOCATION);
         String truncatedObjectPath = objectPath.substring(0, objectPath.length() - 1);
         String truncatedObjectId = created.objectId.substring(0, created.objectId.length() - 1);
 
@@ -150,13 +158,13 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
         String objectPath = checkHeader(
                 checkStatus( CREATED, createObject("Deletable", "tdanford", 100L )),
-                "Location" );
+                HttpHeaders.LOCATION );
         ClientResponse response = checkStatus(FORBIDDEN, delete(client, objectPath, fakeUser));
         String objectId = objectPath.substring(objectPath.length()-36,objectPath.length());
         assertThat(response.getEntity(String.class))
                 .isEqualTo(String.format(messages.get("noWritePermission"), objectId, fakeUser));
 
-        check200( get(client, objectPath) );
+        check200(get(client, objectPath));
     }
 
     @Test
@@ -164,7 +172,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         Client client = new Client();
 
         ClientResponse response = checkStatus( CREATED, createObject("changeable", "tdanford", 100L));
-        String objectPath = checkHeader(response, "Location");
+        String objectPath = checkHeader(response, HttpHeaders.LOCATION);
 
         ObjectDesc rec = response.getEntity(ObjectDesc.class);
         assertThat(rec).isNotNull();
@@ -174,7 +182,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
         check200( post(client, objectPath, rec));
 
-        response = check200( get(client, objectPath));
+        response = check200(get(client, objectPath));
 
         rec = response.getEntity(ObjectDesc.class);
 
@@ -188,7 +196,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         Client client = new Client();
 
         ClientResponse response = checkStatus( CREATED, createObject("changeable", "tdanford", 100L));
-        String objectPath = checkHeader(response, "Location");
+        String objectPath = checkHeader(response, HttpHeaders.LOCATION);
 
         ObjectDesc rec = response.getEntity(ObjectDesc.class);
         assertThat(rec).isNotNull();
@@ -214,7 +222,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         final String newName = "New Name";
 
         ClientResponse response = checkStatus(CREATED, createObject(unchangeableName, "tdanford", 100L));
-        String objectPath = checkHeader(response, "Location");
+        String objectPath = checkHeader(response, HttpHeaders.LOCATION);
 
         ObjectDesc rec = response.getEntity(ObjectDesc.class);
         assertThat(rec).isNotNull();
@@ -240,7 +248,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         final String fakeUser = "fake_user";
 
         ClientResponse response = checkStatus( CREATED, createObject("test object", "tdanford", 100L));
-        String objectPath = checkHeader(response, "Location");
+        String objectPath = checkHeader(response, HttpHeaders.LOCATION);
 
         ObjectDesc rec = response.getEntity(ObjectDesc.class);
 
@@ -276,7 +284,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         int seconds = rand.nextInt(100) + 10;
 
         ClientResponse response = checkStatus( CREATED, createObject("test object", "tdanford", 100L));
-        String objectPath = checkHeader( response, "Location");
+        String objectPath = checkHeader( response, HttpHeaders.LOCATION);
         ObjectDesc desc = response.getEntity(ObjectDesc.class);
 
         ResolveRequest req = new ResolveRequest();
@@ -329,7 +337,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         int seconds = rand.nextInt(100) + 10;
 
         ClientResponse response = checkStatus( CREATED, createObject("test object", "tdanford", 100L));
-        String objectPath = checkHeader( response, "Location");
+        String objectPath = checkHeader( response, HttpHeaders.LOCATION);
         response.getEntity(ObjectDesc.class);
 
         ResolveRequest req = new ResolveRequest();
@@ -350,7 +358,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         Client client = new Client();
         ClientResponse response = checkStatus( CREATED,
                 createObject("test fs object", "tdanford", "opaqueURI", "file:///path/to/file", 100L));
-        String objectPath = checkHeader( response, "Location" );
+        String objectPath = checkHeader( response, HttpHeaders.LOCATION );
 
         int seconds = 1000;
         ResolveRequest req = new ResolveRequest();
@@ -376,7 +384,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         int seconds = rand.nextInt(100) + 10;
 
         ClientResponse response = checkStatus(CREATED, createObject("test object", "tdanford", 100L));
-        String objectPath = checkHeader(response, "Location");
+        String objectPath = checkHeader(response, HttpHeaders.LOCATION);
         ObjectDesc desc = response.getEntity(ObjectDesc.class);
         ResolveRequest req = new ResolveRequest();
         req.httpMethod = HttpMethod.GET;
@@ -396,7 +404,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
         ClientResponse response = checkStatus(CREATED, createObject("test object", "tdanford", 100L));
         ObjectDesc created = response.getEntity(ObjectDesc.class);
-        String objectPath = checkHeader(response, "Location");
+        String objectPath = checkHeader(response, HttpHeaders.LOCATION);
         String truncatedObjectPath = objectPath.substring(0, objectPath.length() - 1);
         String truncatedObjectId = created.objectId.substring(0, created.objectId.length() - 1);
 
@@ -423,7 +431,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         // in the end-to-end integration tests.
         ClientResponse response = checkStatus(CREATED, createObject("Test Name", "tdanford", StoragePlatform.OPAQUEURI.getValue(), "/foo/bar", 1010L));
         ObjectDesc created = response.getEntity(ObjectDesc.class);
-        String objectPath = checkHeader(response, "Location");
+        String objectPath = checkHeader(response, HttpHeaders.LOCATION);
 
         checkStatus( OK, get(client, objectPath) );
         checkStatus( OK, delete(client, objectPath));
@@ -437,10 +445,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         checkStatus(NOT_FOUND, delete(client, objectPath));
     }
 
-    // can't do this right now -- we don't want to put valid objectstore credentials into github.
-    // to run this test, copy a valid boss-config.yml to src/test/resources, and put the bossdev.p12
-    // key file wherever boss-config.yml says it is.
-    //@Test
+    @Test
     public void testActuallyStoringSomeContent() {
         Client client = new Client();
 
@@ -448,51 +453,47 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         ObjectDesc obj = new ObjectDesc();
         obj.ownerId = "testuser";
         obj.objectName = "someObject";
-        obj.readers = arraySet( "testuser" );
-        obj.writers = arraySet( "testuser" );
+        obj.readers = arraySet( obj.ownerId );
+        obj.writers = obj.readers;
         obj.sizeEstimateBytes = 13L;
         obj.storagePlatform = StoragePlatform.CLOUDSTORE.getValue();
-        ClientResponse response = checkStatus(CREATED, post(client,objectsPath(),obj));
-        String objectPath = checkHeader(response, "Location");
+        ClientResponse response = checkStatus(CREATED, post(client,objectsPath(),obj.ownerId,obj));
+        String objectPath = checkHeader(response, HttpHeaders.LOCATION);
 
         // resolve the object for a PUT
         ResolveRequest req = new ResolveRequest();
         req.httpMethod = HttpMethod.PUT;
         req.validityPeriodSeconds = 120;
         req.contentType = MediaType.TEXT_PLAIN;
-        response = checkStatus(OK, post(client,objectPath+"/resolve","testuser",req));
-        ResolveResponse resp = response.getEntity(ResolveResponse.class);
+        response = checkStatus(OK, post(client,objectPath+"/resolve",obj.ownerId,req));
+        String resolveURL = response.getEntity(ResolveResponse.class).objectUrl.toString();
 
         // write some content to the signed URL
         String putContent = "Some content.";
-        response = client.resource(resp.objectUrl.toString())
+        response = client.resource(resolveURL)
                          .type(MediaType.TEXT_PLAIN)
                          .put(ClientResponse.class,putContent);
         assertThat(response.getStatus()).isEqualTo(OK);
 
         // resolve the object for a GET
         req.httpMethod = HttpMethod.GET;
-        response = checkStatus(OK, post(client,objectPath+"/resolve","testuser",req));
-        resp = response.getEntity(ResolveResponse.class);
+        response = checkStatus(OK, post(client,objectPath+"/resolve",obj.ownerId,req));
+        resolveURL = response.getEntity(ResolveResponse.class).objectUrl.toString();
 
         // get the data from the signed URL
-        response = client.resource(resp.objectUrl.toString())
-                         .type(MediaType.TEXT_PLAIN)
-                         .get(ClientResponse.class);
-        assertThat(response.getStatus()).isEqualTo(OK);
+        response = checkStatus(OK, client.resource(resolveURL)
+                                        .type(MediaType.TEXT_PLAIN)
+                                        .get(ClientResponse.class));
         String getContent = response.getEntity(String.class);
 
         // make sure we got back what we wrote
         assertThat(getContent).isEqualTo(putContent);
 
         // clean up by deleting object
-        checkStatus(OK,delete(client,objectPath));
+        checkStatus(OK,delete(client,objectPath,obj.ownerId));
     }
 
-    // can't do this right now -- we don't want to put valid objectstore credentials into github.
-    // to run this test, copy a valid boss-config.yml to src/test/resources, and put the bossdev.p12
-    // key file wherever boss-config.yml says it is.
-    //@Test
+    @Test
     public void testCopy() throws Exception {
         Client client = new Client();
 
@@ -500,26 +501,47 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         ObjectDesc obj = new ObjectDesc();
         obj.ownerId = "testuser";
         obj.objectName = "copiedObject";
-        obj.readers = arraySet( "testuser" );
-        obj.writers = arraySet( "testuser" );
+        obj.readers = arraySet( obj.ownerId );
+        obj.writers = obj.readers;
         obj.sizeEstimateBytes = 13L;
         obj.storagePlatform = StoragePlatform.CLOUDSTORE.getValue();
-        ClientResponse response = checkStatus(CREATED, post(client,objectsPath(),obj));
-        String objectPath = checkHeader(response, "Location");
+        ClientResponse response = checkStatus(CREATED, post(client,objectsPath(),obj.ownerId,obj));
+        String objectPath1 = checkHeader(response, HttpHeaders.LOCATION);
 
-        // here's a test object in another bucket to copy
-        String locationToCopy = "/broad-dsde-dev-public/NA12878/uBam_21.bam";
+        // resolve the object for a PUT
+        ResolveRequest rReq = new ResolveRequest();
+        rReq.httpMethod = HttpMethod.PUT;
+        rReq.validityPeriodSeconds = 120;
+        rReq.contentType = MediaType.TEXT_PLAIN;
+        response = checkStatus(OK, post(client,objectPath1+"/resolve",obj.ownerId,rReq));
+        String resolveURL = response.getEntity(ResolveResponse.class).objectUrl.toString();
+
+        // write some content to the signed URL
+        String putContent = "Some content.";
+        response = checkStatus(OK, client.resource(resolveURL)
+                                     .type(MediaType.TEXT_PLAIN)
+                                     .put(ClientResponse.class,putContent));
+
+        // use this object we just created as the data to copy
+        // we extract "/bucket/key" using inside knowledge of the format -- not ideal
+        int begIdx = RULE.getConfiguration().getObjectStores().get(StoragePlatform.CLOUDSTORE.getValue()).endpoint.length();
+        int endIdx = resolveURL.lastIndexOf('?');
+        if ( endIdx == -1 ) endIdx = resolveURL.length();
+        String locationToCopy = resolveURL.substring(begIdx,endIdx);
+
+        // create another object
+        response = checkStatus(CREATED, post(client,objectsPath(),obj.ownerId,obj));
+        String objectPath2 = checkHeader(response, HttpHeaders.LOCATION);
 
         // get a signed URL for copying the test object to our new object
         CopyRequest copyReq = new CopyRequest();
         copyReq.locationToCopy = locationToCopy;
         copyReq.validityPeriodSeconds = 5;
-        CopyResponse copyResp = checkStatus(OK,
-                                            post(client,objectPath+"/copy","testuser",copyReq))
-                                        .getEntity(CopyResponse.class);
+        response = checkStatus(OK, post(client,objectPath2+"/copy",obj.ownerId,copyReq));
+        CopyResponse copyResp = response.getEntity(CopyResponse.class);
 
-        // ask GCS to do the copy
-        // Jersey is too smart to send an empty PUT
+        // do the copy
+        // use HttpURLConnection -- Jersey is too smart to send an empty PUT with a Content-Length of 0
         HttpURLConnection conn = (HttpURLConnection)copyResp.uri.toURL().openConnection();
         conn.setDoOutput(true);
         conn.setDoInput(true);
@@ -531,25 +553,37 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         assertThat(respCode).isEqualTo(OK);
         conn.disconnect();
 
-        // resolve the object for a GET
-        ResolveRequest req = new ResolveRequest();
-        req.httpMethod = HttpMethod.GET;
-        req.contentType = MediaType.APPLICATION_OCTET_STREAM;
-        req.validityPeriodSeconds = 5;
-        response = checkStatus(OK, post(client,objectPath+"/resolve","testuser",req));
-        ResolveResponse resolveResp = response.getEntity(ResolveResponse.class);
+        // clean up by deleting 1st object (data in 2nd object should be independent)
+        checkStatus(OK,delete(client,objectPath1,obj.ownerId));
+
+        // resolve the 2nd object for a GET
+        rReq.httpMethod = HttpMethod.GET;
+        response = checkStatus(OK, post(client,objectPath2+"/resolve",obj.ownerId,rReq));
+        resolveURL = response.getEntity(ResolveResponse.class).objectUrl.toString();
 
         // get the data from the signed URL
-        response = client.resource(resolveResp.objectUrl.toString())
-                         .type(MediaType.APPLICATION_OCTET_STREAM)
-                         .get(ClientResponse.class);
-        assertThat(response.getStatus()).isEqualTo(OK);
+        response = checkStatus(OK, client.resource(resolveURL)
+                                        .type(MediaType.TEXT_PLAIN)
+                                        .get(ClientResponse.class));
+        assertThat(response.getEntity(String.class)).isEqualTo(putContent);
 
-        // see that there are some bytes there
-        byte[] content = response.getEntity(byte[].class);
-        assertThat(content.length).isGreaterThan(155*1024*1024);
-
-        // clean up by deleting object
-        checkStatus(OK,delete(client,objectPath));
+        // clean up by deleting 2nd object
+        checkStatus(OK,delete(client,objectPath2,obj.ownerId));
     }
+
+    @Test
+    public void testMultiResumable() {
+        Client client = new Client();
+        ClientResponse response = checkStatus( CREATED, createObject("testOject", "tdanford", StoragePlatform.CLOUDSTORE.getValue(),null,1001L));
+        String objectPath = checkHeader( response, "Location");
+        ObjectDesc desc = response.getEntity(ObjectDesc.class);
+        response = post(client, objectPath + "/multi",null);
+        assertThat(response.getStatus()).isEqualTo(OK);
+        CopyResponse rec = response.getEntity(CopyResponse.class);
+        assertThat(rec).isNotNull();
+        ObjectStoreConfiguration config = RULE.getConfiguration().getObjectStores().get(StoragePlatform.CLOUDSTORE.getValue());
+        String urlToExpect = config.endpoint + '/' + config.bucket + '/' + desc.objectName;
+        assertThat(rec.uri.toString()).startsWith(urlToExpect);
+    }
+
 }
