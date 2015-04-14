@@ -20,10 +20,9 @@ import javax.xml.bind.DatatypeConverter;
  */
 public class DatabaseBossAPI implements BossAPI {
 
-    public DatabaseBossAPI( DBI dbi, ObjectStore localStore, ObjectStore cloudStore,  Map<String,String> messages) {
+    public DatabaseBossAPI( DBI dbi, Map<String,ObjectStore> objectStores,  Map<String,String> messages) {
         mDBI = dbi;
-        mLocalStore = localStore;
-        mCloudStore = cloudStore;
+        mObjectStore = objectStores;
         mMessages = messages;
     }
 
@@ -306,13 +305,12 @@ public class DatabaseBossAPI implements BossAPI {
     }
 
     private ObjectStore getObjectStore( String storagePlatform ) {
-        if ( StoragePlatform.CLOUDSTORE.getValue().equals(storagePlatform) )
-            return mCloudStore;
-        if ( StoragePlatform.LOCALSTORE.getValue().equals(storagePlatform) )
-            return mLocalStore;
-        if ( StoragePlatform.OPAQUEURI.getValue().equals(storagePlatform) )
-            return null;
-        throw new IllegalArgumentException(String.format(getMessage("funkyStoragePlatform"),storagePlatform));
+        if ( storagePlatform.equals(StoragePlatform.CLOUDSTORE.getValue()) )
+            return mObjectStore.get(StoragePlatform.CLOUDSTORE.getValue());
+        if ( storagePlatform.equals(StoragePlatform.LOCALSTORE.getValue()) )
+            return mObjectStore.get(StoragePlatform.LOCALSTORE.getValue());
+
+        return null;
     }
 
     private String testCreationValidity( ObjectDesc desc ) {
@@ -423,7 +421,7 @@ public class DatabaseBossAPI implements BossAPI {
 
     DBI mDBI;
     private ObjectStore mLocalStore;
-    private ObjectStore mCloudStore;
+    private Map<String,ObjectStore> mObjectStore;
     private Map<String,String> mMessages;
     static private Long gDefaultEstSize = new Long(-1);
 }

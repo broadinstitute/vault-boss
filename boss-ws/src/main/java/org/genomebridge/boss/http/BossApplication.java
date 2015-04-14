@@ -8,7 +8,6 @@ import io.dropwizard.migrations.MigrationsBundle;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import io.federecio.dropwizard.swagger.SwaggerDropwizard;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.PreparedStatement;
@@ -66,19 +65,20 @@ public class BossApplication extends Application<BossConfiguration> {
         // Create an API object that the resources can use.
         gDBI = new DBIFactory().build(env, config.getDataSourceFactory(), "db");
         gDBI.registerArgumentFactory(new NullArgumentFactory());
-        ObjectStoreConfiguration localConf = config.getLocalStoreConfiguration();
-        ObjectStore localStore = getObjectStore(localConf);
-        ObjectStoreConfiguration cloudConf = config.getCloudStoreConfiguration();
-        ObjectStore cloudStore = getObjectStore(cloudConf);
-        gBossAPI = new DatabaseBossAPI(gDBI,localStore,cloudStore,getMessages());
+
         SwaggerConfiguration swagger = config.getSwaggerConfiguration();
         // Set up the resources themselves.
+        Map<String,ObjectStore> objectStores = getObjectStoresMap(config);
+        gBossAPI = new DatabaseBossAPI(gDBI,objectStores,getMessages());
         env.jersey().register(new ObjectResource(gBossAPI));
         env.jersey().register(new AllObjectsResource(gBossAPI));
         setSwaggerConfiguration(config, env, swagger);
-        if ( localConf.type == ObjectStoreType.FCS || cloudConf.type == ObjectStoreType.FCS ) {
-            env.jersey().register(new FCSResource());
-        }
+
+       // for (Map.Entry<String, ObjectStoreConfiguration> entry : objectStores.entrySet()) {
+       //   if (entry.getValue().type == ObjectStoreType.FCS){
+       //      env.jersey().register(new FCSResource());
+       //     break;
+       // }
     }
 
     private void setSwaggerConfiguration(BossConfiguration config, Environment env, SwaggerConfiguration swagger) {
@@ -95,7 +95,21 @@ public class BossApplication extends Application<BossConfiguration> {
         swaggerDropwizard.onRun(config, env,swagger.host);
     }
 
-    // For invoking some liquibase magic when the args to the server invocation so specify.
+    private Map<String, ObjectStore> getObjectStoresMap(BossConfiguration config) throws Exception {
+    	
+    	Map<String,ObjectStoreConfiguration> objectStoreConfigurationMap = config.getObjectStores();
+    	Map<String,ObjectStore> objectStoreMap = new HashMap<String,ObjectStore>();
+    	
+    	if(objectStoreConfigurationMap != null){
+    		for (Map.Entry<String, ObjectStoreConfiguration> entry : objectStoreConfigurationMap.entrySet()) {
+    			objectStoreMap.put(entry.getKey(), getObjectStore(entry.getValue()));
+    		}
+    	}
+    	
+		return objectStoreMap;
+	}
+
+	// For invoking some liquibase magic when the args to the server invocation so specify.
     public void initialize(Bootstrap<BossConfiguration> bootstrap) {
 
         bootstrap.addBundle(new MigrationsBundle<BossConfiguration>() {
