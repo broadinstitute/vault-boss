@@ -1,5 +1,13 @@
 package org.genomebridge.boss.http;
 
+import io.dropwizard.Application;
+import io.dropwizard.assets.AssetsBundle;
+import io.dropwizard.db.DataSourceFactory;
+import io.dropwizard.jdbi.DBIFactory;
+import io.dropwizard.migrations.MigrationsBundle;
+import io.dropwizard.setup.Bootstrap;
+import io.dropwizard.setup.Environment;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.PreparedStatement;
@@ -11,14 +19,6 @@ import java.util.Map;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
-
-import io.dropwizard.Application;
-import io.dropwizard.assets.AssetsBundle;
-import io.dropwizard.db.DataSourceFactory;
-import io.dropwizard.jdbi.DBIFactory;
-import io.dropwizard.migrations.MigrationsBundle;
-import io.dropwizard.setup.Bootstrap;
-import io.dropwizard.setup.Environment;
 
 import org.genomebridge.boss.http.db.BossDAO;
 import org.genomebridge.boss.http.objectstore.GCSObjectStore;
@@ -60,20 +60,30 @@ public class BossApplication extends Application<BossConfiguration> {
         // Create an API object that the resources can use.
         gDBI = new DBIFactory().build(env, config.getDataSourceFactory(), "db");
         gDBI.registerArgumentFactory(new NullArgumentFactory());
-        ObjectStoreConfiguration localConf = config.getLocalStoreConfiguration();
-        ObjectStore localStore = getObjectStore(localConf);
-        ObjectStoreConfiguration cloudConf = config.getCloudStoreConfiguration();
-        ObjectStore cloudStore = getObjectStore(cloudConf);
-        gBossAPI = new DatabaseBossAPI(gDBI,localStore,cloudStore,getMessages());
-
-        // Set up the resources themselves.
+        Map<String,ObjectStore> objectStores = getObjectStoresMap(config);
+        gBossAPI = new DatabaseBossAPI(gDBI,objectStores,getMessages());
+       // Set up the resources themselves.
         env.jersey().register(new ObjectResource(gBossAPI));
         env.jersey().register(new AllObjectsResource(gBossAPI));
 
 
     }
 
-    // For invoking some liquibase magic when the args to the server invocation so specify.
+    private Map<String, ObjectStore> getObjectStoresMap(BossConfiguration config) throws Exception {
+    	
+    	Map<String,ObjectStoreConfiguration> objectStoreConfigurationMap = config.getObjectStores();
+    	Map<String,ObjectStore> objectStoreMap = new HashMap<String,ObjectStore>();
+    	
+    	if(objectStoreConfigurationMap != null){
+    		for (Map.Entry<String, ObjectStoreConfiguration> entry : objectStoreConfigurationMap.entrySet()) {
+    			objectStoreMap.put(entry.getKey(), getObjectStore(entry.getValue()));
+    		}
+    	}
+    	
+		return objectStoreMap;
+	}
+
+	// For invoking some liquibase magic when the args to the server invocation so specify.
     public void initialize(Bootstrap<BossConfiguration> bootstrap) {
 
         bootstrap.addBundle(new MigrationsBundle<BossConfiguration>() {

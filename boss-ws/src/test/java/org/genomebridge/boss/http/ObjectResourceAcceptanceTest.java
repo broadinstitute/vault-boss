@@ -294,7 +294,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         ResolveResponse rec = response.getEntity(ResolveResponse.class);
 
         assertThat(rec).isNotNull();
-        ObjectStoreConfiguration config = RULE.getConfiguration().getLocalStoreConfiguration();
+        ObjectStoreConfiguration config = RULE.getConfiguration().getObjectStores().get(StoragePlatform.LOCALSTORE.getValue());
         String urlToExpect = config.endpoint + '/' + config.bucket + '/' + desc.objectId;
         assertThat(rec.objectUrl.toString()).startsWith(urlToExpect);
         assertThat(rec.validityPeriodSeconds).isEqualTo(seconds);

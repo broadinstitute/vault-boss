@@ -11,16 +11,17 @@ database:
   password: ${dataSource.password}
   url: ${dataSource.url}
   validationQuery: ${dataSource.validationQuery}
-cloudStore:
-  username: mygoogleproject@developer.gserviceaccount.com
-  password: /path/to/key.p12
-  bucket: bossbucket
-  endpoint: https://storage.googleapis.com
-  type: GCS
-localStore:
-  username: ecsUserName
-  password: ecsPassword
-  bucket: bossbucket
-  endpoint: https://ecsserver.broadinstitute.org
-  pathStyleAccess: true
-  type: S3
+objectStores:
+  cloudStore:
+    username: test
+    password: /path/to/key.p12
+    bucket: bossbucket
+    endpoint: https://storage.googleapis.com
+    type: GCS
+  localStore:
+    username: ecsUserName
+    password: ecsPassword
+    bucket: bossbucket
+    endpoint: https://ecsserver.broadinstitute.org
+    pathStyleAccess: true
+    type: S3

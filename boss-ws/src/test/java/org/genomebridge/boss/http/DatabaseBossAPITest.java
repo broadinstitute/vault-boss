@@ -88,7 +88,7 @@ public class DatabaseBossAPITest extends ResourcedTest {
             assertThat(api.resolveObject(obj.objectId,"tdanford",req,resp)).isNull();
             URI uri = resp.objectUrl;
             assertThat(uri).isNotNull();
-            ObjectStoreConfiguration config = RULE.getConfiguration().getLocalStoreConfiguration();
+            ObjectStoreConfiguration config = RULE.getConfiguration().getObjectStores().get(StoragePlatform.LOCALSTORE.getValue());
             String urlToExpect = config.endpoint + '/' + config.bucket + '/' + obj.objectId;
             assertThat(uri.toString()).startsWith(urlToExpect);
         }
