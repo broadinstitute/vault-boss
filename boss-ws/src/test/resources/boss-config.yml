@@ -6,11 +6,11 @@ server:
     - type: http
       port: 8180
 database:
-  driverClass: ${dataSource.driver}
-  user: ${dataSource.username}
-  password: ${dataSource.password}
-  url: ${dataSource.url}
-  validationQuery: ${dataSource.validationQuery}
+  driverClass: com.mysql.jdbc.Driver
+  user: egxapp
+  password: password
+  url: jdbc:mysql://localhost:3306/testdb
+  validationQuery: SELECT * FROM objects
 objectStores:
   cloudStore:
     username: ignoredInUnitTesting
@@ -18,6 +18,7 @@ objectStores:
     bucket: bossbucket
     endpoint: http://localhost:8180/fcs
     type: FCS
+    readOnly: false
   localStore:
     username: ecsUserName
     password: ecsPassword
