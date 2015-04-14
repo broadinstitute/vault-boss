@@ -18,6 +18,7 @@ objectStores:
     bucket: bossbucket
     endpoint: https://storage.googleapis.com
     type: GCS
+    readOnly: false
   localStore:
     username: ecsUserName
     password: ecsPassword
@@ -25,3 +26,4 @@ objectStores:
     endpoint: https://ecsserver.broadinstitute.org
     pathStyleAccess: true
     type: S3
+    readOnly: false

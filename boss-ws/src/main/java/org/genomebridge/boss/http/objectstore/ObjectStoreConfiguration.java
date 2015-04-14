@@ -23,4 +23,6 @@ public class ObjectStoreConfiguration {
 
     @NotNull
     public String type; // currently either S3 or GCS
+
+    public Boolean readOnly;
 }
