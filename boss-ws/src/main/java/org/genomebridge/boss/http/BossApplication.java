@@ -65,21 +65,40 @@ public class BossApplication extends Application<BossConfiguration> {
         // Create an API object that the resources can use.
         gDBI = new DBIFactory().build(env, config.getDataSourceFactory(), "db");
         gDBI.registerArgumentFactory(new NullArgumentFactory());
-
+        Map<String, ObjectStoreConfiguration> objectStoreConfigurationMap = config.getObjectStores();
+        Map<String, ObjectStore> objectStores = getObjectStoresMap(objectStoreConfigurationMap);
+        gBossAPI = new DatabaseBossAPI(gDBI, objectStores, getMessages());
         SwaggerConfiguration swagger = config.getSwaggerConfiguration();
         // Set up the resources themselves.
-        Map<String,ObjectStore> objectStores = getObjectStoresMap(config);
-        gBossAPI = new DatabaseBossAPI(gDBI,objectStores,getMessages());
         env.jersey().register(new ObjectResource(gBossAPI));
         env.jersey().register(new AllObjectsResource(gBossAPI));
         setSwaggerConfiguration(config, env, swagger);
 
-       // for (Map.Entry<String, ObjectStoreConfiguration> entry : objectStores.entrySet()) {
-       //   if (entry.getValue().type == ObjectStoreType.FCS){
-       //      env.jersey().register(new FCSResource());
-       //     break;
-       // }
+
+        for (Map.Entry<String, ObjectStoreConfiguration> entry : objectStoreConfigurationMap.entrySet()) {
+            if (entry.getValue().type == ObjectStoreType.FCS) {
+                env.jersey().register(new FCSResource());
+                break;
+            }
+        }
     }
+
+
+
+
+            private Map<String, ObjectStore> getObjectStoresMap(Map<String,ObjectStoreConfiguration> objectStoreConfigurationMap) throws Exception {
+    
+    	Map<String,ObjectStore> objectStoreMap = new HashMap<String,ObjectStore>();
+    	
+    	if(objectStoreConfigurationMap != null){
+    		for (Map.Entry<String, ObjectStoreConfiguration> entry : objectStoreConfigurationMap.entrySet()) {
+    			objectStoreMap.put(entry.getKey(), getObjectStore(entry.getValue()));
+    		}
+    	}
+    	
+		return objectStoreMap;
+	}
+
 
     private void setSwaggerConfiguration(BossConfiguration config, Environment env, SwaggerConfiguration swagger) {
         BeanConfig swaggerConfig = new BeanConfig();
