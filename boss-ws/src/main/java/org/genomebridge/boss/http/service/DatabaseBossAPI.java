@@ -182,6 +182,11 @@ public class DatabaseBossAPI implements BossAPI {
             return writePermsErr(objectId, userName);
 
         ObjectStore store = getObjectStore(rec.storagePlatform);
+
+        // Verifies if the store is ReadOnly
+
+        if (store.getReadOnly())  return readOnlyStoreErr("readOnlyStore");
+
         Timestamp now = new Timestamp(System.currentTimeMillis());
         dao.begin();
 
@@ -246,17 +251,21 @@ public class DatabaseBossAPI implements BossAPI {
         Timestamp now = new Timestamp(System.currentTimeMillis());
         dao.updateResolveDate(objectId, now);
 
+
         resp.validityPeriodSeconds = req.validityPeriodSeconds;
         resp.contentType = req.contentType;
         resp.contentMD5Hex = req.contentMD5Hex;
         if ( rec.storagePlatform.equals(StoragePlatform.OPAQUEURI.getValue()) )
             resp.objectUrl = URI.create(rec.directoryPath);
         else {
-            long timeout = now.getTime() + 1000L*req.validityPeriodSeconds;
-            ObjectStore objStore = getObjectStore(rec.storagePlatform);
-            resp.objectUrl = objStore.generateResolveURI(rec.directoryPath, req.httpMethod,
-                                                            timeout, req.contentType, contentMD5x64);
-        }
+
+             long timeout = now.getTime() + 1000L*req.validityPeriodSeconds;
+             ObjectStore objStore = getObjectStore(rec.storagePlatform);
+             if (objStore.getReadOnly()) return readOnlyStoreErr("readOnlyStore");
+             resp.objectUrl = objStore.generateResolveURI(rec.directoryPath, req.httpMethod,
+                        timeout, req.contentType, contentMD5x64);
+            }
+
         return null;
     }
 
@@ -304,7 +313,6 @@ public class DatabaseBossAPI implements BossAPI {
         ObjectStore objStore = getObjectStore(rec.storagePlatform);
         resp.uri = objStore.generateResumableUploadURL(rec.objectName);
         return error;
-
     }
 
     private BossDAO getDao() {
@@ -420,6 +428,9 @@ public class DatabaseBossAPI implements BossAPI {
         return new ErrorDesc(Response.Status.BAD_REQUEST,message);
     }
 
+    private static ErrorDesc readOnlyStoreErr(String message) {
+        return new ErrorDesc(Response.Status.FORBIDDEN,message);
+    }
     private String getMessage(String key) {
         String msg = mMessages.get(key);
         if ( msg == null )

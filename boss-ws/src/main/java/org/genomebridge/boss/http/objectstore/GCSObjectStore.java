@@ -82,6 +82,10 @@ public class GCSObjectStore implements ObjectStore {
         }
         return uri;
     }
+    @Override
+    public boolean getReadOnly(){
+        return mConfig.readOnly;
+    }
 
     public URI getSignedURI( String location, String method, long timeoutInMillis, String contentType, String contentMD5, String xHeaders ) {
 
