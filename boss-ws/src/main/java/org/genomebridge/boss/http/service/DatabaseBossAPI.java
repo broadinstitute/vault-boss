@@ -3,8 +3,7 @@ package org.genomebridge.boss.http.service;
 import org.apache.commons.lang.ArrayUtils;
 import org.genomebridge.boss.http.db.BossDAO;
 import org.genomebridge.boss.http.db.ObjectRow;
-import org.genomebridge.boss.http.models.ObjectCore;
-import org.genomebridge.boss.http.models.StoragePlatform;
+import org.genomebridge.boss.http.models.*;
 import org.genomebridge.boss.http.objectstore.ObjectStore;
 import org.skife.jdbi.v2.DBI;
 

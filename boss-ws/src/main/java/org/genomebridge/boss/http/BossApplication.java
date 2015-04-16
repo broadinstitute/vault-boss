@@ -1,5 +1,14 @@
 package org.genomebridge.boss.http;
 
+import io.dropwizard.Application;
+import io.dropwizard.assets.AssetsBundle;
+import io.dropwizard.db.DataSourceFactory;
+import io.dropwizard.jdbi.DBIFactory;
+import io.dropwizard.migrations.MigrationsBundle;
+import io.dropwizard.setup.Bootstrap;
+import io.dropwizard.setup.Environment;
+import io.federecio.dropwizard.swagger.SwaggerDropwizard;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.PreparedStatement;
@@ -11,14 +20,6 @@ import java.util.Map;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
-
-import io.dropwizard.Application;
-import io.dropwizard.assets.AssetsBundle;
-import io.dropwizard.db.DataSourceFactory;
-import io.dropwizard.jdbi.DBIFactory;
-import io.dropwizard.migrations.MigrationsBundle;
-import io.dropwizard.setup.Bootstrap;
-import io.dropwizard.setup.Environment;
 
 import org.genomebridge.boss.http.db.BossDAO;
 import org.genomebridge.boss.http.objectstore.FCSObjectStore;
@@ -32,6 +33,7 @@ import org.genomebridge.boss.http.resources.FCSResource;
 import org.genomebridge.boss.http.resources.ObjectResource;
 import org.genomebridge.boss.http.service.BossAPI;
 import org.genomebridge.boss.http.service.DatabaseBossAPI;
+import org.genomebridge.boss.http.swagger.SwaggerConfiguration;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.tweak.Argument;
@@ -39,6 +41,7 @@ import org.skife.jdbi.v2.tweak.ArgumentFactory;
 import org.yaml.snakeyaml.Yaml;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.wordnik.swagger.jaxrs.config.BeanConfig;
 
 /**
  * Top-level entry point to the entire application.
@@ -68,13 +71,28 @@ public class BossApplication extends Application<BossConfiguration> {
         ObjectStoreConfiguration cloudConf = config.getCloudStoreConfiguration();
         ObjectStore cloudStore = getObjectStore(cloudConf);
         gBossAPI = new DatabaseBossAPI(gDBI,localStore,cloudStore,getMessages());
-
+        SwaggerConfiguration swagger = config.getSwaggerConfiguration();
         // Set up the resources themselves.
         env.jersey().register(new ObjectResource(gBossAPI));
         env.jersey().register(new AllObjectsResource(gBossAPI));
+        setSwaggerConfiguration(config, env, swagger);
         if ( localConf.type == ObjectStoreType.FCS || cloudConf.type == ObjectStoreType.FCS ) {
             env.jersey().register(new FCSResource());
         }
+    }
+
+    private void setSwaggerConfiguration(BossConfiguration config, Environment env, SwaggerConfiguration swagger) {
+        BeanConfig swaggerConfig = new BeanConfig();
+        swaggerConfig.setTitle(swagger.title);
+        swaggerConfig.setDescription(swagger.description);
+        swaggerConfig.setBasePath(swagger.baseUrl);
+        swaggerConfig.setContact(swagger.contact);
+        swaggerConfig.setLicense(swagger.license);
+        swaggerConfig.setLicenseUrl(swagger.licenseUrl);
+        swaggerConfig.setTermsOfServiceUrl(swagger.termsOfServiceUrl);
+        swaggerConfig.setVersion(swagger.apiVersion);
+        swaggerConfig.setScan(true);
+        swaggerDropwizard.onRun(config, env,swagger.host);
     }
 
     // For invoking some liquibase magic when the args to the server invocation so specify.
@@ -86,8 +104,8 @@ public class BossApplication extends Application<BossConfiguration> {
                 return configuration.getDataSourceFactory();
             }
         });
-
         bootstrap.addBundle(new AssetsBundle("/assets/", "/site"));
+        swaggerDropwizard.onInitialize(bootstrap);
     }
 
     // These next two little methods break encapsulation, and are just for unit testing.
@@ -100,9 +118,9 @@ public class BossApplication extends Application<BossConfiguration> {
 
     private static ObjectStore getObjectStore( ObjectStoreConfiguration config ) throws Exception {
         switch ( config.type ) {
-        case S3: return new S3ObjectStore(config);
-        case GCS: return new GCSObjectStore(config);
-        case FCS: return new FCSObjectStore(config);
+            case S3: return new S3ObjectStore(config);
+            case GCS: return new GCSObjectStore(config);
+            case FCS: return new FCSObjectStore(config);
         }
         throw new IllegalArgumentException("No handler for ObjectStoreType "+config.type.toString());
     }
@@ -151,4 +169,5 @@ public class BossApplication extends Application<BossConfiguration> {
     private static BossAPI gBossAPI;
     private static Map<String,String> gMessages;
     private static final String MESSAGES_FILE = "messages.yml";
+    private final SwaggerDropwizard swaggerDropwizard = new SwaggerDropwizard();
 }

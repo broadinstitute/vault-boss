@@ -9,6 +9,7 @@ import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 
 import org.genomebridge.boss.http.objectstore.ObjectStoreConfiguration;
+import org.genomebridge.boss.http.swagger.SwaggerConfiguration;
 
 public class BossConfiguration extends Configuration {
 
@@ -26,6 +27,8 @@ public class BossConfiguration extends Configuration {
         return cloudStore;
     }
 
+    public SwaggerConfiguration getSwaggerConfiguration() {return swagger;}
+
     @Valid
     @NotNull
     @JsonProperty
@@ -40,4 +43,9 @@ public class BossConfiguration extends Configuration {
     @NotNull
     @JsonProperty
     private ObjectStoreConfiguration cloudStore = new ObjectStoreConfiguration();
+
+    @Valid
+    @NotNull
+    @JsonProperty
+    private SwaggerConfiguration swagger = new SwaggerConfiguration();
 }
