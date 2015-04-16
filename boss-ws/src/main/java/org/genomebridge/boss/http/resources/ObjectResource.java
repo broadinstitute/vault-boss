@@ -170,7 +170,21 @@ public class ObjectResource extends AbstractResource {
     @Path("multi")
     @Produces("application/json")
     @POST
-    public CopyResponse getUploadID(@PathParam("objectId") String objectId,
+    @ApiOperation(value = "Resolving Objects - Resumable Uploads extension",
+                  notes = "Objects are 'resolved' into an URL which can be use to upload the resource of indefinitely large size. For an object, multi will return a GCS Resumable Upload URL.",
+                  response = CopyResponse.class,
+                  httpMethod = "POST")
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "Successful Operation"),
+            @ApiResponse(code = 403, message = "Required Permissions Not Given"),
+            @ApiResponse(code = 404, message = "Object Id Not Found"),
+            @ApiResponse(code = 410, message = "Object Has Been Deleted"),
+            @ApiResponse(code = 500, message = "Boss Internal Error")
+        }
+    )
+    public CopyResponse getUploadID(@ApiParam(required = true,value = "Object Boss Id")
+                                    @PathParam("objectId") String objectId,
+                                    @ApiParam(name = REMOTE_USER_HEADER,  required = true, value = "Remote User")
                                     @HeaderParam(REMOTE_USER_HEADER) String userName) {
         CopyResponse resp = new CopyResponse();
         ErrorDesc err = api.getResumableUploadURL(objectId, userName, resp);
