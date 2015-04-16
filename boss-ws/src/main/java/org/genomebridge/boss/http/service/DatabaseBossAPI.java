@@ -182,10 +182,9 @@ public class DatabaseBossAPI implements BossAPI {
 
         ObjectStore store = getObjectStore(rec.storagePlatform);
 
+       // if (rec.storagePlatform.equals(StoragePlatform.OPAQUEURI.getValue()))  return readOnlyStoreErr("readOnlyStore");
         // Verifies if the store is ReadOnly
-
-        if (store.getReadOnly())  return readOnlyStoreErr("readOnlyStore");
-
+        if (store != null && store.getReadOnly())  return readOnlyStoreErr("readOnlyStore");
         Timestamp now = new Timestamp(System.currentTimeMillis());
         dao.begin();
 
@@ -288,11 +287,8 @@ public class DatabaseBossAPI implements BossAPI {
         if ( !dao.canWrite(objectId,userName) )
             return writePermsErr(objectId,userName);
 
-
-
         Timestamp now = new Timestamp(System.currentTimeMillis());
         dao.updateResolveDate(objectId, now);
-
         ObjectStore objStore = getObjectStore(rec.storagePlatform);
 
         // Verifies if the store is ReadOnly
