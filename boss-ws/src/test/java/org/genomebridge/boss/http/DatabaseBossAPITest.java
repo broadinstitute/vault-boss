@@ -2,12 +2,12 @@ package org.genomebridge.boss.http;
 
 import io.dropwizard.testing.junit.DropwizardAppRule;
 
+import org.genomebridge.boss.http.models.ObjectDesc;
+import org.genomebridge.boss.http.models.ResolveRequest;
+import org.genomebridge.boss.http.models.ResolveResponse;
 import org.genomebridge.boss.http.models.StoragePlatform;
 import org.genomebridge.boss.http.objectstore.ObjectStoreConfiguration;
 import org.genomebridge.boss.http.service.BossAPI;
-import org.genomebridge.boss.http.service.BossAPI.ObjectDesc;
-import org.genomebridge.boss.http.service.BossAPI.ResolveRequest;
-import org.genomebridge.boss.http.service.BossAPI.ResolveResponse;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;

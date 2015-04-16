@@ -10,6 +10,7 @@ import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 
 import org.genomebridge.boss.http.objectstore.ObjectStoreConfiguration;
+import org.genomebridge.boss.http.swagger.SwaggerConfiguration;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -20,6 +21,8 @@ public class BossConfiguration extends Configuration {
     public DataSourceFactory getDataSourceFactory() {
         return database;
     }
+
+    public SwaggerConfiguration getSwaggerConfiguration() {return swagger;}
 
     @Valid
     @NotNull
@@ -39,5 +42,13 @@ public class BossConfiguration extends Configuration {
 		this.objectStores = objectStores;
 	}
 
-	
+    @Valid
+    @NotNull
+    @JsonProperty
+    private ObjectStoreConfiguration cloudStore = new ObjectStoreConfiguration();
+
+    @Valid
+    @NotNull
+    @JsonProperty
+    private SwaggerConfiguration swagger = new SwaggerConfiguration();
 }
