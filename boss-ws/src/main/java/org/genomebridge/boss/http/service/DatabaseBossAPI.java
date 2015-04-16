@@ -258,16 +258,21 @@ public class DatabaseBossAPI implements BossAPI {
         if ( rec.storagePlatform.equals(StoragePlatform.OPAQUEURI.getValue()) )
             resp.objectUrl = URI.create(rec.directoryPath);
         else {
+            long timeout = now.getTime() + 1000L*req.validityPeriodSeconds;
+            ObjectStore objStore = getObjectStore(rec.storagePlatform);
 
-             long timeout = now.getTime() + 1000L*req.validityPeriodSeconds;
-             ObjectStore objStore = getObjectStore(rec.storagePlatform);
-             if (objStore.getReadOnly()) return readOnlyStoreErr("readOnlyStore");
-             resp.objectUrl = objStore.generateResolveURI(rec.directoryPath, req.httpMethod,
-                        timeout, req.contentType, contentMD5x64);
+            if (objStore.getReadOnly()){
+                if ( req.httpMethod.equals(HttpMethod.PUT)
+                        || req.httpMethod.equals(HttpMethod.HEAD ))
+                    return readOnlyStoreErr("readOnlyStore");
             }
 
+            resp.objectUrl = objStore.generateResolveURI(rec.directoryPath, req.httpMethod,
+                    timeout, req.contentType, contentMD5x64);
+        }
         return null;
     }
+
 
     @Override
     public ErrorDesc resolveObjectForCopying(String objectId, String userName, CopyRequest req, CopyResponse resp) {
@@ -284,10 +289,17 @@ public class DatabaseBossAPI implements BossAPI {
         if ( !dao.canWrite(objectId,userName) )
             return writePermsErr(objectId,userName);
 
+
+
         Timestamp now = new Timestamp(System.currentTimeMillis());
         dao.updateResolveDate(objectId, now);
 
         ObjectStore objStore = getObjectStore(rec.storagePlatform);
+
+        // Verifies if the store is ReadOnly
+        if (objStore.getReadOnly())
+            return readOnlyStoreErr("readOnlyStore");
+
         long timeout = now.getTime() + 1000L*req.validityPeriodSeconds;
         resp.uri = objStore.generateCopyURI(rec.directoryPath, req.locationToCopy, timeout);
 
@@ -311,10 +323,12 @@ public class DatabaseBossAPI implements BossAPI {
             return  writePermsErr(objectId,userName);
         }
         ObjectStore objStore = getObjectStore(rec.storagePlatform);
+        if (objStore.getReadOnly())
+            return readOnlyStoreErr("readOnlyStore");
+
         resp.uri = objStore.generateResumableUploadURL(rec.objectName);
         return error;
     }
-
     private BossDAO getDao() {
         return mDBI.onDemand(BossDAO.class);
     }
