@@ -7,10 +7,10 @@ server:
       port: 8180
 database:
   driverClass: ${dataSource.driver}
-   user: ${dataSource.username}
-   password: ${dataSource.password}
-   url: ${dataSource.url}
-   validationQuery: ${dataSource.validationQuery}
+  user: ${dataSource.username}
+  password: ${dataSource.password}
+  url: ${dataSource.url}
+  validationQuery: ${dataSource.validationQuery}
 objectStores:
   cloudStore:
     username: ignoredInUnitTesting
@@ -38,5 +38,7 @@ swagger:
   license: BSD
   licenseUrl: http://opensource.org/licenses/BSD-3-Clause
   termsOfServiceUrl: https://github.com/broadinstitute/vault-boss
+
+
 
 

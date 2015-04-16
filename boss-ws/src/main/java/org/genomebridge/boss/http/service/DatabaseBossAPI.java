@@ -454,7 +454,6 @@ public class DatabaseBossAPI implements BossAPI {
 
 
     DBI mDBI;
-    private ObjectStore mLocalStore;
     private Map<String,ObjectStore> mObjectStore;
     private Map<String,String> mMessages;
     static private Long gDefaultEstSize = new Long(-1);

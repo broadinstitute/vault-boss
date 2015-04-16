@@ -34,6 +34,11 @@ public class BossConfiguration extends Configuration {
     @JsonProperty
     private Map<String,ObjectStoreConfiguration> objectStores = new  HashMap<String,ObjectStoreConfiguration>();
 
+    @Valid
+    @NotNull
+    @JsonProperty
+    private SwaggerConfiguration swagger = new SwaggerConfiguration();
+
 	public Map<String, ObjectStoreConfiguration> getObjectStores() {
 		return objectStores;
 	}
@@ -42,8 +47,5 @@ public class BossConfiguration extends Configuration {
 		this.objectStores = objectStores;
 	}
 
-    @Valid
-    @NotNull
-    @JsonProperty
-    private SwaggerConfiguration swagger = new SwaggerConfiguration();
+
 }
