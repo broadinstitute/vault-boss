@@ -18,7 +18,6 @@ import org.genomebridge.boss.http.models.ResolveResponse;
 import org.genomebridge.boss.http.service.BossAPI;
 import org.genomebridge.boss.http.service.BossAPI.CopyResponse;
 import org.genomebridge.boss.http.service.BossAPI.ErrorDesc;
-
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.wordnik.swagger.annotations.Api;

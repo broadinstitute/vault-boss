@@ -45,10 +45,5 @@ public class BossConfiguration extends Configuration {
     @Valid
     @NotNull
     @JsonProperty
-    private ObjectStoreConfiguration cloudStore = new ObjectStoreConfiguration();
-
-    @Valid
-    @NotNull
-    @JsonProperty
     private SwaggerConfiguration swagger = new SwaggerConfiguration();
 }

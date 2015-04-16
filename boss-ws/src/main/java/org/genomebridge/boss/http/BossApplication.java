@@ -60,20 +60,13 @@ public class BossApplication extends Application<BossConfiguration> {
         // Create an API object that the resources can use.
         gDBI = new DBIFactory().build(env, config.getDataSourceFactory(), "db");
         gDBI.registerArgumentFactory(new NullArgumentFactory());
-
-
-       // Set up the resources themselves.
-        env.jersey().register(new ObjectResource(gBossAPI));
-        env.jersey().register(new AllObjectsResource(gBossAPI));
-
-
-            Map<String,ObjectStoreConfiguration> objectStoreConfigurationMap = config.getObjectStores();
-            Map<String,ObjectStore> objectStores = getObjectStoresMap(objectStoreConfigurationMap);
-            gBossAPI = new DatabaseBossAPI(gDBI,objectStores,getMessages());
+        Map<String,ObjectStoreConfiguration> objectStoreConfigurationMap = config.getObjectStores();
+        Map<String,ObjectStore> objectStores = getObjectStoresMap(objectStoreConfigurationMap);
+        gBossAPI = new DatabaseBossAPI(gDBI,objectStores,getMessages());
         SwaggerConfiguration swagger = config.getSwaggerConfiguration();
         // Set up the resources themselves.
-            env.jersey().register(new ObjectResource(gBossAPI));
-            env.jersey().register(new AllObjectsResource(gBossAPI));
+        env.jersey().register(new ObjectResource(gBossAPI));
+        env.jersey().register(new AllObjectsResource(gBossAPI));
         setSwaggerConfiguration(config, env, swagger);
 
         if (objectStoreConfigurationMap.get(StoragePlatform.LOCALSTORE.getValue()).type == ObjectStoreType.FCS
@@ -81,7 +74,6 @@ public class BossApplication extends Application<BossConfiguration> {
             env.jersey().register(new FCSResource());
         }
     }
-
 
     private Map<String, ObjectStore> getObjectStoresMap(Map<String,ObjectStoreConfiguration> objectStoreConfigurationMap) throws Exception {
     
@@ -96,7 +88,6 @@ public class BossApplication extends Application<BossConfiguration> {
 		return objectStoreMap;
 	}
 
-	// For invoking some liquibase magic when the args to the server invocation so specify.
     private void setSwaggerConfiguration(BossConfiguration config, Environment env, SwaggerConfiguration swagger) {
         BeanConfig swaggerConfig = new BeanConfig();
         swaggerConfig.setTitle(swagger.title);
