@@ -333,7 +333,7 @@ public class DatabaseBossAPI implements BossAPI {
 
     	if ( storagePlatform.equals(StoragePlatform.CLOUDSTORE.getValue()) )
 		    return mObjectStore.get(StoragePlatform.CLOUDSTORE.getValue());
-		if ( storagePlatform.equals(StoragePlatform.LOCALSTORE.getValue()) )
+		if ( storagePlatform.equals(StoragePlatform.LOCALSTORE.getValue()) || storagePlatform.equals(StoragePlatform.DUMMY.getValue()) )
 		    return mObjectStore.get(StoragePlatform.LOCALSTORE.getValue());
         if (  storagePlatform.equals(StoragePlatform.OPAQUEURI.getValue()))
             return null;
@@ -349,7 +349,8 @@ public class DatabaseBossAPI implements BossAPI {
         if ( desc.storagePlatform == null ) add(sb,getMessage("storagePlatformValidation"));
         else {
             if ( desc.storagePlatform.equals(StoragePlatform.CLOUDSTORE.getValue()) ||
-                    desc.storagePlatform.equals(StoragePlatform.LOCALSTORE.getValue()) ) {
+                    desc.storagePlatform.equals(StoragePlatform.LOCALSTORE.getValue()) ||
+                    desc.storagePlatform.equals(StoragePlatform.DUMMY.getValue())) {
                 if ( desc.directoryPath != null && !Boolean.TRUE.equals(desc.forceLocation) )
                     add(sb,String.format(getMessage("directoryPathNotSupplied"),desc.storagePlatform));
             }
