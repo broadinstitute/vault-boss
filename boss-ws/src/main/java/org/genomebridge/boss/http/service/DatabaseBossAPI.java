@@ -178,7 +178,7 @@ public class DatabaseBossAPI implements BossAPI {
 
        // if (rec.storagePlatform.equals(StoragePlatform.OPAQUEURI.getValue()))  return readOnlyStoreErr("readOnlyStore");
         // Verifies if the store is ReadOnly
-        if (store != null && store.getReadOnly())  
+        if (store != null && store.isReadOnly())
         	return readOnlyStoreErr("readOnlyStore");
         Timestamp now = new Timestamp(System.currentTimeMillis());
         dao.begin();
@@ -254,7 +254,7 @@ public class DatabaseBossAPI implements BossAPI {
             long timeout = now.getTime() + 1000L*req.validityPeriodSeconds;
             ObjectStore objStore = getObjectStore(rec.storagePlatform);
 
-            if (objStore != null && objStore.getReadOnly()){
+            if (objStore != null && objStore.isReadOnly()){
                 if ( req.httpMethod.equals(HttpMethod.PUT)
                         || req.httpMethod.equals(HttpMethod.HEAD ))
                     return readOnlyStoreErr("readOnlyStore");
@@ -287,7 +287,7 @@ public class DatabaseBossAPI implements BossAPI {
         ObjectStore objStore = getObjectStore(rec.storagePlatform);
 
         // Verifies if the store is ReadOnly
-        if (objStore != null && objStore.getReadOnly())
+        if (objStore != null && objStore.isReadOnly())
             return readOnlyStoreErr("readOnlyStore");
 
         long timeout = now.getTime() + 1000L*req.validityPeriodSeconds;
@@ -313,7 +313,7 @@ public class DatabaseBossAPI implements BossAPI {
             return  writePermsErr(objectId,userName);
         }
         ObjectStore objStore = getObjectStore(rec.storagePlatform);
-        if (objStore != null && objStore.getReadOnly())
+        if (objStore != null && objStore.isReadOnly())
             return readOnlyStoreErr("readOnlyStore");
 
         resp.uri = objStore.generateResumableUploadURL(rec.objectName);
@@ -324,12 +324,17 @@ public class DatabaseBossAPI implements BossAPI {
     }
 
     private ObjectStore getObjectStore( String storagePlatform ) {
-        if ( storagePlatform.equals(StoragePlatform.CLOUDSTORE.getValue()) )
-            return mObjectStore.get(StoragePlatform.CLOUDSTORE.getValue());
-        if ( storagePlatform.equals(StoragePlatform.LOCALSTORE.getValue()) )
-            return mObjectStore.get(StoragePlatform.LOCALSTORE.getValue());
 
-        return null;
+    	if ( storagePlatform.equals(StoragePlatform.CLOUDSTORE.getValue()) )
+		    return mObjectStore.get(StoragePlatform.CLOUDSTORE.getValue());
+		if ( storagePlatform.equals(StoragePlatform.LOCALSTORE.getValue()))
+		    return mObjectStore.get(StoragePlatform.LOCALSTORE.getValue());
+		 if(storagePlatform.equals(StoragePlatform.DUMMY.getValue()))
+	        return mObjectStore.get(StoragePlatform.DUMMY.getValue());
+        if (  storagePlatform.equals(StoragePlatform.OPAQUEURI.getValue()))
+            return null;
+        throw new IllegalArgumentException(String.format(getMessage("funkyStoragePlatform"),storagePlatform));
+
     }
 
     private String testCreationValidity( ObjectDesc desc ) {
@@ -340,7 +345,8 @@ public class DatabaseBossAPI implements BossAPI {
         if ( desc.storagePlatform == null ) add(sb,getMessage("storagePlatformValidation"));
         else {
             if ( desc.storagePlatform.equals(StoragePlatform.CLOUDSTORE.getValue()) ||
-                    desc.storagePlatform.equals(StoragePlatform.LOCALSTORE.getValue()) ) {
+                    desc.storagePlatform.equals(StoragePlatform.LOCALSTORE.getValue()) ||
+                    desc.storagePlatform.equals(StoragePlatform.DUMMY.getValue())) {
                 if ( desc.directoryPath != null && !Boolean.TRUE.equals(desc.forceLocation) )
                     add(sb,String.format(getMessage("directoryPathNotSupplied"),desc.storagePlatform));
             }

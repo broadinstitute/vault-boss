@@ -45,10 +45,6 @@ public class BossConfiguration extends Configuration {
 		return objectStores;
 	}
 
-	public void setObjectStores(Map<String, ObjectStoreConfiguration> objectStores) {
-		this.objectStores = objectStores;
-	}
-
 
 
 }

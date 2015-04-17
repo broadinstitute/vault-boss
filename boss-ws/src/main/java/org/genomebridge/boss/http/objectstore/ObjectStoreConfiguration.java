@@ -34,4 +34,5 @@ public class ObjectStoreConfiguration {
 
     @NotNull
     public Boolean readOnly;
+
 }

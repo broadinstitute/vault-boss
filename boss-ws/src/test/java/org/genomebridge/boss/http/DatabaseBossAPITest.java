@@ -1,6 +1,13 @@
 package org.genomebridge.boss.http;
 
+import static org.fest.assertions.api.Assertions.assertThat;
+import static org.fest.assertions.api.Fail.fail;
 import io.dropwizard.testing.junit.DropwizardAppRule;
+
+import java.net.URI;
+
+import javax.ws.rs.HttpMethod;
+import javax.ws.rs.core.Response.Status;
 
 import org.genomebridge.boss.http.models.ObjectDesc;
 import org.genomebridge.boss.http.models.ResolveRequest;
@@ -8,16 +15,12 @@ import org.genomebridge.boss.http.models.ResolveResponse;
 import org.genomebridge.boss.http.models.StoragePlatform;
 import org.genomebridge.boss.http.objectstore.ObjectStoreConfiguration;
 import org.genomebridge.boss.http.service.BossAPI;
+import org.genomebridge.boss.http.service.BossAPI.ErrorDesc;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import java.net.URI;
-
-import javax.ws.rs.HttpMethod;
-
-import static org.fest.assertions.api.Assertions.assertThat;
-import static org.fest.assertions.api.Fail.fail;
+import com.sun.jersey.api.client.ClientResponse;
 
 public class DatabaseBossAPITest extends ResourcedTest {
 
@@ -27,7 +30,9 @@ public class DatabaseBossAPITest extends ResourcedTest {
                     resourceFilePath("boss-config.yml"));
 
     private static BossAPI api = null;
-
+    
+    public static int BAD_REQUEST = ClientResponse.Status.BAD_REQUEST.getStatusCode();
+    
     @BeforeClass
     public static void setup() {
         api = BossApplication.getAPI();
@@ -96,6 +101,33 @@ public class DatabaseBossAPITest extends ResourcedTest {
             // If the user doesn't have a correct objectstore configuration, this is a typical symptom
             fail(BossApplication.getMessages().get("serverError"), e);
         }
+    }
+    
+    
+    @Test
+    public void testGeneratePresignedURLWithReadOnlyStore() {
+    	testGeneratePresignedURLWithReadOnlyStore("application/octet-stream", "deadf00dbeef1234567890abcdefdead");
+    }
+
+    private void testGeneratePresignedURLWithReadOnlyStore(String contentType, String contentMD5) {
+        ObjectDesc obj = new ObjectDesc();
+        obj.ownerId = "tdanford";
+        obj.sizeEstimateBytes = 1000L;
+        obj.objectName = "Test Name";
+        obj.readers = new String[] { "tdanford", "testuser" };
+        obj.writers = new String[] { "carlyeks", "tdanford", "testuser" };
+        obj.storagePlatform = StoragePlatform.DUMMY.getValue();
+        assertThat(api.insertObject(obj,"remoteUser")).isNull();
+        ResolveRequest req = new ResolveRequest();
+        req.httpMethod = HttpMethod.PUT;
+        req.validityPeriodSeconds = 10;
+        req.contentType = contentType;
+        req.contentMD5Hex = contentMD5;
+        ResolveResponse resp = new ResolveResponse();
+        ErrorDesc response = api.resolveObject(obj.objectId,"tdanford",req,resp);
+        assertThat(response.mStatus == Status.FORBIDDEN);
+        assertThat(response.mMessage.equals("readOnlyStore"));         
+       
     }
 
 }

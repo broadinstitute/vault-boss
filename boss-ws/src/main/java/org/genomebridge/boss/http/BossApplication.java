@@ -74,13 +74,11 @@ public class BossApplication extends Application<BossConfiguration> {
         env.jersey().register(new AllObjectsResource(gBossAPI));
         setSwaggerConfiguration(config, env, swagger);
 
-
         for (Map.Entry<String, ObjectStoreConfiguration> entry : objectStoreConfigurationMap.entrySet()) {
-            if (entry.getValue().type == ObjectStoreType.FCS) {
-                env.jersey().register(new FCSResource());
-                break;
-            }
-        }
+        	if (entry.getValue().type == ObjectStoreType.FCS){
+    			env.jersey().register(new FCSResource());
+    		}
+    	}
     }
 
 
@@ -90,7 +88,7 @@ public class BossApplication extends Application<BossConfiguration> {
     
     	Map<String,ObjectStore> objectStoreMap = new HashMap<String,ObjectStore>();
     	
-    	if(objectStoreConfigurationMap != null){
+    	if (objectStoreConfigurationMap != null){
     		for (Map.Entry<String, ObjectStoreConfiguration> entry : objectStoreConfigurationMap.entrySet()) {
     			objectStoreMap.put(entry.getKey(), getObjectStore(entry.getValue()));
     		}

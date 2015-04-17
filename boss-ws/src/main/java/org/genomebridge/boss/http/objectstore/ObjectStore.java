@@ -19,5 +19,5 @@ public interface ObjectStore {
 
     public URI generateResumableUploadURL(String objectName);
 
-    public boolean getReadOnly();
+    public boolean isReadOnly();
 }
