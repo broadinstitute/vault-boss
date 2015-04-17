@@ -1,7 +1,5 @@
 package org.genomebridge.boss.http;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.wordnik.swagger.jaxrs.config.BeanConfig;
 import io.dropwizard.Application;
 import io.dropwizard.assets.AssetsBundle;
 import io.dropwizard.db.DataSourceFactory;
@@ -10,10 +8,26 @@ import io.dropwizard.migrations.MigrationsBundle;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import io.federecio.dropwizard.swagger.SwaggerDropwizard;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Types;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
+
 import org.genomebridge.boss.http.db.BossDAO;
-import org.genomebridge.boss.http.models.StoragePlatform;
-import org.genomebridge.boss.http.objectstore.*;
+import org.genomebridge.boss.http.objectstore.FCSObjectStore;
+import org.genomebridge.boss.http.objectstore.GCSObjectStore;
+import org.genomebridge.boss.http.objectstore.ObjectStore;
+import org.genomebridge.boss.http.objectstore.ObjectStoreConfiguration;
 import org.genomebridge.boss.http.objectstore.ObjectStoreConfiguration.ObjectStoreType;
+import org.genomebridge.boss.http.objectstore.S3ObjectStore;
 import org.genomebridge.boss.http.resources.AllObjectsResource;
 import org.genomebridge.boss.http.resources.FCSResource;
 import org.genomebridge.boss.http.resources.ObjectResource;
@@ -26,16 +40,8 @@ import org.skife.jdbi.v2.tweak.Argument;
 import org.skife.jdbi.v2.tweak.ArgumentFactory;
 import org.yaml.snakeyaml.Yaml;
 
-import javax.validation.Valid;
-import javax.validation.constraints.NotNull;
-import java.io.IOException;
-import java.io.InputStream;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Types;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.wordnik.swagger.jaxrs.config.BeanConfig;
 
 /**
  * Top-level entry point to the entire application.
@@ -69,17 +75,20 @@ public class BossApplication extends Application<BossConfiguration> {
         env.jersey().register(new AllObjectsResource(gBossAPI));
         setSwaggerConfiguration(config, env, swagger);
 
-        if (objectStoreConfigurationMap.get(StoragePlatform.LOCALSTORE.getValue()).type == ObjectStoreType.FCS
-                || objectStoreConfigurationMap.get(StoragePlatform.CLOUDSTORE.getValue()).type == ObjectStoreType.FCS ) {
-            env.jersey().register(new FCSResource());
-        }
+        for (Map.Entry<String, ObjectStoreConfiguration> entry : objectStoreConfigurationMap.entrySet()) {
+        	if (entry.getValue().type == ObjectStoreType.FCS){
+    			env.jersey().register(new FCSResource());
+    		}
+    	}
+    	
+        
     }
 
     private Map<String, ObjectStore> getObjectStoresMap(Map<String,ObjectStoreConfiguration> objectStoreConfigurationMap) throws Exception {
     
     	Map<String,ObjectStore> objectStoreMap = new HashMap<String,ObjectStore>();
     	
-    	if(objectStoreConfigurationMap != null){
+    	if (objectStoreConfigurationMap != null){
     		for (Map.Entry<String, ObjectStoreConfiguration> entry : objectStoreConfigurationMap.entrySet()) {
     			objectStoreMap.put(entry.getKey(), getObjectStore(entry.getValue()));
     		}
