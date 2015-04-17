@@ -120,13 +120,13 @@ public class DatabaseBossAPITest extends ResourcedTest {
         obj.storagePlatform = StoragePlatform.DUMMY.getValue();
         assertThat(api.insertObject(obj,"remoteUser")).isNull();
         ResolveRequest req = new ResolveRequest();
-        req.httpMethod = HttpMethod.POST;
+        req.httpMethod = HttpMethod.PUT;
         req.validityPeriodSeconds = 10;
         req.contentType = contentType;
         req.contentMD5Hex = contentMD5;
         ResolveResponse resp = new ResolveResponse();
         ErrorDesc response = api.resolveObject(obj.objectId,"tdanford",req,resp);
-        assertThat(response.mStatus == Status.BAD_REQUEST);
+        assertThat(response.mStatus == Status.FORBIDDEN);
         assertThat(response.mMessage.equals("readOnlyStore"));         
        
     }

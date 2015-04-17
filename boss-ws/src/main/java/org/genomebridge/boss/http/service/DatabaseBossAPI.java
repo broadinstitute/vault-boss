@@ -333,8 +333,10 @@ public class DatabaseBossAPI implements BossAPI {
 
     	if ( storagePlatform.equals(StoragePlatform.CLOUDSTORE.getValue()) )
 		    return mObjectStore.get(StoragePlatform.CLOUDSTORE.getValue());
-		if ( storagePlatform.equals(StoragePlatform.LOCALSTORE.getValue()) || storagePlatform.equals(StoragePlatform.DUMMY.getValue()) )
+		if ( storagePlatform.equals(StoragePlatform.LOCALSTORE.getValue()))
 		    return mObjectStore.get(StoragePlatform.LOCALSTORE.getValue());
+		 if(storagePlatform.equals(StoragePlatform.DUMMY.getValue()))
+	        return mObjectStore.get(StoragePlatform.DUMMY.getValue());
         if (  storagePlatform.equals(StoragePlatform.OPAQUEURI.getValue()))
             return null;
         throw new IllegalArgumentException(String.format(getMessage("funkyStoragePlatform"),storagePlatform));
