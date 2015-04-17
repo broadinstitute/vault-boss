@@ -25,4 +25,4 @@ messages:
   serverError: 'Unexpected server error -- Is your environment correctly configured for the S3 objectstore?'
   noSuchLocation: The directoryPath specified does not exist on the object store.
   funkyStoragePlatform: 'Unexpected value for storagePlatform: %s.'
-  readOnlyStore: 'readOnlyStore'
+  readOnlyStore: 'Unable to resolve, store is read only'

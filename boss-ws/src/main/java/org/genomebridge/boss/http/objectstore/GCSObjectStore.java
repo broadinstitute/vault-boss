@@ -83,7 +83,7 @@ public class GCSObjectStore implements ObjectStore {
         return uri;
     }
     @Override
-    public boolean getReadOnly(){
+    public boolean isReadOnly(){
         return mConfig.readOnly;
     }
 

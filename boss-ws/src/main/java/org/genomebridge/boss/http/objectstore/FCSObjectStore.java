@@ -57,7 +57,7 @@ public class FCSObjectStore implements ObjectStore {
     }
 
     @Override
-    public boolean getReadOnly(){
+    public boolean isReadOnly(){
         return mConf.readOnly;
     }
 
