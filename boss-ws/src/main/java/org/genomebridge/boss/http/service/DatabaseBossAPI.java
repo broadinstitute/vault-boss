@@ -178,7 +178,8 @@ public class DatabaseBossAPI implements BossAPI {
 
        // if (rec.storagePlatform.equals(StoragePlatform.OPAQUEURI.getValue()))  return readOnlyStoreErr("readOnlyStore");
         // Verifies if the store is ReadOnly
-        if (store != null && store.getReadOnly())  return readOnlyStoreErr("readOnlyStore");
+        if (store != null && store.getReadOnly())  
+        	return readOnlyStoreErr("readOnlyStore");
         Timestamp now = new Timestamp(System.currentTimeMillis());
         dao.begin();
 
@@ -253,7 +254,7 @@ public class DatabaseBossAPI implements BossAPI {
             long timeout = now.getTime() + 1000L*req.validityPeriodSeconds;
             ObjectStore objStore = getObjectStore(rec.storagePlatform);
 
-            if (objStore.getReadOnly()){
+            if (objStore != null && objStore.getReadOnly()){
                 if ( req.httpMethod.equals(HttpMethod.PUT)
                         || req.httpMethod.equals(HttpMethod.HEAD ))
                     return readOnlyStoreErr("readOnlyStore");
@@ -286,7 +287,7 @@ public class DatabaseBossAPI implements BossAPI {
         ObjectStore objStore = getObjectStore(rec.storagePlatform);
 
         // Verifies if the store is ReadOnly
-        if (objStore.getReadOnly())
+        if (objStore != null && objStore.getReadOnly())
             return readOnlyStoreErr("readOnlyStore");
 
         long timeout = now.getTime() + 1000L*req.validityPeriodSeconds;
@@ -312,7 +313,7 @@ public class DatabaseBossAPI implements BossAPI {
             return  writePermsErr(objectId,userName);
         }
         ObjectStore objStore = getObjectStore(rec.storagePlatform);
-        if (objStore.getReadOnly())
+        if (objStore != null && objStore.getReadOnly())
             return readOnlyStoreErr("readOnlyStore");
 
         resp.uri = objStore.generateResumableUploadURL(rec.objectName);
