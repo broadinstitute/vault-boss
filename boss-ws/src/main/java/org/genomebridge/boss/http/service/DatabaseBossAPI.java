@@ -182,7 +182,6 @@ public class DatabaseBossAPI implements BossAPI {
 
         ObjectStore store = getObjectStore(rec.storagePlatform);
 
-       // if (rec.storagePlatform.equals(StoragePlatform.OPAQUEURI.getValue()))  return readOnlyStoreErr("readOnlyStore");
         // Verifies if the store is ReadOnly
         if (store != null && store.isReadOnly())
         	return readOnlyStoreErr("readOnlyStore");
