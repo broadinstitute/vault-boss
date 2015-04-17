@@ -171,7 +171,7 @@ public class ObjectResource extends AbstractResource {
     @Produces("application/json")
     @POST
     @ApiOperation(value = "Resolving Objects - Resumable Uploads extension",
-                  notes = "Objects are 'resolved' into an URL which can be use to upload a resource of indefinitely large size. For an object, multi will return a GCS Resumable Upload URL.",
+                  notes = "Objects are 'resolved' into a GCS Resumable Upload URL which can be use to upload a resource of indefinitely large size in multiple parts. Applies only to objects using the cloudStore storage platform.",
                   response = CopyResponse.class,
                   httpMethod = "POST")
     @ApiResponses(value = {
