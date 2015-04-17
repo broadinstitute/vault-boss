@@ -167,11 +167,11 @@ public class ObjectResource extends AbstractResource {
         return objectId;
     }
 
-    @Path("multi")
+    @Path("/multi")
     @Produces("application/json")
     @POST
     @ApiOperation(value = "Resolving Objects - Resumable Uploads extension",
-                  notes = "Objects are 'resolved' into an URL which can be use to upload the resource of indefinitely large size. For an object, multi will return a GCS Resumable Upload URL.",
+                  notes = "Objects are 'resolved' into an URL which can be use to upload a resource of indefinitely large size. For an object, multi will return a GCS Resumable Upload URL.",
                   response = CopyResponse.class,
                   httpMethod = "POST")
     @ApiResponses(value = {
