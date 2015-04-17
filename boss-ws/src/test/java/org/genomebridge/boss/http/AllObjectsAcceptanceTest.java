@@ -1,27 +1,25 @@
 package org.genomebridge.boss.http;
 
+import static org.fest.assertions.api.Assertions.assertThat;
+import io.dropwizard.testing.junit.DropwizardAppRule;
+
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.List;
 
 import javax.ws.rs.HttpMethod;
 import javax.ws.rs.core.MediaType;
+
+import org.genomebridge.boss.http.models.ObjectDesc;
+import org.genomebridge.boss.http.models.ResolveRequest;
+import org.genomebridge.boss.http.models.ResolveResponse;
+import org.junit.ClassRule;
+import org.junit.Test;
 
 import com.google.common.net.HttpHeaders;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.GenericType;
-
-import io.dropwizard.testing.junit.DropwizardAppRule;
-
-import org.genomebridge.boss.http.models.ObjectDesc;
-import org.genomebridge.boss.http.models.ResolveRequest;
-import org.genomebridge.boss.http.models.ResolveResponse;
-import org.genomebridge.boss.http.models.StoragePlatform;
-import org.junit.ClassRule;
-import org.junit.Test;
-
-import static org.fest.assertions.api.Assertions.assertThat;
 
 public class AllObjectsAcceptanceTest extends AbstractTest {
 
@@ -31,6 +29,7 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
     public static int NOT_FOUND = ClientResponse.Status.NOT_FOUND.getStatusCode();
     public static int GONE = ClientResponse.Status.GONE.getStatusCode();
     public static int CONFLICT = ClientResponse.Status.CONFLICT.getStatusCode();
+    public static int FORBIDDEN = ClientResponse.Status.FORBIDDEN.getStatusCode();
 
     @ClassRule
     public static final DropwizardAppRule<BossConfiguration> RULE =
@@ -89,17 +88,23 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
     }
 
     @Test
-    public void testBadStoragePlatformObjectCreation() {
+    public void testBadStoragePlatformObjectCreation() throws Exception {
         /**
          * "The user should not be able to create an object with a bogus storagePlatform"
          */
         ObjectDesc rec = fixture();
         rec.storagePlatform = "xyzzy";
         ClientResponse response = checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
+        StringBuffer objectStoreNames = new StringBuffer();
+        for(String objectStore : BossApplication.getgObjectStores().keySet()){
+    		objectStoreNames
+    		.append(objectStore)
+    		.append(", ");
+    	}
+    	objectStoreNames.append(OPAQUEURI);
+       
         assertThat(response.getEntity(String.class)).isEqualTo(String.format(messages.get("storagePlatformOptions"),
-                StoragePlatform.CLOUDSTORE.getValue(),
-                StoragePlatform.LOCALSTORE.getValue(),
-                StoragePlatform.OPAQUEURI.getValue())+'.');
+        		objectStoreNames.append('.')));
     }
 
     @Test
@@ -141,7 +146,7 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
         // until we have a mock object store, calling delete on an objectstore-object will fail, because
         // the system will reach out to the real objectstore and attempt to delete it. We'll cover that test
         // in the end-to-end integration tests.
-        response = checkStatus(CREATED, createObject("Name", "tdanford", StoragePlatform.OPAQUEURI.getValue(), "file:///path/to/file", 500L));
+        response = checkStatus(CREATED, createObject("Name", "tdanford", OPAQUEURI, "file:///path/to/file", 500L));
         ObjectDesc created = response.getEntity(ObjectDesc.class);
         String objectPath = checkHeader(response, HttpHeaders.LOCATION);
 
@@ -207,7 +212,7 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
         obj.readers[0] = obj.ownerId;
         obj.writers = obj.readers;
         obj.sizeEstimateBytes = 500L;
-        obj.storagePlatform = StoragePlatform.CLOUDSTORE.getValue();
+        obj.storagePlatform = MOCK_STORE;
         ClientResponse response = checkStatus(CREATED, post(client,objectsPath(),obj.ownerId,obj));
         String objectPath = checkHeader(response, HttpHeaders.LOCATION);
         String objectId = response.getEntity(ObjectDesc.class).objectId;
@@ -242,6 +247,79 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
 
         checkStatus(OK, delete(client, objectPath, obj.ownerId));
     }
+    
+    @Test
+    public void testForceLocationWithReadOnlyAccessForPUT() {
+        Client client = new Client();
+
+        // create an object
+        ObjectDesc obj = new ObjectDesc();
+        obj.ownerId = "fred";
+        obj.objectName = "john";
+        obj.readers = new String[1];
+        obj.readers[0] = obj.ownerId;
+        obj.writers = obj.readers;
+        obj.sizeEstimateBytes = 500L;
+        obj.storagePlatform = MOCK_STORE_READ_ONLY;
+        ClientResponse response = checkStatus(CREATED, post(client,objectsPath(),obj.ownerId,obj));
+        String objectPath = checkHeader(response, HttpHeaders.LOCATION);
+        // resolve the object for a PUT
+        ResolveRequest req = new ResolveRequest();
+        req.httpMethod = HttpMethod.PUT;
+        req.validityPeriodSeconds = 120;
+        req.contentType = MediaType.TEXT_PLAIN;
+        response = checkStatus(FORBIDDEN, post(client,objectPath+"/resolve",obj.ownerId,req));
+       
+    }
+
+    @Test
+    public void testForceLocationWithReadOnlyAccessForGET() {
+        Client client = new Client();
+
+        // create an object
+        ObjectDesc obj = new ObjectDesc();
+        obj.ownerId = "fred";
+        obj.objectName = "john";
+        obj.readers = new String[1];
+        obj.readers[0] = obj.ownerId;
+        obj.writers = obj.readers;
+        obj.sizeEstimateBytes = 500L;
+        obj.storagePlatform = MOCK_STORE_READ_ONLY;
+        ClientResponse response = checkStatus(CREATED, post(client,objectsPath(),obj.ownerId,obj));
+        String objectPath = checkHeader(response, HttpHeaders.LOCATION);
+        // resolve the object for a PUT
+        ResolveRequest req = new ResolveRequest();
+        req.httpMethod = HttpMethod.GET;
+        req.validityPeriodSeconds = 120;
+        req.contentType = MediaType.TEXT_PLAIN;
+        response = checkStatus(OK, post(client,objectPath+"/resolve",obj.ownerId,req));
+       
+    }
+    
+    @Test
+    public void testForceLocationWithReadOnlyAccessForHEAD() {
+        Client client = new Client();
+
+        // create an object
+        ObjectDesc obj = new ObjectDesc();
+        obj.ownerId = "fred";
+        obj.objectName = "john";
+        obj.readers = new String[1];
+        obj.readers[0] = obj.ownerId;
+        obj.writers = obj.readers;
+        obj.sizeEstimateBytes = 500L;
+        obj.storagePlatform = MOCK_STORE_READ_ONLY;
+        ClientResponse response = checkStatus(CREATED, post(client,objectsPath(),obj.ownerId,obj));
+        String objectPath = checkHeader(response, HttpHeaders.LOCATION);
+        // resolve the object for a PUT
+        ResolveRequest req = new ResolveRequest();
+        req.httpMethod = HttpMethod.HEAD;
+        req.validityPeriodSeconds = 120;
+        req.contentType = MediaType.TEXT_PLAIN;
+        response = checkStatus(OK, post(client,objectPath+"/resolve",obj.ownerId,req));
+       
+    }
+
 
     @Test
     public void testForceBogusLocation() {
@@ -253,7 +331,7 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
         obj.readers[0] = obj.ownerId;
         obj.writers = obj.readers;
         obj.sizeEstimateBytes = 500L;
-        obj.storagePlatform = StoragePlatform.CLOUDSTORE.getValue();
+        obj.storagePlatform = MOCK_STORE_READ_ONLY;
         obj.directoryPath = "doesNotExist";
         obj.forceLocation = true;
         ClientResponse response = checkStatus(CONFLICT, post(new Client(),objectsPath(),obj.ownerId,obj));

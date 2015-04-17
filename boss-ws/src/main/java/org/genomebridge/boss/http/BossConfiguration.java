@@ -25,6 +25,10 @@ public class BossConfiguration extends Configuration {
 
 
     public SwaggerConfiguration getSwaggerConfiguration() {return swagger;}
+    
+    public Map<String, ObjectStoreConfiguration> getObjectStores() {
+		return objectStores;
+	}
 
     @Valid
     @NotNull
@@ -41,9 +45,7 @@ public class BossConfiguration extends Configuration {
     @JsonProperty
     private SwaggerConfiguration swagger = new SwaggerConfiguration();
 
-	public Map<String, ObjectStoreConfiguration> getObjectStores() {
-		return objectStores;
-	}
+	
 
 
 

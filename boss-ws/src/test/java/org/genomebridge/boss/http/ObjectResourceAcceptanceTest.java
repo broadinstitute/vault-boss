@@ -1,27 +1,28 @@
 package org.genomebridge.boss.http;
 
-import com.google.common.net.HttpHeaders;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-
+import static org.fest.assertions.api.Assertions.assertThat;
 import io.dropwizard.testing.junit.DropwizardAppRule;
-
-import org.genomebridge.boss.http.models.*;
-import org.genomebridge.boss.http.objectstore.ObjectStoreConfiguration;
-import org.genomebridge.boss.http.service.BossAPI.CopyResponse;
-
-import org.junit.ClassRule;
-import org.junit.Test;
-
-import javax.ws.rs.HttpMethod;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
 
 import java.net.HttpURLConnection;
 import java.util.Map;
 import java.util.Random;
 
-import static org.fest.assertions.api.Assertions.assertThat;
+import javax.ws.rs.HttpMethod;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+
+import org.genomebridge.boss.http.models.CopyRequest;
+import org.genomebridge.boss.http.models.ObjectDesc;
+import org.genomebridge.boss.http.models.ResolveRequest;
+import org.genomebridge.boss.http.models.ResolveResponse;
+import org.genomebridge.boss.http.objectstore.ObjectStoreConfiguration;
+import org.genomebridge.boss.http.service.BossAPI.CopyResponse;
+import org.junit.ClassRule;
+import org.junit.Test;
+
+import com.google.common.net.HttpHeaders;
+import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.ClientResponse;
 
 public class ObjectResourceAcceptanceTest extends AbstractTest {
 
@@ -81,7 +82,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         assertThat(objectPath).endsWith(created.objectId);
         assertThat(created.objectName).describedAs("created object name").isEqualTo("Test Name");
         assertThat(created.sizeEstimateBytes).isEqualTo(1010L);
-        assertThat(created.storagePlatform).isEqualTo(StoragePlatform.LOCALSTORE.getValue());
+        assertThat(created.storagePlatform).isEqualTo(MOCK_STORE_READ_ONLY);
         assertThat(created.directoryPath).isNull();
         assertThat(created.writers).describedAs("created object writers").containsOnly("tdanford", "testuser");
         assertThat(created.readers).describedAs("created object readers").containsOnly("tdanford", "testuser");
@@ -92,7 +93,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         Client client = new Client();
 
         ClientResponse response = checkStatus( CREATED,
-                createObject("Test Name", "tdanford", StoragePlatform.OPAQUEURI.getValue(), "/my/path", 1010L) );
+                createObject("Test Name", "tdanford", OPAQUEURI, "/my/path", 1010L) );
         String objectPath = checkHeader(response, HttpHeaders.LOCATION);
 
         response = check200( get(client, objectPath) );
@@ -102,7 +103,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         assertThat(objectPath).endsWith(created.objectId);
         assertThat(created.objectName).describedAs("created object name").isEqualTo("Test Name");
         assertThat(created.sizeEstimateBytes).isEqualTo(1010L);
-        assertThat(created.storagePlatform).isEqualTo(StoragePlatform.OPAQUEURI.getValue());
+        assertThat(created.storagePlatform).isEqualTo(OPAQUEURI);
         assertThat(created.directoryPath).isNotNull();
         assertThat(created.directoryPath).isEqualTo("/my/path");
         assertThat(created.writers).describedAs("created object writers").containsOnly("tdanford", "testuser");
@@ -113,7 +114,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
     public void registerDescribeAndDeleteTest() {
         Client client = new Client();
 
-        ClientResponse response = checkStatus( CREATED, createObject("Test Name", "tdanford", StoragePlatform.OPAQUEURI.getValue(), "/foo/bar", 1010L) );
+        ClientResponse response = checkStatus( CREATED, createObject("Test Name", "tdanford", OPAQUEURI, "/foo/bar", 1010L) );
         String objectPath = checkHeader(response, HttpHeaders.LOCATION);
         ObjectDesc created = response.getEntity(ObjectDesc.class);
 
@@ -127,7 +128,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
     public void deleteCloudObject() {
         Client client = new Client();
 
-        ClientResponse response = checkStatus( CREATED, createObject("Test Name", "tdanford", StoragePlatform.CLOUDSTORE.getValue(), null, 1010L) );
+        ClientResponse response = checkStatus( CREATED, createObject("Test Name", "tdanford", MOCK_STORE, null, 1010L) );
         String objectPath = checkHeader(response, HttpHeaders.LOCATION);
         checkStatus(OK, delete(client, objectPath));
         checkStatus(GONE, get(client, objectPath));
@@ -299,7 +300,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         ResolveResponse rec = response.getEntity(ResolveResponse.class);
 
         assertThat(rec).isNotNull();
-        ObjectStoreConfiguration config = RULE.getConfiguration().getObjectStores().get(StoragePlatform.LOCALSTORE.getValue());
+        ObjectStoreConfiguration config = RULE.getConfiguration().getObjectStores().get(desc.storagePlatform);
         String urlToExpect = config.endpoint + '/' + config.bucket + '/' + desc.objectId;
         assertThat(rec.objectUrl.toString()).startsWith(urlToExpect);
         assertThat(rec.validityPeriodSeconds).isEqualTo(seconds);
@@ -426,7 +427,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         // until we have a mock object store, calling delete on an objectstore-object will fail, because
         // the system will reach out to the real objectstore and attempt to delete it. We'll cover that test
         // in the end-to-end integration tests.
-        ClientResponse response = checkStatus(CREATED, createObject("Test Name", "tdanford", StoragePlatform.OPAQUEURI.getValue(), "/foo/bar", 1010L));
+        ClientResponse response = checkStatus(CREATED, createObject("Test Name", "tdanford", OPAQUEURI, "/foo/bar", 1010L));
         ObjectDesc created = response.getEntity(ObjectDesc.class);
         String objectPath = checkHeader(response, HttpHeaders.LOCATION);
 
@@ -453,7 +454,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         obj.readers = arraySet( obj.ownerId );
         obj.writers = obj.readers;
         obj.sizeEstimateBytes = 13L;
-        obj.storagePlatform = StoragePlatform.CLOUDSTORE.getValue();
+        obj.storagePlatform = MOCK_STORE;
         ClientResponse response = checkStatus(CREATED, post(client,objectsPath(),obj.ownerId,obj));
         String objectPath = checkHeader(response, HttpHeaders.LOCATION);
 
@@ -501,7 +502,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         obj.readers = arraySet( obj.ownerId );
         obj.writers = obj.readers;
         obj.sizeEstimateBytes = 13L;
-        obj.storagePlatform = StoragePlatform.CLOUDSTORE.getValue();
+        obj.storagePlatform = MOCK_STORE;
         ClientResponse response = checkStatus(CREATED, post(client,objectsPath(),obj.ownerId,obj));
         String objectPath1 = checkHeader(response, HttpHeaders.LOCATION);
 
@@ -521,7 +522,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
         // use this object we just created as the data to copy
         // we extract "/bucket/key" using inside knowledge of the format -- not ideal
-        int begIdx = RULE.getConfiguration().getCloudStoreConfiguration().endpoint.length();
+        int begIdx = RULE.getConfiguration().getObjectStores().get(obj.storagePlatform).endpoint.length();
         int endIdx = resolveURL.lastIndexOf('?');
         if ( endIdx == -1 ) endIdx = resolveURL.length();
         String locationToCopy = resolveURL.substring(begIdx,endIdx);
@@ -567,20 +568,52 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         // clean up by deleting 2nd object
         checkStatus(OK,delete(client,objectPath2,obj.ownerId));
     }
+    
+    @Test
+    public void testCopyWithReadOnlyAccess() throws Exception {
+        Client client = new Client();
+        ObjectDesc obj = new ObjectDesc();
+        obj.ownerId = "testuser";
+        obj.objectName = "copiedObject";
+        obj.readers = arraySet( obj.ownerId );
+        obj.writers = obj.readers;
+        obj.sizeEstimateBytes = 13L;
+        obj.storagePlatform = MOCK_STORE_READ_ONLY;
+        ClientResponse response = checkStatus(CREATED, post(client,objectsPath(),obj.ownerId,obj));
+        String objectPath1 = checkHeader(response, HttpHeaders.LOCATION);
+
+        // resolve the object for a PUT
+        ResolveRequest rReq = new ResolveRequest();
+        rReq.httpMethod = HttpMethod.PUT;
+        rReq.validityPeriodSeconds = 120;
+        rReq.contentType = MediaType.TEXT_PLAIN;
+        response = checkStatus(FORBIDDEN, post(client,objectPath1+"/resolve",obj.ownerId,rReq));
+       
+    }
 
     @Test
     public void testMultiResumable() {
         Client client = new Client();
-        ClientResponse response = checkStatus( CREATED, createObject("testOject", "tdanford", StoragePlatform.CLOUDSTORE.getValue(),null,1001L));
+        ClientResponse response = checkStatus( CREATED, createObject("testOject", "tdanford", MOCK_STORE,null,1001L));
         String objectPath = checkHeader( response, "Location");
         ObjectDesc desc = response.getEntity(ObjectDesc.class);
         response = post(client, objectPath + "/multi",null);
         assertThat(response.getStatus()).isEqualTo(OK);
         CopyResponse rec = response.getEntity(CopyResponse.class);
         assertThat(rec).isNotNull();
-        ObjectStoreConfiguration config = RULE.getConfiguration().getCloudStoreConfiguration();
+        ObjectStoreConfiguration config = RULE.getConfiguration().getObjectStores().get(desc.storagePlatform);
         String urlToExpect = config.endpoint + '/' + config.bucket + '/' + desc.objectName;
         assertThat(rec.uri.toString()).startsWith(urlToExpect);
+    }
+    
+    @Test
+    public void testMultiResumableWhitReadOnlyAccess() {
+        Client client = new Client();
+        ClientResponse response = checkStatus( CREATED, createObject("testOject", "tdanford", MOCK_STORE_READ_ONLY,null,1001L));
+        String objectPath = checkHeader( response, "Location");
+        response = post(client, objectPath + "/multi",null);
+        assertThat(response.getStatus()).isEqualTo(FORBIDDEN);
+        
     }
 
 }

@@ -5,13 +5,16 @@ import java.util.Arrays;
 import java.util.TreeSet;
 
 import org.genomebridge.boss.http.models.ObjectDesc;
-import org.genomebridge.boss.http.models.StoragePlatform;
 
 /**
  * Abstract super-class for tests, that allows easy loading of resources from the classpath.
  */
 abstract public class ResourcedTest {
 
+    public static final String OPAQUEURI = "opaqueURI";
+    public static final String MOCK_STORE_READ_ONLY = "mockROnly";
+    public static final String MOCK_STORE = "mockStore";
+    
     public static String resourceFilePath(String name) {
         ClassLoader loader = ClassLoader.getSystemClassLoader();
         URL resource = loader.getResource(name);
@@ -27,7 +30,7 @@ abstract public class ResourcedTest {
     {
         ObjectDesc rec = new ObjectDesc();
         rec.objectName = "newObj";
-        rec.storagePlatform = StoragePlatform.OPAQUEURI.getValue();
+        rec.storagePlatform = OPAQUEURI;
         rec.directoryPath = "file:///path/to/newObj";
         rec.sizeEstimateBytes = 1234L;
         rec.ownerId = "me";

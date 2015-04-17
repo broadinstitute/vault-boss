@@ -65,9 +65,9 @@ public class BossApplication extends Application<BossConfiguration> {
         // Create an API object that the resources can use.
         gDBI = new DBIFactory().build(env, config.getDataSourceFactory(), "db");
         gDBI.registerArgumentFactory(new NullArgumentFactory());
-        Map<String, ObjectStoreConfiguration> objectStoreConfigurationMap = config.getObjectStores();
-        Map<String, ObjectStore> objectStores = getObjectStoresMap(objectStoreConfigurationMap);
-        gBossAPI = new DatabaseBossAPI(gDBI, objectStores, getMessages());
+        Map<String,ObjectStoreConfiguration> objectStoreConfigurationMap = config.getObjectStores();
+        gObjectStores = getObjectStoresMap(objectStoreConfigurationMap);
+        gBossAPI = new DatabaseBossAPI(gDBI,gObjectStores,getMessages());
         SwaggerConfiguration swagger = config.getSwaggerConfiguration();
         // Set up the resources themselves.
         env.jersey().register(new ObjectResource(gBossAPI));
@@ -77,14 +77,13 @@ public class BossApplication extends Application<BossConfiguration> {
         for (Map.Entry<String, ObjectStoreConfiguration> entry : objectStoreConfigurationMap.entrySet()) {
         	if (entry.getValue().type == ObjectStoreType.FCS){
     			env.jersey().register(new FCSResource());
+    			break;
     		}
     	}
     }
 
 
-
-
-            private Map<String, ObjectStore> getObjectStoresMap(Map<String,ObjectStoreConfiguration> objectStoreConfigurationMap) throws Exception {
+    private static Map<String, ObjectStore> getObjectStoresMap(Map<String,ObjectStoreConfiguration> objectStoreConfigurationMap) throws Exception {
     
     	Map<String,ObjectStore> objectStoreMap = new HashMap<String,ObjectStore>();
     	
@@ -146,8 +145,11 @@ public class BossApplication extends Application<BossConfiguration> {
     public static BossAPI getAPI() {
         return gBossAPI;
     }
+    public static Map<String, ObjectStore> getgObjectStores() {
+		return gObjectStores;
+	}
 
-    private static ObjectStore getObjectStore( ObjectStoreConfiguration config ) throws Exception {
+	private static ObjectStore getObjectStore( ObjectStoreConfiguration config ) throws Exception {
         switch ( config.type ) {
             case S3: return new S3ObjectStore(config);
             case GCS: return new GCSObjectStore(config);
@@ -200,5 +202,6 @@ public class BossApplication extends Application<BossConfiguration> {
     private static BossAPI gBossAPI;
     private static Map<String,String> gMessages;
     private static final String MESSAGES_FILE = "messages.yml";
+    private static Map<String,ObjectStore> gObjectStores;
     private final SwaggerDropwizard swaggerDropwizard = new SwaggerDropwizard();
 }

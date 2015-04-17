@@ -12,26 +12,18 @@ database:
   url: ${dataSource.url}
   validationQuery: ${dataSource.validationQuery}
 objectStores:
-  cloudStore:
-    username: test
-    password: /path/to/key.p12
+  mockStore:
+    username: ignoredInUnitTesting
+    password: ignoredInUnitTesting
     bucket: bossbucket
     endpoint: https://storage.googleapis.com
     type: GCS
     readOnly: false
-  localStore:
-    username: ecsUserName
-    password: ecsPassword
-    bucket: bossbucket
-    endpoint: https://ecsserver.broadinstitute.org
-    pathStyleAccess: true
-    type: S3
-    readOnly: false
-  dummyStore:
-    username: dummyUserName
-    password: dummyPassword
-    bucket: dummybucket
-    endpoint: https://dummyserver.broadinstitute.org
+  mockROnly:
+    username: mockStoreUserName
+    password: mockStorePassword
+    bucket: mockbucket
+    endpoint: https://mockStoreserver.broadinstitute.org
     pathStyleAccess: true
     type: S3
     readOnly: true
@@ -46,6 +38,8 @@ swagger:
   license: BSD
   licenseUrl: http://opensource.org/licenses/BSD-3-Clause
   termsOfServiceUrl: https://github.com/broadinstitute/vault-boss
+
+
 
 
 
