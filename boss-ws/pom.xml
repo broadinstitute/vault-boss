@@ -191,6 +191,13 @@
             <artifactId>aws-java-sdk</artifactId>
         </dependency>
 
+
+        <dependency>
+            <groupId>io.federecio</groupId>
+            <artifactId>dropwizard-swagger</artifactId>
+            <version>0.5.3</version>
+         </dependency>
+
         <!--
             We can't include the Oracle driver here for licensing reasons.
             Download the JAR from http://www.oracle.com/technology/software/tech/java/sqlj_jdbc/index.html

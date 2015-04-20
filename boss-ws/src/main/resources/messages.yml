@@ -10,7 +10,7 @@ messages:
   storagePlatformValidation: StoragePlatform cannot be null
   directoryPathNotSupplied: DirectoryPath must not be supplied for %s objects
   directoryPathToSupply: DirectoryPath must be supplied for %s objects
-  storagePlatformOptions: StoragePlatform must be either %s, %s, or %s
+  storagePlatformOptions: StoragePlatform must be either %s
   objectIdFixed: ObjectId cannot be modified
   objectNameFixed: ObjectName cannot be modified
   storagePlatformFixed: StoragePlatform cannot be modified
@@ -23,3 +23,7 @@ messages:
   noReadPermission: No read permission for %s by %s.
   noWritePermission: No write permission for %s by %s.
   serverError: 'Unexpected server error -- Is your environment correctly configured for the S3 objectstore?'
+  noSuchLocation: The directoryPath specified does not exist on the object store.
+  funkyStoragePlatform: 'Unexpected value for storagePlatform: %s.'
+  readOnlyStore: 'Store is read only.'
+

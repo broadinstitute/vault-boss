@@ -8,6 +8,7 @@ public enum StoragePlatform {
     LOCALSTORE ("localStore"),
     OPAQUEURI ("opaqueURI");
 
+
     private final String value;
     public String getValue() {return value;}
 

@@ -31,12 +31,3 @@ You can see the details in the file boss-ws/src/main/resources/migrations.xml.
 
 **Java 7+** and **Maven** are required to build and test BOSS.
 
-### AWS Configuration
-
-It is also necessary to set up a local AWS configuration, in one of the following ways.
-* Local file `~/.aws/config`
-* Local file `~/.s3cfg`
-* Environment variable `AWS_CREDENTIAL_FILE`
-* Environment variables `AWS_ACCESS_KEY` and `AWS_SECRET_KEY`
-
-For more detail, see the [AWS JDK Javadoc](http://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/services/s3/AmazonS3Client.html#AmazonS3Client())

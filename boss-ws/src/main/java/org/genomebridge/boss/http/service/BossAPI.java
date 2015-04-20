@@ -1,22 +1,23 @@
 package org.genomebridge.boss.http.service;
 
-import org.genomebridge.boss.http.models.ObjectCore;
-
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
 import java.net.URI;
 import java.util.List;
 
 import javax.ws.rs.core.Response;
 
+import org.genomebridge.boss.http.models.CopyRequest;
+import org.genomebridge.boss.http.models.ObjectDesc;
+import org.genomebridge.boss.http.models.ResolveRequest;
+import org.genomebridge.boss.http.models.ResolveResponse;
+
+import com.wordnik.swagger.annotations.ApiModel;
+import com.wordnik.swagger.annotations.ApiModelProperty;
+
 public interface BossAPI {
 
-    @JsonInclude(Include.NON_NULL)
-    public static class ObjectDesc extends ObjectCore {
-        public Boolean forceLocation;
-        public String[] readers, writers;
-    }
+
+
 
     public static class ErrorDesc {
         public ErrorDesc( Response.Status status, String message ) {
@@ -32,30 +33,13 @@ public interface BossAPI {
     public ErrorDesc insertObject(ObjectDesc desc, String userName);
     public ErrorDesc updateObject(ObjectDesc desc, String objectId, String userName);
     public ErrorDesc deleteObject(String objectId, String userName);
-
-    public static class ResolveRequest {
-        public Integer validityPeriodSeconds;
-        public String httpMethod;
-        public String contentType;
-        public String contentMD5Hex;
-    }
-
-    @JsonInclude(Include.NON_NULL)
-    public static class ResolveResponse {
-        public URI objectUrl;
-        public Integer validityPeriodSeconds;
-        public String contentType;
-        public String contentMD5Hex;
-    }
-
     public ErrorDesc resolveObject(String objectId, String userName, ResolveRequest req, ResolveResponse resp);
+    public ErrorDesc getResumableUploadURL(String objectId, String userName, CopyResponse resp);
 
-    public static class CopyRequest {
-        public Integer validityPeriodSeconds;
-        public String locationToCopy; // expecting something of the form "/bucket/key"
-    }
 
+    @ApiModel("Copy Response")
     public static class CopyResponse {
+        @ApiModelProperty(value="A pre-signed url generated to access the object for the desired operation.",dataType = "URI")
         public URI uri;
     }
 
