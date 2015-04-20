@@ -27,14 +27,6 @@ objectStores:
     pathStyleAccess: true
     type: S3
     readOnly: false
-  dummyStore:
-    username: dummyUserName
-    password: dummyPassword
-    bucket: dummybucket
-    endpoint: https://dummyserver.broadinstitute.org
-    pathStyleAccess: true
-    type: S3
-    readOnly: true
 swagger:
   host: localhost
   apiDocs: api-docs

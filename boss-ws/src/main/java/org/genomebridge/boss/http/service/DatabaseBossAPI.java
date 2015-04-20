@@ -330,14 +330,12 @@ public class DatabaseBossAPI implements BossAPI {
 
     private ObjectStore getObjectStore( String storagePlatform ) {
 
-    	if ( storagePlatform.equals(StoragePlatform.CLOUDSTORE.getValue()) )
-		    return mObjectStore.get(StoragePlatform.CLOUDSTORE.getValue());
-		if ( storagePlatform.equals(StoragePlatform.LOCALSTORE.getValue()))
-		    return mObjectStore.get(StoragePlatform.LOCALSTORE.getValue());
-		 if(storagePlatform.equals(StoragePlatform.DUMMY.getValue()))
-	        return mObjectStore.get(StoragePlatform.DUMMY.getValue());
-        if (  storagePlatform.equals(StoragePlatform.OPAQUEURI.getValue()))
+        if (storagePlatform.equals(StoragePlatform.OPAQUEURI.getValue()))
             return null;
+        ObjectStore objectStore = mObjectStore.get(storagePlatform);
+        if (objectStore != null){
+        	return objectStore;
+        }
         throw new IllegalArgumentException(String.format(getMessage("funkyStoragePlatform"),storagePlatform));
 
     }
@@ -349,9 +347,8 @@ public class DatabaseBossAPI implements BossAPI {
         if ( desc.ownerId == null ) add(sb,getMessage("ownerIdValidation"));
         if ( desc.storagePlatform == null ) add(sb,getMessage("storagePlatformValidation"));
         else {
-            if ( desc.storagePlatform.equals(StoragePlatform.CLOUDSTORE.getValue()) ||
-                    desc.storagePlatform.equals(StoragePlatform.LOCALSTORE.getValue()) ||
-                    desc.storagePlatform.equals(StoragePlatform.DUMMY.getValue())) {
+        	
+            if (!desc.storagePlatform.equals(StoragePlatform.OPAQUEURI.getValue()) && mObjectStore.containsKey(desc.storagePlatform)) {
                 if ( desc.directoryPath != null && !Boolean.TRUE.equals(desc.forceLocation) )
                     add(sb,String.format(getMessage("directoryPathNotSupplied"),desc.storagePlatform));
             }
@@ -360,11 +357,15 @@ public class DatabaseBossAPI implements BossAPI {
                     add(sb,String.format(getMessage("directoryPathToSupply"),StoragePlatform.OPAQUEURI.getValue()));
             }
             else {
-
+            	StringBuffer objectStoreNames = new StringBuffer();
+            	for(String objectStore : mObjectStore.keySet()){
+            		objectStoreNames
+            		.append(objectStore)
+            		.append(", ");
+            	}
+            	objectStoreNames.append(StoragePlatform.OPAQUEURI.getValue());
                 add(sb, String.format(getMessage("storagePlatformOptions"),
-                        StoragePlatform.CLOUDSTORE.getValue(),
-                        StoragePlatform.LOCALSTORE.getValue(),
-                        StoragePlatform.OPAQUEURI.getValue()));
+                                      objectStoreNames));
             }
         }
         return sb.length() > 0 ? sb.append('.').toString() : null;

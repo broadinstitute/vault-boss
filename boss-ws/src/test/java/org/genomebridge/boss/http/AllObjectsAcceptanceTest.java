@@ -1,18 +1,14 @@
 package org.genomebridge.boss.http;
 
+import static org.fest.assertions.api.Assertions.assertThat;
+import io.dropwizard.testing.junit.DropwizardAppRule;
+
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.List;
 
 import javax.ws.rs.HttpMethod;
 import javax.ws.rs.core.MediaType;
-
-import com.google.common.net.HttpHeaders;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.GenericType;
-
-import io.dropwizard.testing.junit.DropwizardAppRule;
 
 import org.genomebridge.boss.http.models.ObjectDesc;
 import org.genomebridge.boss.http.models.ResolveRequest;
@@ -21,7 +17,10 @@ import org.genomebridge.boss.http.models.StoragePlatform;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import static org.fest.assertions.api.Assertions.assertThat;
+import com.google.common.net.HttpHeaders;
+import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.GenericType;
 
 public class AllObjectsAcceptanceTest extends AbstractTest {
 
@@ -89,17 +88,23 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
     }
 
     @Test
-    public void testBadStoragePlatformObjectCreation() {
+    public void testBadStoragePlatformObjectCreation() throws Exception {
         /**
          * "The user should not be able to create an object with a bogus storagePlatform"
          */
         ObjectDesc rec = fixture();
         rec.storagePlatform = "xyzzy";
         ClientResponse response = checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
+        StringBuffer objectStoreNames = new StringBuffer();
+        for(String objectStore : BossApplication.gObjectStores.keySet()){
+    		objectStoreNames
+    		.append(objectStore)
+    		.append(", ");
+    	}
+    	objectStoreNames.append(StoragePlatform.OPAQUEURI.getValue());
+       
         assertThat(response.getEntity(String.class)).isEqualTo(String.format(messages.get("storagePlatformOptions"),
-                StoragePlatform.CLOUDSTORE.getValue(),
-                StoragePlatform.LOCALSTORE.getValue(),
-                StoragePlatform.OPAQUEURI.getValue())+'.');
+        		objectStoreNames.append('.')));
     }
 
     @Test

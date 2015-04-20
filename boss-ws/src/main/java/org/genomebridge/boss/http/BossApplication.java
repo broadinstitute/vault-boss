@@ -67,8 +67,8 @@ public class BossApplication extends Application<BossConfiguration> {
         gDBI = new DBIFactory().build(env, config.getDataSourceFactory(), "db");
         gDBI.registerArgumentFactory(new NullArgumentFactory());
         Map<String,ObjectStoreConfiguration> objectStoreConfigurationMap = config.getObjectStores();
-        Map<String,ObjectStore> objectStores = getObjectStoresMap(objectStoreConfigurationMap);
-        gBossAPI = new DatabaseBossAPI(gDBI,objectStores,getMessages());
+        gObjectStores = getObjectStoresMap(objectStoreConfigurationMap);
+        gBossAPI = new DatabaseBossAPI(gDBI,gObjectStores,getMessages());
         SwaggerConfiguration swagger = config.getSwaggerConfiguration();
         // Set up the resources themselves.
         env.jersey().register(new ObjectResource(gBossAPI));
@@ -84,7 +84,7 @@ public class BossApplication extends Application<BossConfiguration> {
         
     }
 
-    private Map<String, ObjectStore> getObjectStoresMap(Map<String,ObjectStoreConfiguration> objectStoreConfigurationMap) throws Exception {
+    protected static Map<String, ObjectStore> getObjectStoresMap(Map<String,ObjectStoreConfiguration> objectStoreConfigurationMap) throws Exception {
     
     	Map<String,ObjectStore> objectStoreMap = new HashMap<String,ObjectStore>();
     	
@@ -185,5 +185,6 @@ public class BossApplication extends Application<BossConfiguration> {
     private static BossAPI gBossAPI;
     private static Map<String,String> gMessages;
     private static final String MESSAGES_FILE = "messages.yml";
+    protected static Map<String,ObjectStore> gObjectStores;
     private final SwaggerDropwizard swaggerDropwizard = new SwaggerDropwizard();
 }

@@ -7,7 +7,6 @@ import io.dropwizard.testing.junit.DropwizardAppRule;
 import java.net.URI;
 
 import javax.ws.rs.HttpMethod;
-import javax.ws.rs.core.Response.Status;
 
 import org.genomebridge.boss.http.models.ObjectDesc;
 import org.genomebridge.boss.http.models.ResolveRequest;
@@ -15,7 +14,6 @@ import org.genomebridge.boss.http.models.ResolveResponse;
 import org.genomebridge.boss.http.models.StoragePlatform;
 import org.genomebridge.boss.http.objectstore.ObjectStoreConfiguration;
 import org.genomebridge.boss.http.service.BossAPI;
-import org.genomebridge.boss.http.service.BossAPI.ErrorDesc;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -93,7 +91,7 @@ public class DatabaseBossAPITest extends ResourcedTest {
             assertThat(api.resolveObject(obj.objectId,"tdanford",req,resp)).isNull();
             URI uri = resp.objectUrl;
             assertThat(uri).isNotNull();
-            ObjectStoreConfiguration config = RULE.getConfiguration().getObjectStores().get(StoragePlatform.LOCALSTORE.getValue());
+            ObjectStoreConfiguration config = RULE.getConfiguration().getObjectStores().get(obj.storagePlatform);
             String urlToExpect = config.endpoint + '/' + config.bucket + '/' + obj.objectId;
             assertThat(uri.toString()).startsWith(urlToExpect);
         }
@@ -103,31 +101,5 @@ public class DatabaseBossAPITest extends ResourcedTest {
         }
     }
     
-    
-    @Test
-    public void testGeneratePresignedURLWithReadOnlyStore() {
-    	testGeneratePresignedURLWithReadOnlyStore("application/octet-stream", "deadf00dbeef1234567890abcdefdead");
-    }
-
-    private void testGeneratePresignedURLWithReadOnlyStore(String contentType, String contentMD5) {
-        ObjectDesc obj = new ObjectDesc();
-        obj.ownerId = "tdanford";
-        obj.sizeEstimateBytes = 1000L;
-        obj.objectName = "Test Name";
-        obj.readers = new String[] { "tdanford", "testuser" };
-        obj.writers = new String[] { "carlyeks", "tdanford", "testuser" };
-        obj.storagePlatform = StoragePlatform.DUMMY.getValue();
-        assertThat(api.insertObject(obj,"remoteUser")).isNull();
-        ResolveRequest req = new ResolveRequest();
-        req.httpMethod = HttpMethod.PUT;
-        req.validityPeriodSeconds = 10;
-        req.contentType = contentType;
-        req.contentMD5Hex = contentMD5;
-        ResolveResponse resp = new ResolveResponse();
-        ErrorDesc response = api.resolveObject(obj.objectId,"tdanford",req,resp);
-        assertThat(response.mStatus == Status.FORBIDDEN);
-        assertThat(response.mMessage.equals("readOnlyStore"));         
-       
-    }
 
 }

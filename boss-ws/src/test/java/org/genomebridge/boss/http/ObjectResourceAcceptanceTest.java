@@ -299,7 +299,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         ResolveResponse rec = response.getEntity(ResolveResponse.class);
 
         assertThat(rec).isNotNull();
-        ObjectStoreConfiguration config = RULE.getConfiguration().getObjectStores().get(StoragePlatform.LOCALSTORE.getValue());
+        ObjectStoreConfiguration config = RULE.getConfiguration().getObjectStores().get(desc.storagePlatform);
         String urlToExpect = config.endpoint + '/' + config.bucket + '/' + desc.objectId;
         assertThat(rec.objectUrl.toString()).startsWith(urlToExpect);
         assertThat(rec.validityPeriodSeconds).isEqualTo(seconds);
@@ -521,7 +521,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
         // use this object we just created as the data to copy
         // we extract "/bucket/key" using inside knowledge of the format -- not ideal
-        int begIdx = RULE.getConfiguration().getObjectStores().get(StoragePlatform.CLOUDSTORE.getValue()).endpoint.length();
+        int begIdx = RULE.getConfiguration().getObjectStores().get(obj.storagePlatform).endpoint.length();
         int endIdx = resolveURL.lastIndexOf('?');
         if ( endIdx == -1 ) endIdx = resolveURL.length();
         String locationToCopy = resolveURL.substring(begIdx,endIdx);
@@ -578,7 +578,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         assertThat(response.getStatus()).isEqualTo(OK);
         CopyResponse rec = response.getEntity(CopyResponse.class);
         assertThat(rec).isNotNull();
-        ObjectStoreConfiguration config = RULE.getConfiguration().getObjectStores().get(StoragePlatform.CLOUDSTORE.getValue());
+        ObjectStoreConfiguration config = RULE.getConfiguration().getObjectStores().get(desc.storagePlatform);
         String urlToExpect = config.endpoint + '/' + config.bucket + '/' + desc.objectName;
         assertThat(rec.uri.toString()).startsWith(urlToExpect);
     }

@@ -6,8 +6,8 @@ package org.genomebridge.boss.http.models;
 public enum StoragePlatform {
     CLOUDSTORE ("cloudStore"),
     LOCALSTORE ("localStore"),
-    OPAQUEURI ("opaqueURI"),
-    DUMMY ("dummyStore");
+    OPAQUEURI ("opaqueURI");
+
 
     private final String value;
     public String getValue() {return value;}
