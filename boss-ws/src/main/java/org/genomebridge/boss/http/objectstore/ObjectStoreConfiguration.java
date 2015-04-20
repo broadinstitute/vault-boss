@@ -32,6 +32,7 @@ public class ObjectStoreConfiguration {
     @NotNull
     public ObjectStoreType type;
 
+    @NotNull
     public boolean readOnly;
 
 }
