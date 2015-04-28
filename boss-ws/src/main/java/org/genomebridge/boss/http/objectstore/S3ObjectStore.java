@@ -17,6 +17,7 @@ public class S3ObjectStore implements ObjectStore {
 
     public S3ObjectStore( ObjectStoreConfiguration config ) {
         bucket = config.bucket;
+        readOnly=config.readOnly;
 
         AWSCredentials creds = new BasicAWSCredentials(config.username, config.password);
         client = new AmazonS3Client(creds);
@@ -69,6 +70,13 @@ public class S3ObjectStore implements ObjectStore {
     public URI generateResumableUploadURL(String objectName) {
         throw new ObjectStoreException("Resumable upload is not currently supported on S3 storage.");
     }
+
+    @Override
+    public boolean isReadOnly() {
+        return readOnly;
+    }
+
     private AmazonS3 client;
     private String bucket;
+    private boolean readOnly;
 }

@@ -56,5 +56,10 @@ public class FCSObjectStore implements ObjectStore {
         return generateResolveURI(objectName,HttpMethod.PUT,0L,null,null);
     }
 
+    @Override
+    public boolean isReadOnly(){
+        return mConf.readOnly;
+    }
+
     private ObjectStoreConfiguration mConf;
 }

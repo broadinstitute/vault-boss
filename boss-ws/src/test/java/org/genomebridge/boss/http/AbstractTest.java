@@ -1,20 +1,20 @@
 package org.genomebridge.boss.http;
 
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-
+import static org.fest.assertions.api.Assertions.assertThat;
 import io.dropwizard.testing.junit.DropwizardAppRule;
 
-import org.genomebridge.boss.http.models.ObjectDesc;
-import org.genomebridge.boss.http.models.StoragePlatform;
-import org.genomebridge.boss.http.resources.AbstractResource;
+import java.util.Arrays;
+import java.util.TreeSet;
+import java.util.UUID;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 
-import java.util.*;
+import org.genomebridge.boss.http.models.ObjectDesc;
+import org.genomebridge.boss.http.resources.AbstractResource;
 
-import static org.fest.assertions.api.Assertions.assertThat;
+import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.ClientResponse;
 
 /**
  * An abstract superclass for Tests that involve the BOSS API, includes helper methods for setting up
@@ -25,6 +25,9 @@ abstract public class AbstractTest extends ResourcedTest {
 
     abstract public DropwizardAppRule<BossConfiguration> rule();
     public static final String REMOTE_USER_HEADER = AbstractResource.REMOTE_USER_HEADER;
+    public static final String OPAQUEURI = "opaqueURI";
+    public static final String MOCK_STORE_READ_ONLY = "mockROnly";
+
 
     /*
      * Some utility methods for interacting with HTTP-services.
@@ -103,7 +106,7 @@ abstract public class AbstractTest extends ResourcedTest {
     }
 
     public ClientResponse createObject(String objectName, String owner, long size) {
-        return createObject(objectName, owner, StoragePlatform.LOCALSTORE.getValue(), null, size);
+        return createObject(objectName, owner, MOCK_STORE_READ_ONLY, null, size);
     }
 
     public ClientResponse createObject(String objectName, String owner, String platform, String path, long size) {

@@ -18,4 +18,6 @@ public interface ObjectStore {
     public boolean exists(String objKey);
 
     public URI generateResumableUploadURL(String objectName);
+
+    public boolean isReadOnly();
 }

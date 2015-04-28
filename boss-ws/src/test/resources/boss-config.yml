@@ -11,19 +11,21 @@ database:
   password: ${dataSource.password}
   url: ${dataSource.url}
   validationQuery: ${dataSource.validationQuery}
-cloudStore:
-  username: ignoredInUnitTesting
-  password: ignoredInUnitTesting
-  bucket: bossbucket
-  endpoint: http://localhost:8180/fcs
-  type: FCS
-localStore:
-  username: ecsUserName
-  password: ecsPassword
-  bucket: bossbucket
-  endpoint: https://ecsserver.broadinstitute.org
-  pathStyleAccess: true
-  type: S3
+objectStores:
+  mockStore:
+    username: mockStoreUserName
+    password: mockStorePassword
+    bucket: mockbucket
+    endpoint: http://localhost:8180/fcs
+    type: FCS
+    readOnly: false
+  mockROnly:
+    username: mockStoreUserName
+    password: mockStorePassword
+    bucket: mockbucket
+    endpoint: http://localhost:8180/fcs
+    type: FCS
+    readOnly: true
 swagger:
   host: localhost
   apiDocs: api-docs
@@ -35,3 +37,9 @@ swagger:
   license: BSD
   licenseUrl: http://opensource.org/licenses/BSD-3-Clause
   termsOfServiceUrl: https://github.com/broadinstitute/vault-boss
+
+
+
+
+
+

@@ -1,23 +1,23 @@
 package org.genomebridge.boss.http;
 
+import static org.fest.assertions.api.Assertions.assertThat;
+import static org.fest.assertions.api.Fail.fail;
 import io.dropwizard.testing.junit.DropwizardAppRule;
+
+import java.net.URI;
+
+import javax.ws.rs.HttpMethod;
 
 import org.genomebridge.boss.http.models.ObjectDesc;
 import org.genomebridge.boss.http.models.ResolveRequest;
 import org.genomebridge.boss.http.models.ResolveResponse;
-import org.genomebridge.boss.http.models.StoragePlatform;
 import org.genomebridge.boss.http.objectstore.ObjectStoreConfiguration;
 import org.genomebridge.boss.http.service.BossAPI;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import java.net.URI;
-
-import javax.ws.rs.HttpMethod;
-
-import static org.fest.assertions.api.Assertions.assertThat;
-import static org.fest.assertions.api.Fail.fail;
+import com.sun.jersey.api.client.ClientResponse;
 
 public class DatabaseBossAPITest extends ResourcedTest {
 
@@ -27,7 +27,9 @@ public class DatabaseBossAPITest extends ResourcedTest {
                     resourceFilePath("boss-config.yml"));
 
     private static BossAPI api = null;
-
+    
+    public static int BAD_REQUEST = ClientResponse.Status.BAD_REQUEST.getStatusCode();
+    
     @BeforeClass
     public static void setup() {
         api = BossApplication.getAPI();
@@ -41,7 +43,7 @@ public class DatabaseBossAPITest extends ResourcedTest {
         obj.objectName = "Test Name";
         obj.readers = new String[] { "tdanford", "testuser", "tdanford" };
         obj.writers = new String[] { "carlyeks", "tdanford", "testuser", "carlyeks" };
-        obj.storagePlatform = StoragePlatform.LOCALSTORE.getValue();
+        obj.storagePlatform = MOCK_STORE_READ_ONLY;
 
         assertThat(api.insertObject(obj,"remoteUser")).isNull();
 
@@ -74,7 +76,7 @@ public class DatabaseBossAPITest extends ResourcedTest {
         obj.objectName = "Test Name";
         obj.readers = new String[] { "tdanford", "testuser" };
         obj.writers = new String[] { "carlyeks", "tdanford", "testuser" };
-        obj.storagePlatform = StoragePlatform.LOCALSTORE.getValue();
+        obj.storagePlatform = MOCK_STORE_READ_ONLY;
 
         assertThat(api.insertObject(obj,"remoteUser")).isNull();
 
@@ -88,7 +90,7 @@ public class DatabaseBossAPITest extends ResourcedTest {
             assertThat(api.resolveObject(obj.objectId,"tdanford",req,resp)).isNull();
             URI uri = resp.objectUrl;
             assertThat(uri).isNotNull();
-            ObjectStoreConfiguration config = RULE.getConfiguration().getLocalStoreConfiguration();
+            ObjectStoreConfiguration config = RULE.getConfiguration().getObjectStores().get(obj.storagePlatform);
             String urlToExpect = config.endpoint + '/' + config.bucket + '/' + obj.objectId;
             assertThat(uri.toString()).startsWith(urlToExpect);
         }
@@ -97,5 +99,6 @@ public class DatabaseBossAPITest extends ResourcedTest {
             fail(BossApplication.getMessages().get("serverError"), e);
         }
     }
+    
 
 }

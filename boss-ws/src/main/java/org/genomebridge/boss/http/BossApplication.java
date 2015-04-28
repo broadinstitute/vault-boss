@@ -8,7 +8,6 @@ import io.dropwizard.migrations.MigrationsBundle;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import io.federecio.dropwizard.swagger.SwaggerDropwizard;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.PreparedStatement;
@@ -66,20 +65,37 @@ public class BossApplication extends Application<BossConfiguration> {
         // Create an API object that the resources can use.
         gDBI = new DBIFactory().build(env, config.getDataSourceFactory(), "db");
         gDBI.registerArgumentFactory(new NullArgumentFactory());
-        ObjectStoreConfiguration localConf = config.getLocalStoreConfiguration();
-        ObjectStore localStore = getObjectStore(localConf);
-        ObjectStoreConfiguration cloudConf = config.getCloudStoreConfiguration();
-        ObjectStore cloudStore = getObjectStore(cloudConf);
-        gBossAPI = new DatabaseBossAPI(gDBI,localStore,cloudStore,getMessages());
+        Map<String,ObjectStoreConfiguration> objectStoreConfigurationMap = config.getObjectStores();
+        gObjectStores = getObjectStoresMap(objectStoreConfigurationMap);
+        gBossAPI = new DatabaseBossAPI(gDBI,gObjectStores,getMessages());
         SwaggerConfiguration swagger = config.getSwaggerConfiguration();
         // Set up the resources themselves.
         env.jersey().register(new ObjectResource(gBossAPI));
         env.jersey().register(new AllObjectsResource(gBossAPI));
         setSwaggerConfiguration(config, env, swagger);
-        if ( localConf.type == ObjectStoreType.FCS || cloudConf.type == ObjectStoreType.FCS ) {
-            env.jersey().register(new FCSResource());
-        }
+
+        for (Map.Entry<String, ObjectStoreConfiguration> entry : objectStoreConfigurationMap.entrySet()) {
+        	if (entry.getValue().type == ObjectStoreType.FCS){
+    			env.jersey().register(new FCSResource());
+    			break;
+    		}
+    	}
     }
+
+
+    private static Map<String, ObjectStore> getObjectStoresMap(Map<String,ObjectStoreConfiguration> objectStoreConfigurationMap) throws Exception {
+    
+    	Map<String,ObjectStore> objectStoreMap = new HashMap<String,ObjectStore>();
+    	
+    	if (objectStoreConfigurationMap != null){
+    		for (Map.Entry<String, ObjectStoreConfiguration> entry : objectStoreConfigurationMap.entrySet()) {
+    			objectStoreMap.put(entry.getKey(), getObjectStore(entry.getValue()));
+    		}
+    	}
+    	
+		return objectStoreMap;
+	}
+
 
     private void setSwaggerConfiguration(BossConfiguration config, Environment env, SwaggerConfiguration swagger) {
         BeanConfig swaggerConfig = new BeanConfig();
@@ -95,7 +111,21 @@ public class BossApplication extends Application<BossConfiguration> {
         swaggerDropwizard.onRun(config, env,swagger.host);
     }
 
-    // For invoking some liquibase magic when the args to the server invocation so specify.
+    private Map<String, ObjectStore> getObjectStoresMap(BossConfiguration config) throws Exception {
+    	
+    	Map<String,ObjectStoreConfiguration> objectStoreConfigurationMap = config.getObjectStores();
+    	Map<String,ObjectStore> objectStoreMap = new HashMap<String,ObjectStore>();
+    	
+    	if(objectStoreConfigurationMap != null){
+    		for (Map.Entry<String, ObjectStoreConfiguration> entry : objectStoreConfigurationMap.entrySet()) {
+    			objectStoreMap.put(entry.getKey(), getObjectStore(entry.getValue()));
+    		}
+    	}
+    	
+		return objectStoreMap;
+	}
+
+	// For invoking some liquibase magic when the args to the server invocation so specify.
     public void initialize(Bootstrap<BossConfiguration> bootstrap) {
 
         bootstrap.addBundle(new MigrationsBundle<BossConfiguration>() {
@@ -115,8 +145,11 @@ public class BossApplication extends Application<BossConfiguration> {
     public static BossAPI getAPI() {
         return gBossAPI;
     }
+    public static Map<String, ObjectStore> getgObjectStores() {
+		return gObjectStores;
+	}
 
-    private static ObjectStore getObjectStore( ObjectStoreConfiguration config ) throws Exception {
+	private static ObjectStore getObjectStore( ObjectStoreConfiguration config ) throws Exception {
         switch ( config.type ) {
             case S3: return new S3ObjectStore(config);
             case GCS: return new GCSObjectStore(config);
@@ -169,5 +202,6 @@ public class BossApplication extends Application<BossConfiguration> {
     private static BossAPI gBossAPI;
     private static Map<String,String> gMessages;
     private static final String MESSAGES_FILE = "messages.yml";
+    private static Map<String,ObjectStore> gObjectStores;
     private final SwaggerDropwizard swaggerDropwizard = new SwaggerDropwizard();
 }

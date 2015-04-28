@@ -1,21 +1,19 @@
 package org.genomebridge.boss.http;
 
+import static org.fest.assertions.api.Assertions.assertThat;
 import io.dropwizard.testing.junit.DropwizardAppRule;
-
-import org.genomebridge.boss.http.db.BossDAO;
-import org.genomebridge.boss.http.db.ObjectRow;
-import org.genomebridge.boss.http.models.ObjectDesc;
-import org.genomebridge.boss.http.models.StoragePlatform;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
 
 import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
-import static org.fest.assertions.api.Assertions.assertThat;
+import org.genomebridge.boss.http.db.BossDAO;
+import org.genomebridge.boss.http.db.ObjectRow;
+import org.genomebridge.boss.http.models.ObjectDesc;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Test;
 
 public class BossDAOTest extends ResourcedTest {
 
@@ -93,7 +91,7 @@ public class BossDAOTest extends ResourcedTest {
         rec.ownerId = "tdanford";
         rec.sizeEstimateBytes = 1000L;
         rec.objectName = "Name";
-        rec.storagePlatform = StoragePlatform.OPAQUEURI.getValue();
+        rec.storagePlatform = OPAQUEURI;
         rec.directoryPath = "/some/path";
 
         Timestamp now = new Timestamp(System.currentTimeMillis());
@@ -117,7 +115,7 @@ public class BossDAOTest extends ResourcedTest {
         rec.ownerId = "tdanford";
         rec.sizeEstimateBytes = 1000L;
         rec.objectName = "Name";
-        rec.storagePlatform = StoragePlatform.OPAQUEURI.getValue();
+        rec.storagePlatform = OPAQUEURI;
         rec.directoryPath = "/some/path";
 
         Timestamp now = new Timestamp(System.currentTimeMillis());
@@ -156,7 +154,7 @@ public class BossDAOTest extends ResourcedTest {
         rec.ownerId = "tdanford";
         rec.sizeEstimateBytes = 1000L;
         rec.objectName = "Name";
-        rec.storagePlatform = StoragePlatform.OPAQUEURI.getValue();
+        rec.storagePlatform = OPAQUEURI;
         rec.directoryPath = "/some/path";
 
         Timestamp cDate = new Timestamp(System.currentTimeMillis());
