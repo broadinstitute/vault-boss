@@ -13,19 +13,18 @@ database:
   validationQuery: ${dataSource.validationQuery}
 objectStores:
   mockStore:
-    username: ignoredInUnitTesting
-    password: ignoredInUnitTesting
-    bucket: bossbucket
-    endpoint: https://storage.googleapis.com
-    type: GCS
+    username: mockStoreUserName
+    password: mockStorePassword
+    bucket: mockbucket
+    endpoint: http://localhost:8180/fcs
+    type: FCS
     readOnly: false
   mockROnly:
     username: mockStoreUserName
     password: mockStorePassword
     bucket: mockbucket
-    endpoint: https://mockStoreserver.broadinstitute.org
-    pathStyleAccess: true
-    type: S3
+    endpoint: http://localhost:8180/fcs
+    type: FCS
     readOnly: true
 swagger:
   host: localhost
