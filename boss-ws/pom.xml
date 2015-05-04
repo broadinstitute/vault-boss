@@ -13,9 +13,9 @@
     </parent>
 
     <properties>
-        <java.version>1.7</java.version>
-        <dropwizard.version>0.7.0</dropwizard.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <java.version>1.7</java.version>
+        <dropwizard.version>0.8.0</dropwizard.version>
     </properties>
 
 	<profiles>
@@ -32,16 +32,6 @@
 				<dataSource.validationQuery>SELECT * FROM INFORMATION_SCHEMA.SYSTEM_TABLES</dataSource.validationQuery>
 			</properties>
 		</profile>
-		<profile>
-			<id>oracle</id>
-			<properties>
-				<dataSource.driver>oracle.jdbc.OracleDriver</dataSource.driver>
-				<dataSource.username>BOSS</dataSource.username>
-				<dataSource.password>ssoB1bg</dataSource.password>
-				<dataSource.url>jdbc:oracle:thin:@//biofortisdb:1521/biofort1</dataSource.url>
-				<dataSource.validationQuery>SELECT * FROM TABS</dataSource.validationQuery>
-			</properties>
-		</profile>
 	</profiles>
     <build>
         <testResources>
@@ -52,16 +42,6 @@
         </testResources>
 
         <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>2.3.2</version>
-                <configuration>
-                    <source>1.7</source>
-                    <target>1.7</target>
-                </configuration>
-            </plugin>
-
             <plugin>
                 <groupId>org.liquibase</groupId>
                 <artifactId>liquibase-maven-plugin</artifactId>
@@ -87,6 +67,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
+                <version>2.3</version>
                 <configuration>
                     <finalName>boss</finalName>
                     <createDependencyReducedPom>true</createDependencyReducedPom>
@@ -128,31 +109,44 @@
         <dependency>
             <groupId>io.dropwizard</groupId>
             <artifactId>dropwizard-core</artifactId>
+            <version>${dropwizard.version}</version>
         </dependency>
 
         <dependency>
             <groupId>io.dropwizard</groupId>
-            <artifactId>dropwizard-assets</artifactId>
+            <artifactId>dropwizard-client</artifactId>
+            <version>${dropwizard.version}</version>
         </dependency>
 
         <dependency>
             <groupId>io.dropwizard</groupId>
             <artifactId>dropwizard-testing</artifactId>
+            <version>${dropwizard.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.dropwizard</groupId>
+            <artifactId>dropwizard-assets</artifactId>
+            <version>${dropwizard.version}</version>
         </dependency>
 
         <dependency>
             <groupId>io.dropwizard</groupId>
             <artifactId>dropwizard-logging</artifactId>
+            <version>${dropwizard.version}</version>
         </dependency>
 
         <dependency>
             <groupId>io.dropwizard</groupId>
             <artifactId>dropwizard-jdbi</artifactId>
+            <version>${dropwizard.version}</version>
         </dependency>
 
         <dependency>
             <groupId>io.dropwizard</groupId>
             <artifactId>dropwizard-migrations</artifactId>
+            <version>${dropwizard.version}</version>
         </dependency>
 
         <dependency>
@@ -164,39 +158,34 @@
         <dependency>
             <groupId>org.hsqldb</groupId>
             <artifactId>hsqldb</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>mysql</groupId>
-            <artifactId>mysql-connector-java</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.sun.jersey</groupId>
-            <artifactId>jersey-client</artifactId>
+            <version>2.3.2</version>
         </dependency>
 
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.hubspot.dropwizard</groupId>
-            <artifactId>dropwizard-guice</artifactId>
+            <version>4.12</version>
+            <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk</artifactId>
+            <version>1.9.33</version>
         </dependency>
-
 
         <dependency>
             <groupId>io.federecio</groupId>
             <artifactId>dropwizard-swagger</artifactId>
-            <version>0.5.3</version>
+            <version>0.7.0</version>
          </dependency>
+
+        <dependency>
+            <groupId>org.easytesting</groupId>
+            <artifactId>fest-assert-core</artifactId>
+            <version>2.0M10</version>
+            <scope>test</scope>
+        </dependency>
 
         <!--
             We can't include the Oracle driver here for licensing reasons.

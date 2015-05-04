@@ -1,6 +1,5 @@
 package org.genomebridge.boss.http.service;
 
-import org.apache.commons.lang.ArrayUtils;
 import org.genomebridge.boss.http.db.BossDAO;
 import org.genomebridge.boss.http.db.ObjectRow;
 import org.genomebridge.boss.http.models.*;
@@ -78,7 +77,7 @@ public class DatabaseBossAPI implements BossAPI {
         if ( !rec.storagePlatform.equals(OPAQUEURI) ) {
             if ( !Boolean.TRUE.equals(rec.forceLocation) )
                 loc = createLocation(rec);
-            else if (!mObjectStore.get(rec.storagePlatform).exists(loc) )
+            else if ( !mObjectStore.get(rec.storagePlatform).exists(loc) )
                 return new ErrorDesc(Response.Status.CONFLICT,getMessage("noSuchLocation"));
         }
 
@@ -174,11 +173,13 @@ public class DatabaseBossAPI implements BossAPI {
         if ( !dao.canWrite(objectId, userName) )
             return writePermsErr(objectId, userName);
 
-        ObjectStore store = mObjectStore.get(rec.storagePlatform);
-        if(!OPAQUEURI.equals(rec.storagePlatform)){
-            if(store==null)return badStoreErr(rec.storagePlatform);
-            // Verifies if the store is ReadOnly
-            if (store.isReadOnly())return readOnlyStoreErr("readOnlyStore");
+        ObjectStore store = null;
+        if ( !OPAQUEURI.equals(rec.storagePlatform) ) {
+            store = mObjectStore.get(rec.storagePlatform);
+            if ( store == null )
+                return badStoreErr(rec.storagePlatform);
+            if ( store.isReadOnly() )
+                return readOnlyStoreErr("readOnlyStore");
         }
 
         Timestamp now = new Timestamp(System.currentTimeMillis());
@@ -243,8 +244,6 @@ public class DatabaseBossAPI implements BossAPI {
         }
 
         Timestamp now = new Timestamp(System.currentTimeMillis());
-        dao.updateResolveDate(objectId, now);
-
 
         resp.validityPeriodSeconds = req.validityPeriodSeconds;
         resp.contentType = req.contentType;
@@ -252,17 +251,18 @@ public class DatabaseBossAPI implements BossAPI {
         if ( rec.storagePlatform.equals(OPAQUEURI) )
             resp.objectUrl = URI.create(rec.directoryPath);
         else {
-            long timeout = now.getTime() + 1000L*req.validityPeriodSeconds;
-            ObjectStore objStore = mObjectStore.get(rec.storagePlatform);
-            if (objStore==null ) return badStoreErr(rec.storagePlatform);
-            if (objStore.isReadOnly()){
-                if ( req.httpMethod.equals(HttpMethod.PUT))
-                    return readOnlyStoreErr("readOnlyStore");
-            }
+            ObjectStore store = mObjectStore.get(rec.storagePlatform);
+            if ( store == null )
+                return badStoreErr(rec.storagePlatform);
+            if ( store.isReadOnly() && req.httpMethod.equals(HttpMethod.PUT) )
+                return readOnlyStoreErr("readOnlyStore");
 
-            resp.objectUrl = objStore.generateResolveURI(rec.directoryPath, req.httpMethod,
-                    timeout, req.contentType, contentMD5x64);
+            long timeout = now.getTime() + 1000L*req.validityPeriodSeconds;
+            resp.objectUrl = store.generateResolveURI(rec.directoryPath, req.httpMethod,
+                                                        timeout, req.contentType, contentMD5x64);
         }
+
+        dao.updateResolveDate(objectId, now);
         return null;
     }
 
@@ -282,27 +282,25 @@ public class DatabaseBossAPI implements BossAPI {
         if ( !dao.canWrite(objectId,userName) )
             return writePermsErr(objectId,userName);
 
-        Timestamp now = new Timestamp(System.currentTimeMillis());
-        dao.updateResolveDate(objectId, now);
-        ObjectStore objStore = mObjectStore.get(rec.storagePlatform);
-
-        if(objStore==null)return badStoreErr(rec.storagePlatform);
-        // Verifies if the store is ReadOnly
-        if (objStore != null && objStore.isReadOnly())
+        ObjectStore store = mObjectStore.get(rec.storagePlatform);
+        if ( store == null )
+            return badStoreErr(rec.storagePlatform);
+        if ( store.isReadOnly() )
             return readOnlyStoreErr("readOnlyStore");
 
+        Timestamp now = new Timestamp(System.currentTimeMillis());
         long timeout = now.getTime() + 1000L*req.validityPeriodSeconds;
-        resp.uri = objStore.generateCopyURI(rec.directoryPath, req.locationToCopy, timeout);
+        resp.uri = store.generateCopyURI(rec.directoryPath, req.locationToCopy, timeout);
 
+        dao.updateResolveDate(objectId, now);
         return null;
     }
 
     @Override
     public ErrorDesc getResumableUploadURL(String objectId, String userName, CopyResponse resp) {
-        ErrorDesc error = null;
-        if ( userName == null  ){
+        if ( userName == null  )
             return badReqErr(getMessage("remoteUser"));
-        }
+
         BossDAO dao = getDao();
         ObjectRow rec = dao.findObjectById(objectId);
         if ( rec == null ) {
@@ -313,14 +311,20 @@ public class DatabaseBossAPI implements BossAPI {
         if ( !dao.canWrite(objectId,userName) ) {
             return  writePermsErr(objectId,userName);
         }
-        ObjectStore objStore = mObjectStore.get(rec.storagePlatform);
 
-        if(objStore==null)return badStoreErr(rec.storagePlatform);
-        if (objStore.isReadOnly()) return readOnlyStoreErr("readOnlyStore");
+        ObjectStore store = mObjectStore.get(rec.storagePlatform);
+        if ( store == null )
+            return badStoreErr(rec.storagePlatform);
+        if ( store.isReadOnly() )
+            return readOnlyStoreErr("readOnlyStore");
 
-        resp.uri = objStore.generateResumableUploadURL(rec.objectName);
-        return error;
+        resp.uri = store.generateResumableUploadURL(rec.objectName);
+
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        dao.updateResolveDate(objectId, now);
+        return null;
     }
+
     private BossDAO getDao() {
         return mDBI.onDemand(BossDAO.class);
     }
@@ -380,8 +384,8 @@ public class DatabaseBossAPI implements BossAPI {
         desc.copy(row);
         if ( !desc.storagePlatform.equals(OPAQUEURI) )
             desc.directoryPath = null;
-        desc.readers = dao.findReadersById(row.objectId).toArray(ArrayUtils.EMPTY_STRING_ARRAY);
-        desc.writers = dao.findWritersById(row.objectId).toArray(ArrayUtils.EMPTY_STRING_ARRAY);
+        desc.readers = dao.findReadersById(row.objectId).toArray(EMPTY_STRING_ARRAY);
+        desc.writers = dao.findWritersById(row.objectId).toArray(EMPTY_STRING_ARRAY);
     }
 
     private static List<String> uniqueUsers( String[] users ) {
@@ -451,4 +455,5 @@ public class DatabaseBossAPI implements BossAPI {
     private Map<String,String> mMessages;
     static private Long gDefaultEstSize = new Long(-1);
     private static final String OPAQUEURI = "opaqueURI";
+    private static final String[] EMPTY_STRING_ARRAY = new String[0];
 }

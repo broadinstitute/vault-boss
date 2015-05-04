@@ -12,15 +12,15 @@ import com.wordnik.swagger.annotations.*;
 
 @Path("fcs/{objName : [^?]+}")
 @JsonInclude(Include.NON_NULL)
-@Api(value = "fcs", description = "Operations on object's data",produces = "application/json")
+@Api(value = "fcs", description = "Operations on object's data")
 public class FCSResource {
 
     @GET
-    @Produces("application/json")
-    @ApiOperation(value = "Querying for Object's data by objName",
+    @Produces("application/octet-stream")
+    @ApiOperation(value = "Querying for Object data.",
                   httpMethod = "GET",
-            response = Byte.class,
-            responseContainer = "Array")
+                  response = Byte.class,
+                  responseContainer = "Array")
     @ApiResponses(value = {
             @ApiResponse(code = 200, message = "Successful Request"),
             @ApiResponse(code = 404, message = "Object Name Not Found"),
@@ -36,8 +36,7 @@ public class FCSResource {
     }
 
     @HEAD
-    @Produces("application/json")
-    @ApiOperation(value = "Checking for Object's data by objName",
+    @ApiOperation(value = "Checking for existence of Object data.",
                   httpMethod = "HEAD")
     @ApiResponses(value = {
             @ApiResponse(code = 200, message = "Successful Operation"),
@@ -55,8 +54,7 @@ public class FCSResource {
     // TODO: add POST method for testing multi-part upload
 
     @PUT
-    @Produces("application/json")
-    @ApiOperation(value = "Inserting Object's data by objName",
+    @ApiOperation(value = "Populating Object data.",
                   httpMethod = "PUT")
     @ApiResponses(value = {
             @ApiResponse(code = 200, message = "Successful Operation"),
@@ -69,7 +67,7 @@ public class FCSResource {
                             @PathParam("objName") String objName,
                             @ApiParam(name = "Content-Length",  required = true, value = "Content Length")
                             @HeaderParam(HttpHeaders.CONTENT_LENGTH) String contentLength,
-                            @ApiParam(name = "x-goog-copy-source",  required = true, value = "Location to copy")
+                            @ApiParam(name = "x-goog-copy-source",  required = false, value = "Location to copy")
                             @HeaderParam("x-goog-copy-source") String copySource,
                             @ApiParam(name="value",required = true) byte[] value) {
         // check silly GCS quirk
@@ -89,8 +87,7 @@ public class FCSResource {
     }
 
     @DELETE
-    @Produces("application/json")
-    @ApiOperation(value = "Deleting Object's data by objName",
+    @ApiOperation(value = "Deleting Object data.",
                   httpMethod = "DELETE")
     @ApiResponses(value = {
             @ApiResponse(code = 200, message = "Successful Operation"),

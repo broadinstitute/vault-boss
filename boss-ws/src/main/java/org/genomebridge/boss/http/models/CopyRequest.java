@@ -7,9 +7,9 @@ import com.wordnik.swagger.annotations.ApiModelProperty;
 @ApiModel("Copy Request")
 public  class CopyRequest {
 
-    @ApiModelProperty(value="Validity Period Seconds.",dataType = "Integer")
+    @ApiModelProperty(value="Validity Period Seconds.")
     public Integer validityPeriodSeconds;
-    @ApiModelProperty(value="Location to copy.",dataType = "String")
+    @ApiModelProperty(value="Location to copy.")
     public String locationToCopy; // expecting something of the form "/bucket/key"
 
 }

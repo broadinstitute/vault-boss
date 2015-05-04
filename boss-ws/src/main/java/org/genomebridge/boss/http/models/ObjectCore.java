@@ -16,16 +16,16 @@ public class ObjectCore {
         this.ownerId = that.ownerId;
     }
 
-    @ApiModelProperty(value = "The Boss ID for this Object.", dataType = "String")
+    @ApiModelProperty(value = "The Boss ID for this Object.")
     public String objectId;
-    @ApiModelProperty(value = "The Name for this Object.", dataType = "String")
+    @ApiModelProperty(value = "The Name for this Object.")
     public String objectName;
-    @ApiModelProperty(value = "The Storage Platform for this Object.", dataType = "String")
+    @ApiModelProperty(value = "The Storage Platform for this Object.")
     public String storagePlatform;
-    @ApiModelProperty(value = "The URI for this Object.", dataType = "String")
+    @ApiModelProperty(value = "The URI for this Object.")
     public String directoryPath;
-    @ApiModelProperty(value = "The estimated size for this Object.", dataType = "Long")
+    @ApiModelProperty(value = "The estimated size for this Object.")
     public Long sizeEstimateBytes;
-    @ApiModelProperty(value = "The owner for this Object.", dataType = "String")
+    @ApiModelProperty(value = "The owner for this Object.")
     public String ownerId;
 }

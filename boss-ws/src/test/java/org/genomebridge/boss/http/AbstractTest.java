@@ -7,14 +7,14 @@ import java.util.Arrays;
 import java.util.TreeSet;
 import java.util.UUID;
 
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.core.Response;
 
 import org.genomebridge.boss.http.models.ObjectDesc;
 import org.genomebridge.boss.http.resources.AbstractResource;
-
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
 
 /**
  * An abstract superclass for Tests that involve the BOSS API, includes helper methods for setting up
@@ -33,47 +33,45 @@ abstract public class AbstractTest extends ResourcedTest {
      * Some utility methods for interacting with HTTP-services.
      */
 
-    public <T> ClientResponse post(Client client, String url, T value) { return post(client, url, "testuser", value); }
+    public <T> Response post(Client client, String url, T value) { return post(client, url, "testuser", value); }
 
-    public <T> ClientResponse post(Client client, String url, String user, T value) {
-        return client.resource(url)
-                .type(MediaType.APPLICATION_JSON_TYPE)
-                .accept(MediaType.APPLICATION_JSON_TYPE)
+    public <T> Response post(Client client, String url, String user, T value) {
+        return client.target(url).request(MediaType.APPLICATION_JSON_TYPE)
                 .header(REMOTE_USER_HEADER, user)
-                .post(ClientResponse.class, value);
+                .post(Entity.entity(value,MediaType.APPLICATION_JSON_TYPE));
     }
 
-    public ClientResponse delete(Client client, String url) { return delete(client, url, "testuser"); }
+    public Response delete(Client client, String url) { return delete(client, url, "testuser"); }
 
-    public ClientResponse delete(Client client, String url, String user) {
-        return client.resource(url)
+    public Response delete(Client client, String url, String user) {
+        return client.target(url).request()
                 .header(REMOTE_USER_HEADER, user)
-                .delete(ClientResponse.class);
+                .delete();
     }
 
-    public ClientResponse get(Client client, String url) { return get(client, url, "testuser"); }
+    public Response get(Client client, String url) { return get(client, url, "testuser"); }
 
-    public ClientResponse get(Client client, String url, String user) {
-        return client.resource(url)
-                .accept(MediaType.APPLICATION_JSON_TYPE)
+    public Response get(Client client, String url, String user) {
+        return client.target(url)
+                .request(MediaType.APPLICATION_JSON_TYPE)
                 .header(REMOTE_USER_HEADER, user)
-                .get(ClientResponse.class);
+                .get();
     }
 
 
-    public ClientResponse check200( ClientResponse response ) {
+    public Response check200( Response response ) {
         return checkStatus(200, response);
     }
 
-    public ClientResponse checkStatus( int status, ClientResponse response ) {
+    public Response checkStatus( int status, Response response ) {
         assertThat(response.getStatus()).isEqualTo(status);
         return response;
     }
 
-    public String checkHeader( ClientResponse response, String header ) {
-        MultivaluedMap<String,String> map = response.getHeaders();
+    public String checkHeader( Response response, String header ) {
+        MultivaluedMap<String,Object> map = response.getHeaders();
         assertThat(map).describedAs(String.format("header \"%s\"", header)).containsKey(header);
-        return map.getFirst(header);
+        return map.getFirst(header).toString();
     }
 
     public String randomID() {
@@ -105,12 +103,12 @@ abstract public class AbstractTest extends ResourcedTest {
         return set.toArray(new String[0]);
     }
 
-    public ClientResponse createObject(String objectName, String owner, long size) {
+    public Response createObject(String objectName, String owner, long size) {
         return createObject(objectName, owner, MOCK_STORE_READ_ONLY, null, size);
     }
 
-    public ClientResponse createObject(String objectName, String owner, String platform, String path, long size) {
-        Client client = new Client();
+    public Response createObject(String objectName, String owner, String platform, String path, long size) {
+        Client client = BossApplication.getClient();
 
         ObjectDesc obj = new ObjectDesc();
         obj.ownerId = owner;

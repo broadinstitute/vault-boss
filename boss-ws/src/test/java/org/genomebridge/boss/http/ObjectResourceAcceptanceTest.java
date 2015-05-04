@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.Random;
 
 import javax.ws.rs.HttpMethod;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
@@ -21,8 +23,6 @@ import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.google.common.net.HttpHeaders;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
 
 public class ObjectResourceAcceptanceTest extends AbstractTest {
 
@@ -52,10 +52,10 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         String owner = "carlyeks";
         Long sizeEstimate = 1010L;
 
-        ClientResponse response = checkStatus( CREATED, createObject(name, owner, sizeEstimate) );
+        Response response = checkStatus( CREATED, createObject(name, owner, sizeEstimate) );
         String objectPath = checkHeader(response, HttpHeaders.LOCATION);
 
-        ObjectDesc created = response.getEntity(ObjectDesc.class);
+        ObjectDesc created = response.readEntity(ObjectDesc.class);
 
         assertThat(created).isNotNull();
         assertThat(created.objectId).isNotNull();
@@ -70,14 +70,14 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
     @Test
     public void registerObjectAndDescribeTest() {
-        Client client = new Client();
+        Client client = BossApplication.getClient();
 
-        ClientResponse response = checkStatus( CREATED, createObject("Test Name", "tdanford", 1010L) );
+        Response response = checkStatus( CREATED, createObject("Test Name", "tdanford", 1010L) );
         String objectPath = checkHeader(response, HttpHeaders.LOCATION);
 
         response = check200( get(client, objectPath) );
 
-        ObjectDesc created = response.getEntity(ObjectDesc.class);
+        ObjectDesc created = response.readEntity(ObjectDesc.class);
 
         assertThat(objectPath).endsWith(created.objectId);
         assertThat(created.objectName).describedAs("created object name").isEqualTo("Test Name");
@@ -90,15 +90,15 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
     @Test
     public void registerFilesystemObjectAndDescribeTest() {
-        Client client = new Client();
+        Client client = BossApplication.getClient();
 
-        ClientResponse response = checkStatus( CREATED,
+        Response response = checkStatus( CREATED,
                 createObject("Test Name", "tdanford", OPAQUEURI, "/my/path", 1010L) );
         String objectPath = checkHeader(response, HttpHeaders.LOCATION);
 
         response = check200( get(client, objectPath) );
 
-        ObjectDesc created = response.getEntity(ObjectDesc.class);
+        ObjectDesc created = response.readEntity(ObjectDesc.class);
 
         assertThat(objectPath).endsWith(created.objectId);
         assertThat(created.objectName).describedAs("created object name").isEqualTo("Test Name");
@@ -112,23 +112,23 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
     @Test
     public void registerDescribeAndDeleteTest() {
-        Client client = new Client();
+        Client client = BossApplication.getClient();
 
-        ClientResponse response = checkStatus( CREATED, createObject("Test Name", "tdanford", OPAQUEURI, "/foo/bar", 1010L) );
+        Response response = checkStatus( CREATED, createObject("Test Name", "tdanford", OPAQUEURI, "/foo/bar", 1010L) );
         String objectPath = checkHeader(response, HttpHeaders.LOCATION);
-        ObjectDesc created = response.getEntity(ObjectDesc.class);
+        ObjectDesc created = response.readEntity(ObjectDesc.class);
 
         checkStatus(OK, get(client, objectPath));
         checkStatus(OK, delete(client, objectPath));
         response = checkStatus(GONE, get(client, objectPath));
-        assertThat(response.getEntity(String.class)).isEqualTo(String.format(messages.get("objectDeleted"), created.objectId));
+        assertThat(response.readEntity(String.class)).isEqualTo(String.format(messages.get("objectDeleted"), created.objectId));
     }
 
     @Test
     public void deleteCloudObject() {
-        Client client = new Client();
+        Client client = BossApplication.getClient();
 
-        ClientResponse response = checkStatus( CREATED, createObject("Test Name", "tdanford", MOCK_STORE, null, 1010L) );
+        Response response = checkStatus( CREATED, createObject("Test Name", "tdanford", MOCK_STORE, null, 1010L) );
         String objectPath = checkHeader(response, HttpHeaders.LOCATION);
         checkStatus(OK, delete(client, objectPath));
         checkStatus(GONE, get(client, objectPath));
@@ -136,30 +136,30 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
     @Test
     public void testInvalidObjectDescribe() {
-        Client client = new Client();
+        Client client = BossApplication.getClient();
 
-        ClientResponse response = checkStatus(CREATED, createObject("test object", "tdanford", 100L));
-        ObjectDesc created = response.getEntity(ObjectDesc.class);
+        Response response = checkStatus(CREATED, createObject("test object", "tdanford", 100L));
+        ObjectDesc created = response.readEntity(ObjectDesc.class);
         String objectPath = checkHeader(response, HttpHeaders.LOCATION);
         String truncatedObjectPath = objectPath.substring(0, objectPath.length() - 1);
         String truncatedObjectId = created.objectId.substring(0, created.objectId.length() - 1);
 
         response = checkStatus( NOT_FOUND, get(client, truncatedObjectPath));
 
-        assertThat(response.getEntity(String.class)).isEqualTo(String.format(messages.get("objectNotFound"), truncatedObjectId));
+        assertThat(response.readEntity(String.class)).isEqualTo(String.format(messages.get("objectNotFound"), truncatedObjectId));
     }
 
     @Test
     public void setIllegalDeleteOnObject() {
-        Client client = new Client();
+        Client client = BossApplication.getClient();
         final String fakeUser = "fake_user";
 
         String objectPath = checkHeader(
                 checkStatus( CREATED, createObject("Deletable", "tdanford", 100L )),
                 HttpHeaders.LOCATION );
-        ClientResponse response = checkStatus(FORBIDDEN, delete(client, objectPath, fakeUser));
+        Response response = checkStatus(FORBIDDEN, delete(client, objectPath, fakeUser));
         String objectId = objectPath.substring(objectPath.length()-36,objectPath.length());
-        assertThat(response.getEntity(String.class))
+        assertThat(response.readEntity(String.class))
                 .isEqualTo(String.format(messages.get("noWritePermission"), objectId, fakeUser));
 
         check200(get(client, objectPath));
@@ -167,12 +167,12 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
     @Test
     public void testSetPermissionsOnObject() {
-        Client client = new Client();
+        Client client = BossApplication.getClient();
 
-        ClientResponse response = checkStatus( CREATED, createObject("changeable", "tdanford", 100L));
+        Response response = checkStatus( CREATED, createObject("changeable", "tdanford", 100L));
         String objectPath = checkHeader(response, HttpHeaders.LOCATION);
 
-        ObjectDesc rec = response.getEntity(ObjectDesc.class);
+        ObjectDesc rec = response.readEntity(ObjectDesc.class);
         assertThat(rec).isNotNull();
 
         rec.readers = arrayAppend( rec.readers, "new_reader" );
@@ -182,7 +182,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
         response = check200(get(client, objectPath));
 
-        rec = response.getEntity(ObjectDesc.class);
+        rec = response.readEntity(ObjectDesc.class);
 
         assertThat(rec.readers).containsOnly("testuser", "tdanford", "new_reader");
         assertThat(rec.writers).containsOnly("testuser", "tdanford", "new_writer");
@@ -191,12 +191,12 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
     @Test
     public void setOwnerOnObject() {
-        Client client = new Client();
+        Client client = BossApplication.getClient();
 
-        ClientResponse response = checkStatus( CREATED, createObject("changeable", "tdanford", 100L));
+        Response response = checkStatus( CREATED, createObject("changeable", "tdanford", 100L));
         String objectPath = checkHeader(response, HttpHeaders.LOCATION);
 
-        ObjectDesc rec = response.getEntity(ObjectDesc.class);
+        ObjectDesc rec = response.readEntity(ObjectDesc.class);
         assertThat(rec).isNotNull();
 
         rec.ownerId = "new_owner";
@@ -205,7 +205,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
         response = check200( get(client, objectPath));
 
-        rec = response.getEntity(ObjectDesc.class);
+        rec = response.readEntity(ObjectDesc.class);
 
         assertThat(rec.ownerId).isEqualTo("new_owner");
     }
@@ -215,26 +215,26 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         /**
          * "It's illegal for a user to set the Name field on an already-registered object."
          */
-        Client client = new Client();
+        Client client = BossApplication.getClient();
         final String unchangeableName = "unchangeable";
         final String newName = "New Name";
 
-        ClientResponse response = checkStatus(CREATED, createObject(unchangeableName, "tdanford", 100L));
+        Response response = checkStatus(CREATED, createObject(unchangeableName, "tdanford", 100L));
         String objectPath = checkHeader(response, HttpHeaders.LOCATION);
 
-        ObjectDesc rec = response.getEntity(ObjectDesc.class);
+        ObjectDesc rec = response.readEntity(ObjectDesc.class);
         assertThat(rec).isNotNull();
 
         rec.objectName = newName;
 
         // It's illegal to change the name!
         response = checkStatus(BAD_REQUEST, post(client, objectPath, rec));
-        assertThat(response.getEntity(String.class))
+        assertThat(response.readEntity(String.class))
                 .isEqualTo(messages.get("objectNameFixed")+'.');
 
         response = check200( get(client, objectPath));
 
-        rec = response.getEntity(ObjectDesc.class);
+        rec = response.readEntity(ObjectDesc.class);
 
         // The name is unchanged.
         assertThat(rec.objectName).isEqualTo(unchangeableName);
@@ -242,24 +242,24 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
     @Test
     public void testIllegalSetPermissions() {
-        Client client = new Client();
+        Client client = BossApplication.getClient();
         final String fakeUser = "fake_user";
 
-        ClientResponse response = checkStatus( CREATED, createObject("test object", "tdanford", 100L));
+        Response response = checkStatus( CREATED, createObject("test object", "tdanford", 100L));
         String objectPath = checkHeader(response, HttpHeaders.LOCATION);
 
-        ObjectDesc rec = response.getEntity(ObjectDesc.class);
+        ObjectDesc rec = response.readEntity(ObjectDesc.class);
 
         rec.readers = arrayAppend(rec.readers, "new_reader");
 
         // It's illegal, as the user 'fake_user', to update the readers field of the ObjectDesc
         response = checkStatus(FORBIDDEN, post(client, objectPath, fakeUser, rec));
-        assertThat(response.getEntity(String.class))
+        assertThat(response.readEntity(String.class))
                 .isEqualTo(String.format(messages.get("noWritePermission"), rec.objectId, fakeUser));
 
         response = check200( get(client, objectPath) );
 
-        rec = response.getEntity(ObjectDesc.class);
+        rec = response.readEntity(ObjectDesc.class);
 
         // The readers are unchanged.
         assertThat(rec.readers).containsOnly("testuser", "tdanford");
@@ -276,14 +276,14 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
     }
 
     private void testObjectResolve(String contentType, String contentMD5Hex) {
-        Client client = new Client();
+        Client client = BossApplication.getClient();
         Random rand = new Random();
 
         int seconds = rand.nextInt(100) + 10;
 
-        ClientResponse response = checkStatus( CREATED, createObject("test object", "tdanford", 100L));
+        Response response = checkStatus( CREATED, createObject("test object", "tdanford", 100L));
         String objectPath = checkHeader( response, HttpHeaders.LOCATION);
-        ObjectDesc desc = response.getEntity(ObjectDesc.class);
+        ObjectDesc desc = response.readEntity(ObjectDesc.class);
 
         ResolveRequest req = new ResolveRequest();
         req.httpMethod = HttpMethod.GET;
@@ -297,7 +297,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
         assertThat(response.getStatus()).isEqualTo(OK);
 
-        ResolveResponse rec = response.getEntity(ResolveResponse.class);
+        ResolveResponse rec = response.readEntity(ResolveResponse.class);
 
         assertThat(rec).isNotNull();
         ObjectStoreConfiguration config = RULE.getConfiguration().getObjectStores().get(desc.storagePlatform);
@@ -329,14 +329,14 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
     }
 
     private void testObjectResolveBadRequest(String contentType, String contentMD5Hex) {
-        Client client = new Client();
+        Client client = BossApplication.getClient();
         Random rand = new Random();
 
         int seconds = rand.nextInt(100) + 10;
 
-        ClientResponse response = checkStatus( CREATED, createObject("test object", "tdanford", 100L));
+        Response response = checkStatus( CREATED, createObject("test object", "tdanford", 100L));
         String objectPath = checkHeader( response, HttpHeaders.LOCATION);
-        response.getEntity(ObjectDesc.class);
+        response.readEntity(ObjectDesc.class);
 
         ResolveRequest req = new ResolveRequest();
         req.httpMethod = HttpMethod.GET;
@@ -353,8 +353,8 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
     @Test
     public void testFilesystemObjectResolve() {
-        Client client = new Client();
-        ClientResponse response = checkStatus( CREATED,
+        Client client = BossApplication.getClient();
+        Response response = checkStatus( CREATED,
                 createObject("test fs object", "tdanford", "opaqueURI", "file:///path/to/file", 100L));
         String objectPath = checkHeader( response, HttpHeaders.LOCATION );
 
@@ -365,7 +365,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
         response = check200( post(client, objectPath + "/resolve", req) );
 
-        ResolveResponse rr = response.getEntity(ResolveResponse.class);
+        ResolveResponse rr = response.readEntity(ResolveResponse.class);
 
         assertThat(rr).isNotNull();
         assertThat(rr.objectUrl.toString()).isEqualTo("file:///path/to/file");
@@ -375,33 +375,33 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
     @Test
     public void testIllegalObjectResolve() {
-        Client client = new Client();
+        Client client = BossApplication.getClient();
         Random rand = new Random();
         final String fakeUser = "fake_user";
 
         int seconds = rand.nextInt(100) + 10;
 
-        ClientResponse response = checkStatus(CREATED, createObject("test object", "tdanford", 100L));
+        Response response = checkStatus(CREATED, createObject("test object", "tdanford", 100L));
         String objectPath = checkHeader(response, HttpHeaders.LOCATION);
-        ObjectDesc desc = response.getEntity(ObjectDesc.class);
+        ObjectDesc desc = response.readEntity(ObjectDesc.class);
         ResolveRequest req = new ResolveRequest();
         req.httpMethod = HttpMethod.GET;
         req.validityPeriodSeconds = seconds;
 
         response = checkStatus(FORBIDDEN, post(client, objectPath + "/resolve", fakeUser, req));
-        assertThat(response.getEntity(String.class))
+        assertThat(response.readEntity(String.class))
                 .isEqualTo(String.format(messages.get("noReadPermission"), desc.objectId, fakeUser));
     }
 
     @Test
     public void testInvalidObjectResolveAndDelete() {
-        Client client = new Client();
+        Client client = BossApplication.getClient();
         Random rand = new Random();
 
         int seconds = rand.nextInt(100) + 10;
 
-        ClientResponse response = checkStatus(CREATED, createObject("test object", "tdanford", 100L));
-        ObjectDesc created = response.getEntity(ObjectDesc.class);
+        Response response = checkStatus(CREATED, createObject("test object", "tdanford", 100L));
+        ObjectDesc created = response.readEntity(ObjectDesc.class);
         String objectPath = checkHeader(response, HttpHeaders.LOCATION);
         String truncatedObjectPath = objectPath.substring(0, objectPath.length() - 1);
         String truncatedObjectId = created.objectId.substring(0, created.objectId.length() - 1);
@@ -410,16 +410,16 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         req.httpMethod = HttpMethod.GET;
         req.validityPeriodSeconds = seconds;
         response = checkStatus( NOT_FOUND, post(client, truncatedObjectPath + "/resolve", req));
-        assertThat(response.getEntity(String.class)).isEqualTo(String.format(messages.get("objectNotFound"), truncatedObjectId));
+        assertThat(response.readEntity(String.class)).isEqualTo(String.format(messages.get("objectNotFound"), truncatedObjectId));
 
         // confirm that we also can't delete it
         response = checkStatus(NOT_FOUND, delete(client, truncatedObjectPath));
-        assertThat(response.getEntity(String.class)).isEqualTo(String.format(messages.get("objectNotFound"), truncatedObjectId));
+        assertThat(response.readEntity(String.class)).isEqualTo(String.format(messages.get("objectNotFound"), truncatedObjectId));
     }
 
     @Test
     public void testDeletedObjectResolveAndDelete() {
-        Client client = new Client();
+        Client client = BossApplication.getClient();
         Random rand = new Random();
 
         int seconds = rand.nextInt(100) + 10;
@@ -427,8 +427,8 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         // until we have a mock object store, calling delete on an objectstore-object will fail, because
         // the system will reach out to the real objectstore and attempt to delete it. We'll cover that test
         // in the end-to-end integration tests.
-        ClientResponse response = checkStatus(CREATED, createObject("Test Name", "tdanford", OPAQUEURI, "/foo/bar", 1010L));
-        ObjectDesc created = response.getEntity(ObjectDesc.class);
+        Response response = checkStatus(CREATED, createObject("Test Name", "tdanford", OPAQUEURI, "/foo/bar", 1010L));
+        ObjectDesc created = response.readEntity(ObjectDesc.class);
         String objectPath = checkHeader(response, HttpHeaders.LOCATION);
 
         checkStatus( OK, get(client, objectPath) );
@@ -437,7 +437,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         req.httpMethod = HttpMethod.GET;
         req.validityPeriodSeconds = seconds;
         response = checkStatus( GONE, post(client, objectPath + "/resolve", req));
-        assertThat(response.getEntity(String.class)).isEqualTo(String.format(messages.get("objectDeleted"), created.objectId));
+        assertThat(response.readEntity(String.class)).isEqualTo(String.format(messages.get("objectDeleted"), created.objectId));
 
         // confirm that we can't re-delete it
         checkStatus(NOT_FOUND, delete(client, objectPath));
@@ -445,7 +445,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
     @Test
     public void testActuallyStoringSomeContent() {
-        Client client = new Client();
+        Client client = BossApplication.getClient();
 
         // create a cloudStore object
         ObjectDesc obj = new ObjectDesc();
@@ -455,7 +455,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         obj.writers = obj.readers;
         obj.sizeEstimateBytes = 13L;
         obj.storagePlatform = MOCK_STORE;
-        ClientResponse response = checkStatus(CREATED, post(client,objectsPath(),obj.ownerId,obj));
+        Response response = checkStatus(CREATED, post(client,objectsPath(),obj.ownerId,obj));
         String objectPath = checkHeader(response, HttpHeaders.LOCATION);
 
         // resolve the object for a PUT
@@ -464,25 +464,22 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         req.validityPeriodSeconds = 120;
         req.contentType = MediaType.TEXT_PLAIN;
         response = checkStatus(OK, post(client,objectPath+"/resolve",obj.ownerId,req));
-        String resolveURL = response.getEntity(ResolveResponse.class).objectUrl.toString();
+        String resolveURL = response.readEntity(ResolveResponse.class).objectUrl.toString();
 
         // write some content to the signed URL
         String putContent = "Some content.";
-        response = client.resource(resolveURL)
-                         .type(MediaType.TEXT_PLAIN)
-                         .put(ClientResponse.class,putContent);
-        assertThat(response.getStatus()).isEqualTo(OK);
+        response = checkStatus(OK, client.target(resolveURL).request().put(Entity.entity(putContent,MediaType.APPLICATION_OCTET_STREAM)));
 
         // resolve the object for a GET
         req.httpMethod = HttpMethod.GET;
         response = checkStatus(OK, post(client,objectPath+"/resolve",obj.ownerId,req));
-        resolveURL = response.getEntity(ResolveResponse.class).objectUrl.toString();
+        resolveURL = response.readEntity(ResolveResponse.class).objectUrl.toString();
 
         // get the data from the signed URL
-        response = checkStatus(OK, client.resource(resolveURL)
-                                        .type(MediaType.TEXT_PLAIN)
-                                        .get(ClientResponse.class));
-        String getContent = response.getEntity(String.class);
+        response = checkStatus(OK, client.target(resolveURL)
+                                        .request(MediaType.APPLICATION_OCTET_STREAM)
+                                        .get());
+        String getContent = response.readEntity(String.class);
 
         // make sure we got back what we wrote
         assertThat(getContent).isEqualTo(putContent);
@@ -493,7 +490,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
     @Test
     public void testCopy() throws Exception {
-        Client client = new Client();
+        Client client = BossApplication.getClient();
 
         // create a cloudStore object
         ObjectDesc obj = new ObjectDesc();
@@ -503,7 +500,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         obj.writers = obj.readers;
         obj.sizeEstimateBytes = 13L;
         obj.storagePlatform = MOCK_STORE;
-        ClientResponse response = checkStatus(CREATED, post(client,objectsPath(),obj.ownerId,obj));
+        Response response = checkStatus(CREATED, post(client,objectsPath(),obj.ownerId,obj));
         String objectPath1 = checkHeader(response, HttpHeaders.LOCATION);
 
         // resolve the object for a PUT
@@ -512,13 +509,11 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         rReq.validityPeriodSeconds = 120;
         rReq.contentType = MediaType.TEXT_PLAIN;
         response = checkStatus(OK, post(client,objectPath1+"/resolve",obj.ownerId,rReq));
-        String resolveURL = response.getEntity(ResolveResponse.class).objectUrl.toString();
+        String resolveURL = response.readEntity(ResolveResponse.class).objectUrl.toString();
 
         // write some content to the signed URL
         String putContent = "Some content.";
-        response = checkStatus(OK, client.resource(resolveURL)
-                                     .type(MediaType.TEXT_PLAIN)
-                                     .put(ClientResponse.class,putContent));
+        response = checkStatus(OK, client.target(resolveURL).request().put(Entity.entity(putContent,MediaType.APPLICATION_OCTET_STREAM)));
 
         // use this object we just created as the data to copy
         // we extract "/bucket/key" using inside knowledge of the format -- not ideal
@@ -536,7 +531,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         copyReq.locationToCopy = locationToCopy;
         copyReq.validityPeriodSeconds = 5;
         response = checkStatus(OK, post(client,objectPath2+"/copy",obj.ownerId,copyReq));
-        CopyResponse copyResp = response.getEntity(CopyResponse.class);
+        CopyResponse copyResp = response.readEntity(CopyResponse.class);
 
         // do the copy
         // use HttpURLConnection -- Jersey is too smart to send an empty PUT with a Content-Length of 0
@@ -557,13 +552,11 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         // resolve the 2nd object for a GET
         rReq.httpMethod = HttpMethod.GET;
         response = checkStatus(OK, post(client,objectPath2+"/resolve",obj.ownerId,rReq));
-        resolveURL = response.getEntity(ResolveResponse.class).objectUrl.toString();
+        resolveURL = response.readEntity(ResolveResponse.class).objectUrl.toString();
 
         // get the data from the signed URL
-        response = checkStatus(OK, client.resource(resolveURL)
-                                        .type(MediaType.TEXT_PLAIN)
-                                        .get(ClientResponse.class));
-        assertThat(response.getEntity(String.class)).isEqualTo(putContent);
+        response = checkStatus(OK, client.target(resolveURL).request(MediaType.APPLICATION_OCTET_STREAM).get());
+        assertThat(response.readEntity(String.class)).isEqualTo(putContent);
 
         // clean up by deleting 2nd object
         checkStatus(OK,delete(client,objectPath2,obj.ownerId));
@@ -571,7 +564,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
     
     @Test
     public void testCopyWithReadOnlyAccess() throws Exception {
-        Client client = new Client();
+        Client client = BossApplication.getClient();
         ObjectDesc obj = new ObjectDesc();
         obj.ownerId = "testuser";
         obj.objectName = "copiedObject";
@@ -579,7 +572,7 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
         obj.writers = obj.readers;
         obj.sizeEstimateBytes = 13L;
         obj.storagePlatform = MOCK_STORE_READ_ONLY;
-        ClientResponse response = checkStatus(CREATED, post(client,objectsPath(),obj.ownerId,obj));
+        Response response = checkStatus(CREATED, post(client,objectsPath(),obj.ownerId,obj));
         String objectPath1 = checkHeader(response, HttpHeaders.LOCATION);
 
         // resolve the object for a PUT
@@ -593,13 +586,13 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
 
     @Test
     public void testMultiResumable() {
-        Client client = new Client();
-        ClientResponse response = checkStatus( CREATED, createObject("testOject", "tdanford", MOCK_STORE,null,1001L));
+        Client client = BossApplication.getClient();
+        Response response = checkStatus( CREATED, createObject("testOject", "tdanford", MOCK_STORE,null,1001L));
         String objectPath = checkHeader( response, "Location");
-        ObjectDesc desc = response.getEntity(ObjectDesc.class);
+        ObjectDesc desc = response.readEntity(ObjectDesc.class);
         response = post(client, objectPath + "/multi",null);
         assertThat(response.getStatus()).isEqualTo(OK);
-        CopyResponse rec = response.getEntity(CopyResponse.class);
+        CopyResponse rec = response.readEntity(CopyResponse.class);
         assertThat(rec).isNotNull();
         ObjectStoreConfiguration config = RULE.getConfiguration().getObjectStores().get(desc.storagePlatform);
         String urlToExpect = config.endpoint + '/' + config.bucket + '/' + desc.objectName;
@@ -608,8 +601,8 @@ public class ObjectResourceAcceptanceTest extends AbstractTest {
     
     @Test
     public void testMultiResumableWhitReadOnlyAccess() {
-        Client client = new Client();
-        ClientResponse response = checkStatus( CREATED, createObject("testOject", "tdanford", MOCK_STORE_READ_ONLY,null,1001L));
+        Client client = BossApplication.getClient();
+        Response response = checkStatus( CREATED, createObject("testOject", "tdanford", MOCK_STORE_READ_ONLY,null,1001L));
         String objectPath = checkHeader( response, "Location");
         response = post(client, objectPath + "/multi",null);
         assertThat(response.getStatus()).isEqualTo(FORBIDDEN);

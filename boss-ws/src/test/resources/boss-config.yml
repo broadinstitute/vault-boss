@@ -27,19 +27,13 @@ objectStores:
     type: FCS
     readOnly: true
 swagger:
-  host: localhost
-  apiDocs: api-docs
-  apiVersion: 0.1
-  baseUrl: /
-  contact: vault@broadinstitute.org
-  description: BOSS(the Broad Object Storage System) API has been made "RESTful" by identifying a single core class of resources, namely "objects"
+  resourcePackage: org.genomebridge.boss.http.resources
   title: Boss API
+  version: 0.1
+  description: BOSS - the Broad Object Storage System
+  termsOfServiceUrl: https://github.com/broadinstitute/vault-boss
+  contact: vault@broadinstitute.org
   license: BSD
   licenseUrl: http://opensource.org/licenses/BSD-3-Clause
-  termsOfServiceUrl: https://github.com/broadinstitute/vault-boss
-
-
-
-
-
-
+jerseyClient:
+  chunkedEncodingEnabled: false

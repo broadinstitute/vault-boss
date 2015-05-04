@@ -8,9 +8,9 @@ import com.wordnik.swagger.annotations.ApiModelProperty;
 public class ObjectDesc extends ObjectCore {
 
     public Boolean forceLocation;
-    @ApiModelProperty(value = "The users with read access to this Object.",dataType = "String[]" )
+    @ApiModelProperty(value = "The users with read access to this Object.")
     public String[] readers;
-    @ApiModelProperty(value = "The users with write access to this Object.",dataType = "String[]" )
+    @ApiModelProperty(value = "The users with write access to this Object.")
     public String[] writers;
 
 }

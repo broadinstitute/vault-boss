@@ -10,13 +10,13 @@ import java.net.URI;
 @ApiModel("Resolve Response")
 public class ResolveResponse {
 
-    @ApiModelProperty(value="ObjectUrl is a pre-signed url generated to access the object for the desired operation.",dataType = "URI")
+    @ApiModelProperty(value="ObjectUrl is a pre-signed url generated to access the object for the desired operation.")
     public URI objectUrl;
-    @ApiModelProperty(value = "Validity period seconds.",dataType = "Integer")
+    @ApiModelProperty(value = "Validity period seconds.")
     public Integer validityPeriodSeconds;
-    @ApiModelProperty(value = "Content Type.",dataType = "String")
+    @ApiModelProperty(value = "Content Type.")
     public String contentType;
-    @ApiModelProperty(value = "Content MD5.",dataType = "String")
+    @ApiModelProperty(value = "Content MD5.")
     public String contentMD5Hex;
 
 }
