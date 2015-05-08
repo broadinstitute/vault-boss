@@ -11,16 +11,15 @@ import java.security.Signature;
 import java.sql.Timestamp;
 
 import javax.ws.rs.HttpMethod;
+import javax.ws.rs.client.Client;
 import javax.ws.rs.core.Response;
 import javax.xml.bind.DatatypeConverter;
 
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-
 public class GCSObjectStore implements ObjectStore {
 
-    public GCSObjectStore( ObjectStoreConfiguration config ) throws Exception {
+    public GCSObjectStore( ObjectStoreConfiguration config, Client client ) throws Exception {
         mConfig = config;
+        mClient = client;
     }
 
     @Override
@@ -42,14 +41,14 @@ public class GCSObjectStore implements ObjectStore {
         String location = getLocation(objKey);
         long timeoutInMillis = System.currentTimeMillis() + A_FEW_SECONDS;
         URI uri = getSignedURI(location,HttpMethod.DELETE,timeoutInMillis,null,null,null);
-        ClientResponse response = new Client().resource(uri.toString()).delete(ClientResponse.class);
+        Response response = mClient.target(uri.toString()).request().delete();
         int status = response.getStatus();
         if ( status == Response.Status.OK.getStatusCode() ||
                 status == Response.Status.NO_CONTENT.getStatusCode() ||
                 // this is a little iffy, but the client may never have done a PUT
                 status == Response.Status.NOT_FOUND.getStatusCode() )
             return;
-        throw new ObjectStoreException(response.getEntity(String.class));
+        throw new ObjectStoreException(response.readEntity(String.class));
     }
 
     @Override
@@ -57,7 +56,7 @@ public class GCSObjectStore implements ObjectStore {
         String location = getLocation(objKey);
         long timeoutInMillis = System.currentTimeMillis() + A_FEW_SECONDS;
         URI uri = getSignedURI(location,HttpMethod.HEAD,timeoutInMillis,null,null,null);
-        ClientResponse response = new Client().resource(uri.toString()).head();
+        Response response = mClient.target(uri.toString()).request().head();
         return response.getStatus() == Response.Status.OK.getStatusCode();
     }
 
@@ -150,6 +149,7 @@ public class GCSObjectStore implements ObjectStore {
     }
 
     private ObjectStoreConfiguration mConfig;
+    private Client mClient;
     private PrivateKey mKey;
     private static final long A_FEW_SECONDS = 5000L;
 }

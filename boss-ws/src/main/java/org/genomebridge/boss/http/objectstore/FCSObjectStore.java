@@ -4,15 +4,14 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 import javax.ws.rs.HttpMethod;
+import javax.ws.rs.client.Client;
 import javax.ws.rs.core.Response;
-
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
 
 public class FCSObjectStore implements ObjectStore {
 
-    public FCSObjectStore( ObjectStoreConfiguration conf ) {
+    public FCSObjectStore( ObjectStoreConfiguration conf, Client client ) {
         mConf = conf;
+        mClient = client;
     }
 
     @Override
@@ -36,18 +35,18 @@ public class FCSObjectStore implements ObjectStore {
     @Override
     public void deleteObject(String objKey) {
         URI uri = generateResolveURI(objKey,HttpMethod.DELETE,0L,null,null);
-        ClientResponse response = new Client().resource(uri.toString()).delete(ClientResponse.class);
+        Response response = mClient.target(uri.toString()).request().delete();
         int status = response.getStatus();
         if ( status == Response.Status.OK.getStatusCode() ||
                 status == Response.Status.NOT_FOUND.getStatusCode() )
             return;
-        throw new ObjectStoreException("Unable to delete object: "+response.getEntity(String.class));
+        throw new ObjectStoreException("Unable to delete object: "+response.readEntity(String.class));
     }
 
     @Override
     public boolean exists(String objKey) {
         URI uri = generateResolveURI(objKey,HttpMethod.HEAD,0L,null,null);
-        ClientResponse response = new Client().resource(uri.toString()).head();
+        Response response = mClient.target(uri.toString()).request().head();
         return response.getStatus() == Response.Status.OK.getStatusCode();
     }
 
@@ -62,4 +61,5 @@ public class FCSObjectStore implements ObjectStore {
     }
 
     private ObjectStoreConfiguration mConf;
+    private Client mClient;
 }

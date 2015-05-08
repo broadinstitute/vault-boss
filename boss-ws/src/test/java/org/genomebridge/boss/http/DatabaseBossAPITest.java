@@ -7,6 +7,7 @@ import io.dropwizard.testing.junit.DropwizardAppRule;
 import java.net.URI;
 
 import javax.ws.rs.HttpMethod;
+import javax.ws.rs.core.Response;
 
 import org.genomebridge.boss.http.models.ObjectDesc;
 import org.genomebridge.boss.http.models.ResolveRequest;
@@ -17,8 +18,6 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import com.sun.jersey.api.client.ClientResponse;
-
 public class DatabaseBossAPITest extends ResourcedTest {
 
     @ClassRule
@@ -28,7 +27,7 @@ public class DatabaseBossAPITest extends ResourcedTest {
 
     private static BossAPI api = null;
     
-    public static int BAD_REQUEST = ClientResponse.Status.BAD_REQUEST.getStatusCode();
+    public static int BAD_REQUEST = Response.Status.BAD_REQUEST.getStatusCode();
     
     @BeforeClass
     public static void setup() {

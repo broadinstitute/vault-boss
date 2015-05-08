@@ -39,7 +39,7 @@ public interface BossAPI {
 
     @ApiModel("Copy Response")
     public static class CopyResponse {
-        @ApiModelProperty(value="A pre-signed url generated to access the object for the desired operation.",dataType = "URI")
+        @ApiModelProperty(value="A pre-signed url generated to access the object for the desired operation.")
         public URI uri;
     }
 

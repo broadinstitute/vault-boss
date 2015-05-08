@@ -8,7 +8,11 @@ import java.util.Map;
 import java.util.UUID;
 
 import javax.ws.rs.HttpMethod;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.core.GenericType;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 import org.genomebridge.boss.http.models.ObjectDesc;
 import org.genomebridge.boss.http.models.ResolveRequest;
@@ -17,19 +21,16 @@ import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.google.common.net.HttpHeaders;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.GenericType;
 
 public class AllObjectsAcceptanceTest extends AbstractTest {
 
-    public static int OK = ClientResponse.Status.OK.getStatusCode();
-    public static int CREATED = ClientResponse.Status.CREATED.getStatusCode();
-    public static int BAD_REQUEST = ClientResponse.Status.BAD_REQUEST.getStatusCode();
-    public static int NOT_FOUND = ClientResponse.Status.NOT_FOUND.getStatusCode();
-    public static int GONE = ClientResponse.Status.GONE.getStatusCode();
-    public static int CONFLICT = ClientResponse.Status.CONFLICT.getStatusCode();
-    public static int FORBIDDEN = ClientResponse.Status.FORBIDDEN.getStatusCode();
+    public static int OK = Response.Status.OK.getStatusCode();
+    public static int CREATED = Response.Status.CREATED.getStatusCode();
+    public static int BAD_REQUEST = Response.Status.BAD_REQUEST.getStatusCode();
+    public static int NOT_FOUND = Response.Status.NOT_FOUND.getStatusCode();
+    public static int GONE = Response.Status.GONE.getStatusCode();
+    public static int CONFLICT = Response.Status.CONFLICT.getStatusCode();
+    public static int FORBIDDEN = Response.Status.FORBIDDEN.getStatusCode();
 
     @ClassRule
     public static final DropwizardAppRule<BossConfiguration> RULE =
@@ -49,15 +50,15 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
          * "The user should be able to create a new ObjectDesc by POSTing to objects"
          */
 
-        Client client = new Client();
+        Client client = BossApplication.getClient();
 
-        ClientResponse response = checkStatus(CREATED, createObject("Name", "tdanford", 500L));
+        Response response = checkStatus(CREATED, createObject("Name", "tdanford", 500L));
 
         String location = checkHeader(response, HttpHeaders.LOCATION);
 
         response = check200( get(client, location) );
 
-        ObjectDesc rec = response.getEntity(ObjectDesc.class);
+        ObjectDesc rec = response.readEntity(ObjectDesc.class);
 
         assertThat(rec).isNotNull();
         assertThat(rec.objectName).isEqualTo("Name");
@@ -72,8 +73,8 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
          */
         ObjectDesc rec = fixture();
         rec.objectName = null;
-        ClientResponse response = checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
-        assertThat(response.getEntity(String.class)).isEqualTo(messages.get("objectValidation")+'.');
+        Response response = checkStatus(BAD_REQUEST, post(BossApplication.getClient(), objectsPath(), rec));
+        assertThat(response.readEntity(String.class)).isEqualTo(messages.get("objectValidation")+'.');
     }
 
     @Test
@@ -83,8 +84,8 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
          */
         ObjectDesc rec = fixture();
         rec.storagePlatform = null;
-        ClientResponse response = checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
-        assertThat(response.getEntity(String.class)).isEqualTo(messages.get("storagePlatformValidation")+'.');
+        Response response = checkStatus(BAD_REQUEST, post(BossApplication.getClient(), objectsPath(), rec));
+        assertThat(response.readEntity(String.class)).isEqualTo(messages.get("storagePlatformValidation")+'.');
     }
 
     @Test
@@ -94,7 +95,7 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
          */
         ObjectDesc rec = fixture();
         rec.storagePlatform = "xyzzy";
-        ClientResponse response = checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
+        Response response = checkStatus(BAD_REQUEST, post(BossApplication.getClient(), objectsPath(), rec));
         StringBuffer objectStoreNames = new StringBuffer();
         for(String objectStore : BossApplication.getgObjectStores().keySet()){
     		objectStoreNames
@@ -103,7 +104,7 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
     	}
     	objectStoreNames.append(OPAQUEURI);
        
-        assertThat(response.getEntity(String.class)).isEqualTo(String.format(messages.get("storagePlatformOptions"),
+        assertThat(response.readEntity(String.class)).isEqualTo(String.format(messages.get("storagePlatformOptions"),
         		objectStoreNames.append('.')));
     }
 
@@ -114,8 +115,8 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
          */
         ObjectDesc rec = fixture();
         rec.directoryPath = null;
-        ClientResponse response = checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
-        assertThat(response.getEntity(String.class)).isEqualTo(String.format(messages.get("directoryPathToSupply"),"opaqueURI") + '.');
+        Response response = checkStatus(BAD_REQUEST, post(BossApplication.getClient(), objectsPath(), rec));
+        assertThat(response.readEntity(String.class)).isEqualTo(String.format(messages.get("directoryPathToSupply"),"opaqueURI") + '.');
     }
 
     @Test
@@ -125,8 +126,8 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
          */
         ObjectDesc rec = fixture();
         rec.ownerId = null;
-        ClientResponse response = checkStatus(BAD_REQUEST, post(new Client(), objectsPath(), rec));
-        assertThat(response.getEntity(String.class)).isEqualTo(messages.get("ownerIdValidation")+'.');
+        Response response = checkStatus(BAD_REQUEST, post(BossApplication.getClient(), objectsPath(), rec));
+        assertThat(response.readEntity(String.class)).isEqualTo(messages.get("ownerIdValidation")+'.');
     }
 
     @Test
@@ -135,11 +136,11 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
          * "The user should not be able to create an object via an update"
          */
         ObjectDesc rec = fixture();
-        Client client = new Client();
+        Client client = BossApplication.getClient();
         final String fakeObjectId = "xyzzy";
 
-        ClientResponse response = checkStatus(NOT_FOUND, post(client, String.format("%s/%s", objectsPath(), fakeObjectId), rec));
-        assertThat(response.getEntity(String.class)).isEqualTo(String.format(messages.get("objectNotFound"), fakeObjectId));
+        Response response = checkStatus(NOT_FOUND, post(client, String.format("%s/%s", objectsPath(), fakeObjectId), rec));
+        assertThat(response.readEntity(String.class)).isEqualTo(String.format(messages.get("objectNotFound"), fakeObjectId));
 
         // check that this is also true for deleted objects
 
@@ -147,20 +148,20 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
         // the system will reach out to the real objectstore and attempt to delete it. We'll cover that test
         // in the end-to-end integration tests.
         response = checkStatus(CREATED, createObject("Name", "tdanford", OPAQUEURI, "file:///path/to/file", 500L));
-        ObjectDesc created = response.getEntity(ObjectDesc.class);
+        ObjectDesc created = response.readEntity(ObjectDesc.class);
         String objectPath = checkHeader(response, HttpHeaders.LOCATION);
 
         checkStatus(OK, get(client, objectPath));
         checkStatus(OK, delete(client, objectPath));
         response = checkStatus( GONE, post(client, String.format("%s/%s", objectsPath(), created.objectId), rec));
-        assertThat(response.getEntity(String.class)).isEqualTo(String.format(String.format(messages.get("objectDeleted"), created.objectId)));
+        assertThat(response.readEntity(String.class)).isEqualTo(String.format(String.format(messages.get("objectDeleted"), created.objectId)));
         response = checkStatus( GONE, get(client, objectPath));
-        assertThat(response.getEntity(String.class)).isEqualTo(String.format(messages.get("objectDeleted"), created.objectId));
+        assertThat(response.readEntity(String.class)).isEqualTo(String.format(messages.get("objectDeleted"), created.objectId));
     }
 
     @Test
     public void testFindByName() {
-        Client client = new Client();
+        Client client = BossApplication.getClient();
         ObjectDesc rec = fixture();
         rec.objectName = UUID.randomUUID().toString();
         String queryURL = objectsPath()+"?name="+rec.objectName;
@@ -170,16 +171,16 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
 
         // make an object with our name, and see if we can find it
         checkStatus(CREATED,post(client,objectsPath(),"me",rec));
-        ClientResponse response = checkStatus(OK,get(client,queryURL,"me"));
+        Response response = checkStatus(OK,get(client,queryURL,"me"));
         GenericType<List<ObjectDesc>> genTyp = new GenericType<List<ObjectDesc>>() {};
-        List<ObjectDesc> recs = response.getEntity(genTyp);
+        List<ObjectDesc> recs = response.readEntity(genTyp);
         assertThat(recs.size()).isEqualTo(1);
         assertThat(recs.get(0).objectName).isEqualTo(rec.objectName);
 
         // make another one, and see that we find both
         checkStatus(CREATED,post(client,objectsPath(),"me",rec));
         response = checkStatus(OK,get(client,queryURL,"me"));
-        recs = response.getEntity(genTyp);
+        recs = response.readEntity(genTyp);
         assertThat(recs.size()).isEqualTo(2);
         assertThat(recs.get(0).objectName).isEqualTo(rec.objectName);
         assertThat(recs.get(1).objectName).isEqualTo(rec.objectName);
@@ -188,21 +189,21 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
         rec.readers = arraySet("him","her");
         checkStatus(CREATED,post(client,objectsPath(),"me",rec));
         response = checkStatus(OK,get(client,queryURL,"me"));
-        recs = response.getEntity(genTyp);
+        recs = response.readEntity(genTyp);
         assertThat(recs.size()).isEqualTo(2);
 
         // delete one of them and make sure we find just one
         checkStatus(OK,delete(client,objectsPath()+"/"+recs.get(0).objectId,"me"));
         String expectedId = recs.get(1).objectId;
         response = checkStatus(OK,get(client,queryURL,"me"));
-        recs = response.getEntity(genTyp);
+        recs = response.readEntity(genTyp);
         assertThat(recs.size()).isEqualTo(1);
         assertThat(recs.get(0).objectId).isEqualTo(expectedId);
     }
 
     @Test
     public void testForceLocation() {
-        Client client = new Client();
+        Client client = BossApplication.getClient();
 
         // create an object
         ObjectDesc obj = new ObjectDesc();
@@ -213,9 +214,9 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
         obj.writers = obj.readers;
         obj.sizeEstimateBytes = 500L;
         obj.storagePlatform = MOCK_STORE;
-        ClientResponse response = checkStatus(CREATED, post(client,objectsPath(),obj.ownerId,obj));
+        Response response = checkStatus(CREATED, post(client,objectsPath(),obj.ownerId,obj));
         String objectPath = checkHeader(response, HttpHeaders.LOCATION);
-        String objectId = response.getEntity(ObjectDesc.class).objectId;
+        String objectId = response.readEntity(ObjectDesc.class).objectId;
 
         // resolve the object for a PUT
         ResolveRequest req = new ResolveRequest();
@@ -223,16 +224,14 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
         req.validityPeriodSeconds = 120;
         req.contentType = MediaType.TEXT_PLAIN;
         response = checkStatus(OK, post(client,objectPath+"/resolve",obj.ownerId,req));
-        String putURL = response.getEntity(ResolveResponse.class).objectUrl.toString();
+        String putURL = response.readEntity(ResolveResponse.class).objectUrl.toString();
 
         // delete the object (but the PUT URL is still valid)
         checkStatus(OK, delete(client, objectPath, obj.ownerId));
 
         // write some content to the PUT URL
         String putContent = "Some content.";
-        response = checkStatus(OK, client.resource(putURL)
-                                     .type(MediaType.TEXT_PLAIN)
-                                     .put(ClientResponse.class,putContent));
+        response = checkStatus(OK, client.target(putURL).request().put(Entity.entity(putContent,MediaType.APPLICATION_OCTET_STREAM)));
 
         // do a forceLocation for the key where we shoved the content
         // we're relying on "inside" knowledge to extract the key from the PUT URL -- not ideal
@@ -241,7 +240,7 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
         obj.forceLocation = true;
         response = checkStatus(CREATED, post(client,objectsPath(),obj.ownerId,obj));
         objectPath = checkHeader(response, HttpHeaders.LOCATION);
-        ObjectDesc rec = response.getEntity(ObjectDesc.class);
+        ObjectDesc rec = response.readEntity(ObjectDesc.class);
         assertThat(rec).isNotNull();
         assertThat(rec.directoryPath).isEqualTo(obj.directoryPath);
 
@@ -250,7 +249,7 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
     
     @Test
     public void testForceLocationWithReadOnlyAccessForPUT() {
-        Client client = new Client();
+        Client client = BossApplication.getClient();
 
         // create an object
         ObjectDesc obj = new ObjectDesc();
@@ -261,7 +260,7 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
         obj.writers = obj.readers;
         obj.sizeEstimateBytes = 500L;
         obj.storagePlatform = MOCK_STORE_READ_ONLY;
-        ClientResponse response = checkStatus(CREATED, post(client,objectsPath(),obj.ownerId,obj));
+        Response response = checkStatus(CREATED, post(client,objectsPath(),obj.ownerId,obj));
         String objectPath = checkHeader(response, HttpHeaders.LOCATION);
         // resolve the object for a PUT
         ResolveRequest req = new ResolveRequest();
@@ -274,7 +273,7 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
 
     @Test
     public void testForceLocationWithReadOnlyAccessForGET() {
-        Client client = new Client();
+        Client client = BossApplication.getClient();
 
         // create an object
         ObjectDesc obj = new ObjectDesc();
@@ -285,7 +284,7 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
         obj.writers = obj.readers;
         obj.sizeEstimateBytes = 500L;
         obj.storagePlatform = MOCK_STORE_READ_ONLY;
-        ClientResponse response = checkStatus(CREATED, post(client,objectsPath(),obj.ownerId,obj));
+        Response response = checkStatus(CREATED, post(client,objectsPath(),obj.ownerId,obj));
         String objectPath = checkHeader(response, HttpHeaders.LOCATION);
         // resolve the object for a PUT
         ResolveRequest req = new ResolveRequest();
@@ -298,7 +297,7 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
     
     @Test
     public void testForceLocationWithReadOnlyAccessForHEAD() {
-        Client client = new Client();
+        Client client = BossApplication.getClient();
 
         // create an object
         ObjectDesc obj = new ObjectDesc();
@@ -309,7 +308,7 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
         obj.writers = obj.readers;
         obj.sizeEstimateBytes = 500L;
         obj.storagePlatform = MOCK_STORE_READ_ONLY;
-        ClientResponse response = checkStatus(CREATED, post(client,objectsPath(),obj.ownerId,obj));
+        Response response = checkStatus(CREATED, post(client,objectsPath(),obj.ownerId,obj));
         String objectPath = checkHeader(response, HttpHeaders.LOCATION);
         // resolve the object for a PUT
         ResolveRequest req = new ResolveRequest();
@@ -334,7 +333,7 @@ public class AllObjectsAcceptanceTest extends AbstractTest {
         obj.storagePlatform = MOCK_STORE_READ_ONLY;
         obj.directoryPath = "doesNotExist";
         obj.forceLocation = true;
-        ClientResponse response = checkStatus(CONFLICT, post(new Client(),objectsPath(),obj.ownerId,obj));
-        assertThat(response.getEntity(String.class)).isEqualTo(messages.get("noSuchLocation"));
+        Response response = checkStatus(CONFLICT, post(BossApplication.getClient(),objectsPath(),obj.ownerId,obj));
+        assertThat(response.readEntity(String.class)).isEqualTo(messages.get("noSuchLocation"));
     }
 }

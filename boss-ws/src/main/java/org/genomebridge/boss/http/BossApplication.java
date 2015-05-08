@@ -2,12 +2,15 @@ package org.genomebridge.boss.http;
 
 import io.dropwizard.Application;
 import io.dropwizard.assets.AssetsBundle;
+import io.dropwizard.client.JerseyClientBuilder;
 import io.dropwizard.db.DataSourceFactory;
 import io.dropwizard.jdbi.DBIFactory;
 import io.dropwizard.migrations.MigrationsBundle;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
-import io.federecio.dropwizard.swagger.SwaggerDropwizard;
+import io.federecio.dropwizard.swagger.SwaggerBundle;
+import io.federecio.dropwizard.swagger.SwaggerBundleConfiguration;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.PreparedStatement;
@@ -19,6 +22,7 @@ import java.util.Map;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
+import javax.ws.rs.client.Client;
 
 import org.genomebridge.boss.http.db.BossDAO;
 import org.genomebridge.boss.http.objectstore.FCSObjectStore;
@@ -32,7 +36,6 @@ import org.genomebridge.boss.http.resources.FCSResource;
 import org.genomebridge.boss.http.resources.ObjectResource;
 import org.genomebridge.boss.http.service.BossAPI;
 import org.genomebridge.boss.http.service.DatabaseBossAPI;
-import org.genomebridge.boss.http.swagger.SwaggerConfiguration;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.tweak.Argument;
@@ -40,7 +43,6 @@ import org.skife.jdbi.v2.tweak.ArgumentFactory;
 import org.yaml.snakeyaml.Yaml;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.wordnik.swagger.jaxrs.config.BeanConfig;
 
 /**
  * Top-level entry point to the entire application.
@@ -60,74 +62,41 @@ public class BossApplication extends Application<BossConfiguration> {
         }
     }
 
+    @Override
     public void run(BossConfiguration config, Environment env) throws Exception {
 
         // Create an API object that the resources can use.
         gDBI = new DBIFactory().build(env, config.getDataSourceFactory(), "db");
         gDBI.registerArgumentFactory(new NullArgumentFactory());
+
+        // Set up the object stores.
         Map<String,ObjectStoreConfiguration> objectStoreConfigurationMap = config.getObjectStores();
-        gObjectStores = getObjectStoresMap(objectStoreConfigurationMap);
-        gBossAPI = new DatabaseBossAPI(gDBI,gObjectStores,getMessages());
-        SwaggerConfiguration swagger = config.getSwaggerConfiguration();
+        gJerseyClient = new JerseyClientBuilder(env).using(config.getJerseyClientConfiguration()).build(getName());
+        gObjectStores = getObjectStoresMap(objectStoreConfigurationMap,gJerseyClient);
+        for ( ObjectStoreConfiguration conf : objectStoreConfigurationMap.values() ) {
+            if (conf.type == ObjectStoreType.FCS) {
+                env.jersey().register(new FCSResource());
+                break;
+            }
+        }
+
         // Set up the resources themselves.
+        gBossAPI = new DatabaseBossAPI(gDBI,gObjectStores,getMessages());
         env.jersey().register(new ObjectResource(gBossAPI));
         env.jersey().register(new AllObjectsResource(gBossAPI));
-        setSwaggerConfiguration(config, env, swagger);
-
-        for (Map.Entry<String, ObjectStoreConfiguration> entry : objectStoreConfigurationMap.entrySet()) {
-        	if (entry.getValue().type == ObjectStoreType.FCS){
-    			env.jersey().register(new FCSResource());
-    			break;
-    		}
-    	}
     }
 
-
-    private static Map<String, ObjectStore> getObjectStoresMap(Map<String,ObjectStoreConfiguration> objectStoreConfigurationMap) throws Exception {
-    
-    	Map<String,ObjectStore> objectStoreMap = new HashMap<String,ObjectStore>();
-    	
-    	if (objectStoreConfigurationMap != null){
-    		for (Map.Entry<String, ObjectStoreConfiguration> entry : objectStoreConfigurationMap.entrySet()) {
-    			objectStoreMap.put(entry.getKey(), getObjectStore(entry.getValue()));
-    		}
-    	}
-    	
-		return objectStoreMap;
-	}
-
-
-    private void setSwaggerConfiguration(BossConfiguration config, Environment env, SwaggerConfiguration swagger) {
-        BeanConfig swaggerConfig = new BeanConfig();
-        swaggerConfig.setTitle(swagger.title);
-        swaggerConfig.setDescription(swagger.description);
-        swaggerConfig.setBasePath(swagger.baseUrl);
-        swaggerConfig.setContact(swagger.contact);
-        swaggerConfig.setLicense(swagger.license);
-        swaggerConfig.setLicenseUrl(swagger.licenseUrl);
-        swaggerConfig.setTermsOfServiceUrl(swagger.termsOfServiceUrl);
-        swaggerConfig.setVersion(swagger.apiVersion);
-        swaggerConfig.setScan(true);
-        swaggerDropwizard.onRun(config, env,swagger.host);
-    }
-
-    private Map<String, ObjectStore> getObjectStoresMap(BossConfiguration config) throws Exception {
-    	
-    	Map<String,ObjectStoreConfiguration> objectStoreConfigurationMap = config.getObjectStores();
-    	Map<String,ObjectStore> objectStoreMap = new HashMap<String,ObjectStore>();
-    	
-    	if(objectStoreConfigurationMap != null){
-    		for (Map.Entry<String, ObjectStoreConfiguration> entry : objectStoreConfigurationMap.entrySet()) {
-    			objectStoreMap.put(entry.getKey(), getObjectStore(entry.getValue()));
-    		}
-    	}
-    	
-		return objectStoreMap;
-	}
 
 	// For invoking some liquibase magic when the args to the server invocation so specify.
+    @Override
     public void initialize(Bootstrap<BossConfiguration> bootstrap) {
 
+        bootstrap.addBundle(new SwaggerBundle<BossConfiguration>() {
+            @Override
+            public SwaggerBundleConfiguration getSwaggerBundleConfiguration(BossConfiguration configuration) {
+                return configuration.getSwaggerConfiguration();
+            }
+        });
         bootstrap.addBundle(new MigrationsBundle<BossConfiguration>() {
             @Override
             public DataSourceFactory getDataSourceFactory(BossConfiguration configuration) {
@@ -135,36 +104,21 @@ public class BossApplication extends Application<BossConfiguration> {
             }
         });
         bootstrap.addBundle(new AssetsBundle("/assets/", "/site"));
-        swaggerDropwizard.onInitialize(bootstrap);
     }
 
-    // These next two little methods break encapsulation, and are just for unit testing.
+    // These next few little methods break encapsulation, and are just for unit testing.
     public static BossDAO getDAO() {
         return gDBI.onDemand(BossDAO.class);
     }
     public static BossAPI getAPI() {
         return gBossAPI;
     }
+    public static Client getClient() {
+        return gJerseyClient;
+    }
     public static Map<String, ObjectStore> getgObjectStores() {
 		return gObjectStores;
 	}
-
-	private static ObjectStore getObjectStore( ObjectStoreConfiguration config ) throws Exception {
-        switch ( config.type ) {
-            case S3: return new S3ObjectStore(config);
-            case GCS: return new GCSObjectStore(config);
-            case FCS: return new FCSObjectStore(config);
-        }
-        throw new IllegalArgumentException("No handler for ObjectStoreType "+config.type.toString());
-    }
-
-    private static class BossMessages {
-        @Valid
-        @JsonProperty
-        @NotNull
-        public HashMap<String,String> messages;
-    }
-
     public static synchronized Map<String,String> getMessages() {
         if ( gMessages == null ) {
             try (InputStream messageInput = ClassLoader.getSystemResourceAsStream(MESSAGES_FILE)) {
@@ -175,6 +129,37 @@ public class BossApplication extends Application<BossConfiguration> {
             }
         }
         return gMessages;
+    }
+
+    private static Map<String, ObjectStore> getObjectStoresMap(
+                                                Map<String,ObjectStoreConfiguration> objectStoreConfigurationMap,
+                                                Client client ) throws Exception {
+
+        Map<String,ObjectStore> objectStoreMap = new HashMap<String,ObjectStore>();
+
+        if (objectStoreConfigurationMap != null){
+            for (Map.Entry<String, ObjectStoreConfiguration> entry : objectStoreConfigurationMap.entrySet()) {
+                objectStoreMap.put(entry.getKey(), getObjectStore(entry.getValue(),client));
+            }
+        }
+
+        return objectStoreMap;
+    }
+
+    private static ObjectStore getObjectStore( ObjectStoreConfiguration config, Client client ) throws Exception {
+        switch ( config.type ) {
+            case S3: return new S3ObjectStore(config);
+            case GCS: return new GCSObjectStore(config,client);
+            case FCS: return new FCSObjectStore(config,client);
+        }
+        throw new IllegalArgumentException("No handler for ObjectStoreType "+config.type.toString());
+    }
+
+    private static class BossMessages {
+        @Valid
+        @JsonProperty
+        @NotNull
+        public HashMap<String,String> messages;
     }
 
     // Workaround for some null argument funkiness in JDBI that breaks on Oracle.
@@ -202,6 +187,6 @@ public class BossApplication extends Application<BossConfiguration> {
     private static BossAPI gBossAPI;
     private static Map<String,String> gMessages;
     private static final String MESSAGES_FILE = "messages.yml";
+    private static Client gJerseyClient;
     private static Map<String,ObjectStore> gObjectStores;
-    private final SwaggerDropwizard swaggerDropwizard = new SwaggerDropwizard();
 }
