@@ -56,6 +56,7 @@ public class ObjectMaker implements Runnable {
         gBossURL = props.getProperty("host");
         gUser = props.getProperty("user");
         String password = props.getProperty("password");
+        gObjectStore = props.getProperty("store",DEFAULTOBJECTSTORE);
         if ( gBossURL == null || gUser == null || password == null || !isURL(gBossURL) )
             usage();
 
@@ -138,7 +139,7 @@ public class ObjectMaker implements Runnable {
         obj.objectName = objName;
         obj.readers = gACL;
         obj.writers = gACL;
-        obj.storagePlatform = OBJECTSTORE;
+        obj.storagePlatform = gObjectStore;
 
         ClientResponse response = gBOSSClient.resource(gBossURL)
                         .type(MediaType.APPLICATION_JSON_TYPE)
@@ -368,9 +369,10 @@ public class ObjectMaker implements Runnable {
 
     private static int CHUNK_SIZE = 16*1024*1024; // 16Mb
     private static int VALIDITY_DURATION = 604800; // 1 week
-    private static String OBJECTSTORE = "localStore";
+    private static String DEFAULTOBJECTSTORE = "localStore";
     private static String gBossURL;
     private static String gUser;
+    private static String gObjectStore;
     private static String[] gACL;
     private static Client gBOSSClient;
     //private static Client gOSClient;
